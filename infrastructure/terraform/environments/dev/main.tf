@@ -12,7 +12,7 @@ provider "aws" {
 }
 
 module "agile_stories" {
-  source = "../../"  # Root module
+  source = "../../"  # Points to root module
 
   environment = "dev"
   aws_region = "us-east-1"

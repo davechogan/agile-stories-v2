@@ -20,10 +20,7 @@ jobs:
   terraform:
     name: 'Terraform'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./infrastructure/terraform/environments/dev
-
+    
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -39,20 +36,31 @@ jobs:
       with:
         terraform_version: "1.7.0"
 
+    - name: Create Lambda packages
+      run: |
+        mkdir -p backend/dist
+        cd backend/src/analyze_story && zip -r ../../dist/analyze_story.zip .
+        cd ../estimate_story && zip -r ../../dist/estimate_story.zip .
+        cd ../get_status && zip -r ../../dist/get_status.zip .
+
     - name: Terraform Format
-      run: terraform fmt -check -recursive ../..
+      working-directory: ./infrastructure/terraform
+      run: terraform fmt -check -recursive
 
     - name: Terraform Init
+      working-directory: ./infrastructure/terraform/environments/dev
       run: terraform init
 
     - name: Terraform Validate
+      working-directory: ./infrastructure/terraform/environments/dev
       run: terraform validate
 
     - name: Terraform Plan
-      if: github.event_name == 'pull_request'
+      working-directory: ./infrastructure/terraform/environments/dev
       run: terraform plan -no-color
-      continue-on-error: true
+      if: github.event_name == 'pull_request'
 
     - name: Terraform Apply
+      working-directory: ./infrastructure/terraform/environments/dev
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       run: terraform apply -auto-approve 
