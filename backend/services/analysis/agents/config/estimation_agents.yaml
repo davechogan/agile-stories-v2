@@ -1,0 +1,63 @@
+agents:
+  backend_dev:
+    name: "Backend Developer"
+    description: "Senior backend developer with extensive API and database experience"
+    role: "backend_developer"
+    expertise_level: "senior"
+    model: "gpt-4-turbo-preview"
+    prompt_file: "backend_dev/BackendDevPrompt.md"
+    temperature: 0.7
+
+  frontend_dev:
+    name: "Frontend Developer"
+    description: "Senior frontend developer with React and TypeScript expertise"
+    role: "frontend_developer"
+    expertise_level: "senior"
+    model: "gpt-4-turbo-preview"
+    prompt_file: "frontend_dev/FrontendDevPrompt.md"
+    temperature: 0.7
+
+  qa_engineer:
+    name: "QA Engineer"
+    description: "Senior QA engineer with automation and testing expertise"
+    role: "qa_engineer"
+    expertise_level: "senior"
+    model: "gpt-4-turbo-preview"
+    prompt_file: "qa_engineer/QAEngineerPrompt.md"
+    temperature: 0.7
+
+  devops_engineer:
+    name: "DevOps Engineer"
+    description: "Senior DevOps engineer with infrastructure and CI/CD expertise"
+    role: "devops_engineer"
+    expertise_level: "senior"
+    model: "gpt-4-turbo-preview"
+    prompt_file: "devops_engineer/DevOpsEngineerPrompt.md"
+    temperature: 0.7
+
+  security_expert:
+    name: "Security Expert"
+    description: "Senior security expert with application security focus"
+    role: "security_expert"
+    expertise_level: "senior"
+    model: "gpt-4-turbo-preview"
+    prompt_file: "security_expert/SecurityExpertPrompt.md"
+    temperature: 0.7
+
+  database_admin:
+    name: "Database Administrator"
+    description: "Senior DBA with performance and scaling expertise"
+    role: "database_admin"
+    expertise_level: "senior"
+    model: "gpt-4-turbo-preview"
+    prompt_file: "database_admin/DatabaseAdminPrompt.md"
+    temperature: 0.7
+
+  ui_designer:
+    name: "UI Designer"
+    description: "Senior UI designer with UX expertise"
+    role: "ui_designer"
+    expertise_level: "senior"
+    model: "gpt-4-turbo-preview"
+    prompt_file: "ui_designer/UIDesignerPrompt.md"
+    temperature: 0.7 

@@ -1,0 +1,56 @@
+variable "environment" {
+  description = "Environment name (e.g., dev, staging, prod)"
+  type        = string
+}
+
+variable "vpc_id" {
+  description = "ID of the VPC"
+  type        = string
+}
+
+variable "subnet_ids" {
+  description = "List of subnet IDs for VPC Link"
+  type        = list(string)
+}
+
+variable "cors_allowed_origins" {
+  description = "List of allowed origins for CORS"
+  type        = list(string)
+  default     = ["*"]  # Should be restricted in production
+}
+
+variable "log_retention_days" {
+  description = "Number of days to retain API Gateway logs"
+  type        = number
+  default     = 30
+}
+
+variable "analyze_story_lambda_arn" {
+  description = "ARN of the analyze story Lambda function"
+  type        = string
+}
+
+variable "estimate_story_lambda_arn" {
+  description = "ARN of the estimate story Lambda function"
+  type        = string
+}
+
+variable "get_status_lambda_arn" {
+  description = "ARN of the get estimation status Lambda function"
+  type        = string
+}
+
+variable "analyze_story_lambda_name" {
+  description = "Name of the analyze story Lambda function"
+  type        = string
+}
+
+variable "estimate_story_lambda_name" {
+  description = "Name of the estimate story Lambda function"
+  type        = string
+}
+
+variable "get_status_lambda_name" {
+  description = "Name of the get estimation status Lambda function"
+  type        = string
+} 
