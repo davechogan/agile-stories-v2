@@ -1,0 +1,14 @@
+agents:
+  agile_coach:
+    name: "Agile Coach"
+    description: "Analyzes and improves user stories using INVEST principles"
+    prompt_path: "prompts/agile_coach/prompt.md"
+    model: "gpt-4-turbo-preview"
+    temperature: 0.7
+    
+  senior_dev:
+    name: "Senior Developer"
+    description: "Provides technical analysis and implementation details"
+    prompt_path: "prompts/senior_dev/prompt.md"
+    model: "gpt-4-turbo-preview"
+    temperature: 0.7
