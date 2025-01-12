@@ -33,6 +33,14 @@ resource "aws_iam_role_policy_attachment" "lambda_vpc" {
   role       = aws_iam_role.lambda_role.name
 }
 
+# Attach additional policies
+resource "aws_iam_role_policy_attachment" "additional_policies" {
+  count = length(var.additional_policy_arns)
+
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = var.additional_policy_arns[count.index]
+}
+
 # Security Group for Lambda functions
 resource "aws_security_group" "lambda" {
   name        = "${var.environment}-agile-stories-lambda"

@@ -1,3 +1,4 @@
+# Combined CloudWatch Dashboard
 resource "aws_cloudwatch_dashboard" "agile_stories" {
   dashboard_name = "${var.environment}-agile-stories-monitoring"
 
@@ -30,26 +31,8 @@ resource "aws_cloudwatch_dashboard" "agile_stories" {
           title  = "Queue Metrics Overview"
         }
       },
-      # DLQ Status
-      {
-        type   = "metric"
-        x      = 12
-        y      = 0
-        width  = 12
-        height = 6
-        properties = {
-          view    = "timeSeries"
-          stacked = false
-          metrics = [
-            ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", aws_sqs_queue.story_analysis_dlq.name],
-            [".", ".", ".", aws_sqs_queue.story_estimation_dlq.name]
-          ]
-          period = 300
-          region = var.aws_region
-          title  = "Dead Letter Queue Messages"
-        }
-      },
-      # Queue Performance
+      
+      # Lambda Function Metrics
       {
         type   = "metric"
         x      = 0
@@ -60,46 +43,50 @@ resource "aws_cloudwatch_dashboard" "agile_stories" {
           view    = "timeSeries"
           stacked = false
           metrics = [
-            # Analysis Queue Performance
-            ["AWS/SQS", "SentMessageSize", "QueueName", aws_sqs_queue.story_analysis.name],
-            [".", "NumberOfMessagesDeleted", ".", "."],
-            [".", "NumberOfEmptyReceives", ".", "."],
-            # Estimation Queue Performance
-            ["AWS/SQS", "SentMessageSize", "QueueName", aws_sqs_queue.story_estimation.name],
-            [".", "NumberOfMessagesDeleted", ".", "."],
-            [".", "NumberOfEmptyReceives", ".", "."]
+            # Invocations
+            ["AWS/Lambda", "Invocations", "FunctionName", "${var.environment}-agile-stories-analyze-story"],
+            [".", ".", ".", "${var.environment}-agile-stories-estimate-story"],
+            [".", ".", ".", "${var.environment}-agile-stories-get-status"]
           ]
           period = 300
           region = var.aws_region
-          title  = "Queue Performance Metrics"
+          title  = "Lambda Invocations"
         }
       },
-      # Error Tracking
+      
+      # Cost Overview
       {
         type   = "metric"
-        x      = 12
-        y      = 6
-        width  = 12
+        x      = 0
+        y      = 12
+        width  = 24
         height = 6
         properties = {
           view    = "timeSeries"
-          stacked = false
+          stacked = true
           metrics = [
-            ["AWS/SQS", "NumberOfMessagesMoved", "QueueName", aws_sqs_queue.story_analysis.name],
-            [".", ".", ".", aws_sqs_queue.story_estimation.name],
-            [".", "ApproximateAgeOfOldestMessage", ".", aws_sqs_queue.story_analysis_dlq.name],
-            [".", ".", ".", aws_sqs_queue.story_estimation_dlq.name]
+            # Lambda Costs
+            ["AWS/Billing", "EstimatedCharges", "ServiceName", "Lambda", "Currency", "USD"],
+            # SQS Costs
+            [".", ".", ".", "AWSQueueService", ".", "."],
+            # DynamoDB Costs
+            [".", ".", ".", "AmazonDynamoDB", ".", "."],
+            # API Gateway Costs
+            [".", ".", ".", "AmazonApiGateway", ".", "."],
+            # CloudWatch Costs
+            [".", ".", ".", "AmazonCloudWatch", ".", "."]
           ]
-          period = 300
-          region = var.aws_region
-          title  = "Error Tracking"
+          period = 3600
+          region = "us-east-1"
+          title  = "Estimated Service Costs (USD)"
         }
       },
+      
       # Alarm Status
       {
         type   = "alarm"
         x      = 0
-        y      = 12
+        y      = 18
         width  = 24
         height = 6
         properties = {

@@ -3,14 +3,16 @@ variable "environment" {
   type        = string
 }
 
-variable "vpc_id" {
-  description = "ID of the VPC"
+variable "aws_region" {
+  description = "AWS region for resources"
   type        = string
+  default     = "us-east-1"
 }
 
-variable "subnet_ids" {
-  description = "List of subnet IDs for Lambda functions"
+variable "cors_allowed_origins" {
+  description = "List of allowed origins for CORS"
   type        = list(string)
+  default     = ["*"]
 }
 
 variable "openai_api_key" {
@@ -34,26 +36,24 @@ variable "get_status_package_path" {
   type        = string
 }
 
-variable "log_retention_days" {
-  description = "Number of days to retain Lambda CloudWatch logs"
-  type        = number
-  default     = 30
-}
-
-variable "lambda_memory_size" {
-  description = "Memory size for Lambda functions in MB"
-  type        = number
-  default     = 256
-}
-
-variable "lambda_timeout" {
-  description = "Timeout for Lambda functions in seconds"
-  type        = number
-  default     = 30
-}
-
-variable "additional_policy_arns" {
-  description = "List of additional IAM policy ARNs to attach to the Lambda role"
+variable "alarm_actions" {
+  description = "List of ARNs to notify when alarm triggers"
   type        = list(string)
   default     = []
+}
+
+variable "ok_actions" {
+  description = "List of ARNs to notify when alarm returns to OK state"
+  type        = list(string)
+  default     = []
+}
+
+variable "vpc_id" {
+  description = "ID of the VPC where resources will be created"
+  type        = string
+}
+
+variable "subnet_ids" {
+  description = "List of subnet IDs where resources will be created"
+  type        = list(string)
 } 

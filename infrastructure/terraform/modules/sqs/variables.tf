@@ -89,4 +89,10 @@ variable "billing_currency" {
   description = "Currency for billing metrics"
   type        = string
   default     = "USD"
+}
+
+variable "lambda_function_names" {
+  description = "List of Lambda function names for monitoring"
+  type        = list(string)
+  default     = []
 } 

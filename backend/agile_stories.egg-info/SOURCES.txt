@@ -1,0 +1,7 @@
+pyproject.toml
+setup.py
+agile_stories.egg-info/PKG-INFO
+agile_stories.egg-info/SOURCES.txt
+agile_stories.egg-info/dependency_links.txt
+agile_stories.egg-info/requires.txt
+agile_stories.egg-info/top_level.txt
