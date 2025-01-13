@@ -36,12 +36,11 @@ jobs:
       with:
         terraform_version: "1.7.0"
 
-    - name: Create Lambda packages
+    - name: Create Lambda Packages
       run: |
-        mkdir -p backend/dist
-        cd backend/src/analyze_story && zip -r ../../dist/analyze_story.zip .
-        cd ../estimate_story && zip -r ../../dist/estimate_story.zip .
-        cd ../get_status && zip -r ../../dist/get_status.zip .
+        cd backend/src/analyze_story && zip -r ../../dist/analyze_story.zip lambda_function.py
+        cd ../../src/estimate_story && zip -r ../../dist/estimate_story.zip lambda_function.py
+        cd ../../src/get_status && zip -r ../../dist/get_status.zip lambda_function.py
 
     - name: Terraform Format
       working-directory: ./infrastructure/terraform
