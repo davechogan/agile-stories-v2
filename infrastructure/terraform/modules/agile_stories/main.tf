@@ -2,10 +2,10 @@
 module "vpc" {
   source = "../vpc"
 
-  cidr_block          = var.cidr_block
-  public_subnet_cidrs = var.public_subnet_cidrs
+  cidr_block           = var.cidr_block
+  public_subnet_cidrs  = var.public_subnet_cidrs
   private_subnet_cidrs = var.private_subnet_cidrs
-  public_subnet_ids   = var.public_subnet_ids
+  public_subnet_ids    = var.public_subnet_ids
   environment          = var.environment
 }
 
@@ -20,7 +20,7 @@ module "lambda" {
 
   account_id                  = var.account_id
   environment                 = var.environment
-   vpc_id                      = var.vpc_id    # Pass vpc_id
+  vpc_id                      = var.vpc_id     # Pass vpc_id
   subnet_ids                  = var.subnet_ids # Pass subnet_ids
   openai_api_key              = var.openai_api_key
   analyze_story_package_path  = var.analyze_story_package_path
@@ -52,8 +52,8 @@ module "api_gateway" {
   source = "../api_gateway"
 
   environment          = var.environment
-  vpc_id                      = var.vpc_id    # Pass vpc_id
-  subnet_ids                  = var.subnet_ids # Pass subnet_ids
+  vpc_id               = var.vpc_id     # Pass vpc_id
+  subnet_ids           = var.subnet_ids # Pass subnet_ids
   cors_allowed_origins = var.cors_allowed_origins
 
   analyze_story_lambda_arn  = module.lambda.analyze_story_lambda_arn

@@ -88,7 +88,7 @@ variable "estimations_table_arn" {
 variable "terraform_locks_table_arn" {
   description = "ARN of the terraform locks DynamoDB table"
   type        = string
-} 
+}
 
 variable "function_name" {
   description = "Name of the Lambda function"
