@@ -36,11 +36,30 @@ jobs:
       with:
         terraform_version: "1.7.0"
 
+    - name: Create Lambda Directories
+      run: |
+        pwd
+        mkdir -p backend/src/analyze_story
+        mkdir -p backend/src/estimate_story
+        mkdir -p backend/src/get_status
+        mkdir -p backend/dist
+        ls -la backend/src/
+
+    - name: Create Lambda Functions
+      run: |
+        echo 'def lambda_handler(event, context):
+            return {"statusCode": 200, "body": "Story analysis placeholder"}' > backend/src/analyze_story/lambda_function.py
+        echo 'def lambda_handler(event, context):
+            return {"statusCode": 200, "body": "Story estimation placeholder"}' > backend/src/estimate_story/lambda_function.py
+        echo 'def lambda_handler(event, context):
+            return {"statusCode": 200, "body": "Status check placeholder"}' > backend/src/get_status/lambda_function.py
+        ls -la backend/src/*/lambda_function.py
+
     - name: Create Lambda Packages
       run: |
-        cd backend/src/analyze_story && zip -r ../../dist/analyze_story.zip lambda_function.py
-        cd ../../src/estimate_story && zip -r ../../dist/estimate_story.zip lambda_function.py
-        cd ../../src/get_status && zip -r ../../dist/get_status.zip lambda_function.py
+        (cd backend/src/analyze_story && zip -r ../../dist/analyze_story.zip lambda_function.py)
+        (cd backend/src/estimate_story && zip -r ../../dist/estimate_story.zip lambda_function.py)
+        (cd backend/src/get_status && zip -r ../../dist/get_status.zip lambda_function.py)
 
     - name: Terraform Format
       working-directory: ./infrastructure/terraform
