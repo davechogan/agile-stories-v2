@@ -38,9 +38,9 @@ module "agile_stories" {
 
 module "lambda_functions" {
   source = "../../modules/lambda"
-  
+
   account_id    = var.account_id
-  function_name = "agile-stories-${var.environment}"  # or however you want to name it
+  function_name = "agile-stories-${var.environment}" # or however you want to name it
   aws_region    = var.aws_region
   # ... other existing variables ...
 } 
