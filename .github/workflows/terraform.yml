@@ -81,4 +81,8 @@ jobs:
     - name: Terraform Apply
       working-directory: ./infrastructure/terraform/environments/dev
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      run: terraform apply -auto-approve 
+      env:
+        TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        cd infrastructure/terraform/environments/dev
+        terraform apply -auto-approve 
