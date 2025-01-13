@@ -65,7 +65,7 @@ resource "aws_lambda_function" "analyze_story" {
   filename      = var.analyze_story_package_path
   function_name = "${var.environment}-agile-stories-analyze"
   role          = aws_iam_role.lambda_role.arn
-  handler       = "lambda_function.handler"
+  handler       = "lambda_function.lambda_handler"
   runtime       = "python3.11"
   timeout       = 30
   memory_size   = 256
@@ -93,7 +93,7 @@ resource "aws_lambda_function" "estimate_story" {
   filename      = var.estimate_story_package_path
   function_name = "${var.environment}-agile-stories-estimate"
   role          = aws_iam_role.lambda_role.arn
-  handler       = "lambda_function.handler"
+  handler       = "lambda_function.lambda_handler"
   runtime       = "python3.11"
   timeout       = 30
   memory_size   = 256
@@ -121,7 +121,7 @@ resource "aws_lambda_function" "get_status" {
   filename      = var.get_status_package_path
   function_name = "${var.environment}-agile-stories-status"
   role          = aws_iam_role.lambda_role.arn
-  handler       = "lambda_function.handler"
+  handler       = "lambda_function.lambda_handler"
   runtime       = "python3.11"
   timeout       = 10
   memory_size   = 128
