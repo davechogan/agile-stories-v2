@@ -45,3 +45,4 @@ crash.log
 # Misc
 .cache/
 .temp/ 
+frontend-src/

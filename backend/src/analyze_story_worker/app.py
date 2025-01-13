@@ -19,6 +19,7 @@ import json
 import os
 from datetime import datetime
 import boto3
+from botocore.exceptions import ClientError
 from openai import OpenAI
 
 dynamodb = boto3.resource('dynamodb')
@@ -54,6 +55,24 @@ def get_agile_coach_prompt():
         ]
     }"""
 
+def get_secret():
+    secret_name = "openai_key"
+    region_name = "us-east-1"
+
+    session = boto3.session.Session()
+    client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name
+    )
+
+    try:
+        get_secret_value_response = client.get_secret_value(
+            SecretId=secret_name
+        )
+        return get_secret_value_response['SecretString']
+    except ClientError as e:
+        raise e
+
 def handler(event, context):
     try:
         for record in event['Records']:
@@ -70,8 +89,11 @@ def handler(event, context):
             )
             original_story = response['Item']
             
+            # Get OpenAI API key from Secrets Manager
+            openai_api_key = get_secret()
+            client = OpenAI(api_key=openai_api_key)
+            
             # Send to OpenAI
-            client = OpenAI()
             response = client.chat.completions.create(
                 model="gpt-4-1106-preview",
                 messages=[

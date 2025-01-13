@@ -184,4 +184,23 @@ resource "aws_iam_role_policy" "dynamodb_access" {
       }
     ]
   })
+}
+
+# Add this to your IAM role policy
+resource "aws_iam_role_policy" "secrets_manager_policy" {
+  name = "${var.function_name}-secrets-policy"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:openai_key*"
+      }
+    ]
+  })
 } 

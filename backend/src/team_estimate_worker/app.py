@@ -19,10 +19,29 @@ import json
 import os
 from datetime import datetime
 import boto3
+from botocore.exceptions import ClientError
 from openai import OpenAI
 
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
+
+def get_secret():
+    secret_name = "openai_key"
+    region_name = "us-east-1"
+
+    session = boto3.session.Session()
+    client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name
+    )
+
+    try:
+        get_secret_value_response = client.get_secret_value(
+            SecretId=secret_name
+        )
+        return get_secret_value_response['SecretString']
+    except ClientError as e:
+        raise e
 
 def get_role_prompt(role):
     """Get role-specific estimation prompt"""
@@ -77,8 +96,11 @@ def handler(event, context):
             )
             tech_review = response['Item']
             
+            # Get OpenAI API key from Secrets Manager
+            openai_api_key = get_secret()
+            client = OpenAI(api_key=openai_api_key)
+            
             # Send to OpenAI with role-specific prompt
-            client = OpenAI()
             response = client.chat.completions.create(
                 model="gpt-4-1106-preview",
                 messages=[

@@ -1,15 +1,16 @@
 import type { Story, AnalysisResult, MockAnalysisResult } from '@/types'
 import api from './api'
 
-export async function submitStoryForAgileReview(story: Story): Promise<MockAnalysisResult> {
-  try {
-    const response = await api.post<AnalysisResult>('/api/analyze', story)
-    return transformAnalysis(response.data)
-  } catch (error) {
-    console.error('Error submitting story:', error)
-    throw error
-  }
-}
+export const analyzeStory = async (storyData: StoryData) => {
+  const response = await fetch('/api/analyze', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(storyData)
+  });
+  return response.json();
+};
 
 const transformAnalysis = (rawAnalysis: AnalysisResult): MockAnalysisResult => {
   const investAnalysis = [

@@ -1,7 +1,27 @@
 import json
 import os
+import boto3
+from botocore.exceptions import ClientError
 from openai import OpenAI
 from typing import Dict, Any
+
+def get_secret():
+    secret_name = "openai_key"
+    region_name = "us-east-1"
+
+    session = boto3.session.Session()
+    client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name
+    )
+
+    try:
+        get_secret_value_response = client.get_secret_value(
+            SecretId=secret_name
+        )
+        return get_secret_value_response['SecretString']
+    except ClientError as e:
+        raise e
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
@@ -31,8 +51,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         agent_config = event['agent_config']
         prompt_file = event['prompt_file']
 
-        # Initialize OpenAI client using environment variable
-        client = OpenAI()
+        # Initialize OpenAI client using secret
+        openai_api_key = get_secret()
+        client = OpenAI(api_key=openai_api_key)
 
         # Load the appropriate prompt template
         prompt_template = load_prompt(prompt_file)

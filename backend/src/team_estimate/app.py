@@ -21,6 +21,7 @@ import os
 from datetime import datetime
 import boto3
 from botocore.exceptions import ClientError
+from openai import OpenAI
 
 dynamodb = boto3.resource('dynamodb')
 sqs = boto3.client('sqs')
@@ -29,6 +30,24 @@ table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
 def get_team_members():
     """Get team members from environment variable"""
     return json.loads(os.environ['TEAM_MEMBERS'])
+
+def get_secret():
+    secret_name = "openai_key"
+    region_name = "us-east-1"
+
+    session = boto3.session.Session()
+    client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name
+    )
+
+    try:
+        get_secret_value_response = client.get_secret_value(
+            SecretId=secret_name
+        )
+        return get_secret_value_response['SecretString']
+    except ClientError as e:
+        raise e
 
 def handler(event, context):
     try:
@@ -62,6 +81,10 @@ def handler(event, context):
         # Queue estimation tasks for each team member
         team_members = get_team_members()
         queued_members = []
+        
+        # Get OpenAI API key from Secrets Manager
+        openai_api_key = get_secret()
+        client = OpenAI(api_key=openai_api_key)
         
         for member in team_members:
             try:
