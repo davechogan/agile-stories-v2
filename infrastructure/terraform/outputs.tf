@@ -3,11 +3,6 @@ output "api_endpoint" {
   value       = module.api_gateway.api_endpoint
 }
 
-output "monitoring_dashboard_name" {
-  description = "Name of the CloudWatch monitoring dashboard"
-  value       = module.queues.monitoring_dashboard_name
-}
-
 output "stories_table_name" {
   description = "Name of the stories DynamoDB table"
   value       = module.dynamodb.stories_table_name

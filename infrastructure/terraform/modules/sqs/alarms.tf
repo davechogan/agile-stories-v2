@@ -12,7 +12,7 @@ resource "aws_cloudwatch_metric_alarm" "analysis_queue_age" {
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    QueueName = aws_sqs_queue.story_analysis.name
+    QueueName = aws_sqs_queue.analysis_queue.name
   }
 
   alarm_actions = var.alarm_actions
@@ -37,7 +37,7 @@ resource "aws_cloudwatch_metric_alarm" "analysis_dlq_messages" {
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    QueueName = aws_sqs_queue.story_analysis_dlq.name
+    QueueName = aws_sqs_queue.analysis_dlq.name
   }
 
   alarm_actions = var.alarm_actions
@@ -114,7 +114,7 @@ resource "aws_cloudwatch_metric_alarm" "high_throughput" {
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    QueueName = aws_sqs_queue.story_analysis.name
+    QueueName = aws_sqs_queue.analysis_queue.name
   }
 
   alarm_actions = var.alarm_actions

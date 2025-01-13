@@ -1,5 +1,9 @@
 <template>
-  <div class="test">
+  <div v-if="!analysis">
+    <p>No analysis data available. Please submit a story first.</p>
+    <v-btn to="/" color="primary">Return to Story Input</v-btn>
+  </div>
+  <div v-else class="test">
     <div class="two-column-layout">
       <!-- Left Column: Primary Content -->
       <div class="primary-content-wrapper">
@@ -133,8 +137,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { mockAnalysisResult } from '@/mocks/mockAnalysisData'
+import { useStoryStore } from '@/stores/storyStore'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const storyStore = useStoryStore()
+const analysis = computed(() => {
+  console.log('Current analysis:', storyStore.currentAnalysis)
+  return storyStore.currentAnalysis
+})
+
+onMounted(() => {
+  if (!storyStore.currentAnalysis) {
+    console.log('No analysis data, redirecting to input')
+    router.push('/')
+  }
+})
 
 // Story editing
 const editingStory = ref(false)

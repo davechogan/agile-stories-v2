@@ -3,8 +3,6 @@ output "api_endpoint" {
   value       = module.agile_stories.api_endpoint
 }
 
-
-
 output "stories_table_name" {
   description = "Name of the stories DynamoDB table"
   value       = module.agile_stories.stories_table_name

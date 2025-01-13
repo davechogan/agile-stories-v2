@@ -102,9 +102,13 @@ const storyStore = useStoryStore()
 const loading = ref(false)
 
 const story = ref({
-  title: '',
-  text: '',
-  acceptance_criteria: ['']
+  title: 'Test Story',
+  text: 'As a user, I want to save my preferences, so that I can customize my experience',
+  acceptance_criteria: [
+    'User preferences are saved immediately after changes',
+    'Preferences persist between sessions',
+    'User can reset preferences to default'
+  ]
 })
 
 const writingTips = [
@@ -148,15 +152,14 @@ const removeCriteria = (index) => {
 }
 
 const submitStory = async () => {
-  if (!isValid.value) return
-  
-  loading.value = true
   try {
-    const result = await submitStoryForAgileReview(story.value)
-    storyStore.setCurrentAnalysis(result)
+    loading.value = true
+    const response = await submitStoryForAgileReview(story.value)
+    console.log('API Response:', response)  // Debug log
+    storyStore.setCurrentAnalysis(response)
     router.push('/agile')
   } catch (error) {
-    console.error('Error submitting story:', error)
+    console.error('Error:', error)
   } finally {
     loading.value = false
   }

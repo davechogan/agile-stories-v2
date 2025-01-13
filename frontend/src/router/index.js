@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import StoryInput from '../views/StoryInput.vue'
-import AgileResults from '../views/AgileResults.vue'
+import AgileReview from '../views/AgileReview.vue'
 import TechReview from '../views/TechReview.vue'
 import Estimates from '../views/Estimates.vue'
 
@@ -15,7 +15,7 @@ const router = createRouter({
     {
       path: '/agile',
       name: 'agile',
-      component: AgileResults
+      component: AgileReview
     },
     {
       path: '/tech',

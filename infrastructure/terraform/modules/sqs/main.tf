@@ -1,28 +1,35 @@
-# Story Analysis Queue
+# Dead Letter Queue for failed messages (create this FIRST)
+resource "aws_sqs_queue" "analysis_dlq" {
+  name                        = "${var.prefix}-analysis-dlq.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+  message_retention_seconds   = var.dlq_message_retention_seconds
+  
+  tags = {
+    Environment = var.environment
+    Project     = "agile-stories"
+  }
+}
+
+# Story Analysis Queue (create this SECOND, after DLQ)
 resource "aws_sqs_queue" "analysis_queue" {
-  name = "${var.environment}-story-analysis-queue"
+  name                        = "${var.prefix}-analysis.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+  visibility_timeout_seconds  = var.visibility_timeout_seconds
+  message_retention_seconds   = var.message_retention_seconds
   
-  # Retention period for messages
-  message_retention_seconds = 86400  # 24 hours
-  
-  # Visibility timeout (how long a message is invisible after being picked up)
-  visibility_timeout_seconds = 900    # 15 minutes
-  
-  # Dead letter queue settings
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.analysis_dlq.arn
-    maxReceiveCount     = 3
+    maxReceiveCount     = var.max_receive_count
   })
   
   tags = {
     Environment = var.environment
+    Project     = "agile-stories"
   }
-}
 
-# Dead Letter Queue for failed messages
-resource "aws_sqs_queue" "analysis_dlq" {
-  name = "${var.environment}-story-analysis-dlq"
-  message_retention_seconds = 1209600  # 14 days
+  depends_on = [aws_sqs_queue.analysis_dlq]  # Explicit dependency
 }
 
 # Story Estimation Queue
@@ -32,14 +39,14 @@ resource "aws_sqs_queue" "story_estimation" {
   content_based_deduplication = true
   deduplication_scope         = "messageGroup"
   fifo_throughput_limit       = "perMessageGroupId"
-  visibility_timeout_seconds  = 900    # 15 minutes for parallel estimations
-  message_retention_seconds   = 86400  # 1 day
+  visibility_timeout_seconds  = var.visibility_timeout_seconds
+  message_retention_seconds   = var.message_retention_seconds
   max_message_size            = 262144 # 256 KB
   delay_seconds               = 0
 
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.story_estimation_dlq.arn
-    maxReceiveCount     = 3
+    maxReceiveCount     = var.max_receive_count
   })
 
   tags = {
@@ -53,7 +60,7 @@ resource "aws_sqs_queue" "story_estimation_dlq" {
   name                        = "${var.environment}-agile-stories-estimation-dlq.fifo"
   fifo_queue                  = true
   content_based_deduplication = true
-  message_retention_seconds   = 1209600 # 14 days
+  message_retention_seconds   = var.dlq_message_retention_seconds
 
   tags = {
     Environment = var.environment
@@ -78,8 +85,8 @@ resource "aws_iam_policy" "sqs_access" {
           "sqs:ChangeMessageVisibility"
         ]
         Resource = [
-          aws_sqs_queue.story_analysis.arn,
-          aws_sqs_queue.story_analysis_dlq.arn,
+          aws_sqs_queue.analysis_queue.arn,
+          aws_sqs_queue.analysis_dlq.arn,
           aws_sqs_queue.story_estimation.arn,
           aws_sqs_queue.story_estimation_dlq.arn
         ]

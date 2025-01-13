@@ -1,18 +1,18 @@
 import { defineStore } from 'pinia'
-import { mockAnalysisResult } from '@/mocks/mockAnalysisData'
 
 export const useStoryStore = defineStore('story', {
   state: () => ({
-    currentAnalysis: mockAnalysisResult
+    currentAnalysis: null
   }),
 
   actions: {
     setCurrentAnalysis(analysis) {
+      console.log('Setting analysis:', analysis)
       this.currentAnalysis = analysis
     },
 
     clearCurrentAnalysis() {
-      this.currentAnalysis = mockAnalysisResult
+      this.currentAnalysis = null
     }
   }
 }) 

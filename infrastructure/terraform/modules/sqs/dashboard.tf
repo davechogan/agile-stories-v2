@@ -1,5 +1,5 @@
 # Combined CloudWatch Dashboard
-resource "aws_cloudwatch_dashboard" "agile_stories" {
+resource "aws_cloudwatch_dashboard" "sqs_dashboard" {
   dashboard_name = "${var.environment}-agile-stories-monitoring"
 
   dashboard_body = jsonencode({
@@ -16,10 +16,11 @@ resource "aws_cloudwatch_dashboard" "agile_stories" {
           stacked = false
           metrics = [
             # Analysis Queue Metrics
-            ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", aws_sqs_queue.story_analysis.name],
-            [".", "ApproximateAgeOfOldestMessage", ".", "."],
-            [".", "NumberOfMessagesReceived", ".", "."],
-            [".", "NumberOfMessagesSent", ".", "."],
+            ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", aws_sqs_queue.analysis_queue.name],
+            ["AWS/SQS", "ApproximateAgeOfOldestMessage", "QueueName", aws_sqs_queue.analysis_queue.name],
+            ["AWS/SQS", "NumberOfMessagesReceived", "QueueName", aws_sqs_queue.analysis_queue.name],
+            ["AWS/SQS", "NumberOfMessagesDeleted", "QueueName", aws_sqs_queue.analysis_queue.name],
+            ["AWS/SQS", "NumberOfMessagesSent", "QueueName", aws_sqs_queue.analysis_queue.name],
             # Estimation Queue Metrics
             ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", aws_sqs_queue.story_estimation.name],
             [".", "ApproximateAgeOfOldestMessage", ".", "."],
