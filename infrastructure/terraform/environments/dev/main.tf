@@ -44,9 +44,9 @@ module "lambda_functions" {
   environment                 = var.environment
   vpc_id                      = var.vpc_id
   subnet_ids                  = var.subnet_ids
-  openai_api_key             = var.openai_api_key
-  dynamodb_table_arn         = module.dynamodb.table_arn
+  openai_api_key              = var.openai_api_key
+  dynamodb_table_arn          = module.dynamodb.table_arn
   analyze_story_package_path  = var.analyze_story_package_path
   estimate_story_package_path = var.estimate_story_package_path
-  get_status_package_path    = var.get_status_package_path
+  get_status_package_path     = var.get_status_package_path
 } 
