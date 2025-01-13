@@ -31,7 +31,7 @@ resource "aws_cloudwatch_dashboard" "agile_stories" {
           title  = "Queue Metrics Overview"
         }
       },
-      
+
       # Lambda Function Metrics
       {
         type   = "metric"
@@ -53,7 +53,7 @@ resource "aws_cloudwatch_dashboard" "agile_stories" {
           title  = "Lambda Invocations"
         }
       },
-      
+
       # Cost Overview
       {
         type   = "metric"
@@ -81,7 +81,7 @@ resource "aws_cloudwatch_dashboard" "agile_stories" {
           title  = "Estimated Service Costs (USD)"
         }
       },
-      
+
       # Alarm Status
       {
         type   = "alarm"

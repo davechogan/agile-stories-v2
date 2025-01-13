@@ -33,6 +33,6 @@ output "lambda_function_names" {
   value = {
     analyze_story  = module.lambda_functions.analyze_story_lambda_name
     estimate_story = module.lambda_functions.estimate_story_lambda_name
-    get_status    = module.lambda_functions.get_status_lambda_name
+    get_status     = module.lambda_functions.get_status_lambda_name
   }
 } 

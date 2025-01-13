@@ -25,5 +25,5 @@ output "estimation_queue_url" {
 
 output "lambda_function_names" {
   description = "Names of the Lambda functions"
-  value = module.agile_stories.lambda_function_names
+  value       = module.agile_stories.lambda_function_names
 } 

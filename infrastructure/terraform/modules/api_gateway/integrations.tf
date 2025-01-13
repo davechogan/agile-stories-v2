@@ -4,7 +4,7 @@ resource "aws_apigatewayv2_integration" "analyze_story" {
   integration_type       = "AWS_PROXY"
   integration_uri        = var.analyze_story_lambda_arn
   payload_format_version = "2.0"
-  description           = "Integration for story analysis"
+  description            = "Integration for story analysis"
 }
 
 resource "aws_apigatewayv2_route" "analyze_story" {
@@ -19,7 +19,7 @@ resource "aws_apigatewayv2_integration" "estimate_story" {
   integration_type       = "AWS_PROXY"
   integration_uri        = var.estimate_story_lambda_arn
   payload_format_version = "2.0"
-  description           = "Integration for story estimation"
+  description            = "Integration for story estimation"
 }
 
 resource "aws_apigatewayv2_route" "estimate_story" {
@@ -34,7 +34,7 @@ resource "aws_apigatewayv2_integration" "get_estimation_status" {
   integration_type       = "AWS_PROXY"
   integration_uri        = var.get_status_lambda_arn
   payload_format_version = "2.0"
-  description           = "Integration for getting estimation status"
+  description            = "Integration for getting estimation status"
 }
 
 resource "aws_apigatewayv2_route" "get_estimation_status" {

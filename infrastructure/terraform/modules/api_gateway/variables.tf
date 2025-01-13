@@ -16,7 +16,7 @@ variable "subnet_ids" {
 variable "cors_allowed_origins" {
   description = "List of allowed origins for CORS"
   type        = list(string)
-  default     = ["*"]  # Should be restricted in production
+  default     = ["*"] # Should be restricted in production
 }
 
 variable "log_retention_days" {

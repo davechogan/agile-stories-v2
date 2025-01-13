@@ -6,13 +6,13 @@ variable "environment" {
 variable "message_retention_seconds" {
   description = "Time (in seconds) that messages will be kept in SQS queues"
   type        = number
-  default     = 86400  # 1 day
+  default     = 86400 # 1 day
 }
 
 variable "visibility_timeout_seconds" {
   description = "Time (in seconds) that messages will be invisible after being received"
   type        = number
-  default     = 900  # 15 minutes
+  default     = 900 # 15 minutes
 }
 
 variable "max_receive_count" {
@@ -24,7 +24,7 @@ variable "max_receive_count" {
 variable "dlq_message_retention_seconds" {
   description = "Time (in seconds) that messages will be kept in DLQ"
   type        = number
-  default     = 1209600  # 14 days
+  default     = 1209600 # 14 days
 }
 
 variable "alarm_actions" {
@@ -42,7 +42,7 @@ variable "ok_actions" {
 variable "max_message_age_threshold" {
   description = "Maximum age of messages in seconds before alerting"
   type        = number
-  default     = 3600  # 1 hour
+  default     = 3600 # 1 hour
 }
 
 variable "dlq_messages_threshold" {
@@ -66,22 +66,22 @@ variable "aws_region" {
 variable "dashboard_refresh_interval" {
   description = "Dashboard refresh interval in seconds"
   type        = number
-  default     = 300  # 5 minutes
+  default     = 300 # 5 minutes
 }
 
 variable "cost_monitoring_thresholds" {
   description = "Cost thresholds for different services"
   type = object({
-    lambda_monthly_threshold    = number
-    sqs_monthly_threshold      = number
-    dynamodb_monthly_threshold = number
+    lambda_monthly_threshold     = number
+    sqs_monthly_threshold        = number
+    dynamodb_monthly_threshold   = number
     apigateway_monthly_threshold = number
   })
   default = {
-    lambda_monthly_threshold    = 10  # USD
-    sqs_monthly_threshold      = 5   # USD
-    dynamodb_monthly_threshold = 5   # USD
-    apigateway_monthly_threshold = 5   # USD
+    lambda_monthly_threshold     = 10 # USD
+    sqs_monthly_threshold        = 5  # USD
+    dynamodb_monthly_threshold   = 5  # USD
+    apigateway_monthly_threshold = 5  # USD
   }
 }
 

@@ -1,14 +1,14 @@
 # Story Analysis Queue
 resource "aws_sqs_queue" "story_analysis" {
-  name                       = "${var.environment}-agile-stories-analysis.fifo"
-  fifo_queue                = true
+  name                        = "${var.environment}-agile-stories-analysis.fifo"
+  fifo_queue                  = true
   content_based_deduplication = true
-  deduplication_scope       = "messageGroup"
-  fifo_throughput_limit     = "perMessageGroupId"
-  visibility_timeout_seconds = 900  # 15 minutes for long-running analysis
-  message_retention_seconds  = 86400  # 1 day
-  max_message_size          = 262144  # 256 KB
-  delay_seconds             = 0
+  deduplication_scope         = "messageGroup"
+  fifo_throughput_limit       = "perMessageGroupId"
+  visibility_timeout_seconds  = 900    # 15 minutes for long-running analysis
+  message_retention_seconds   = 86400  # 1 day
+  max_message_size            = 262144 # 256 KB
+  delay_seconds               = 0
 
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.story_analysis_dlq.arn
@@ -23,10 +23,10 @@ resource "aws_sqs_queue" "story_analysis" {
 
 # Story Analysis Dead Letter Queue
 resource "aws_sqs_queue" "story_analysis_dlq" {
-  name                       = "${var.environment}-agile-stories-analysis-dlq.fifo"
-  fifo_queue                = true
+  name                        = "${var.environment}-agile-stories-analysis-dlq.fifo"
+  fifo_queue                  = true
   content_based_deduplication = true
-  message_retention_seconds  = 1209600  # 14 days
+  message_retention_seconds   = 1209600 # 14 days
 
   tags = {
     Environment = var.environment
@@ -36,15 +36,15 @@ resource "aws_sqs_queue" "story_analysis_dlq" {
 
 # Story Estimation Queue
 resource "aws_sqs_queue" "story_estimation" {
-  name                       = "${var.environment}-agile-stories-estimation.fifo"
-  fifo_queue                = true
+  name                        = "${var.environment}-agile-stories-estimation.fifo"
+  fifo_queue                  = true
   content_based_deduplication = true
-  deduplication_scope       = "messageGroup"
-  fifo_throughput_limit     = "perMessageGroupId"
-  visibility_timeout_seconds = 900  # 15 minutes for parallel estimations
-  message_retention_seconds  = 86400  # 1 day
-  max_message_size          = 262144  # 256 KB
-  delay_seconds             = 0
+  deduplication_scope         = "messageGroup"
+  fifo_throughput_limit       = "perMessageGroupId"
+  visibility_timeout_seconds  = 900    # 15 minutes for parallel estimations
+  message_retention_seconds   = 86400  # 1 day
+  max_message_size            = 262144 # 256 KB
+  delay_seconds               = 0
 
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.story_estimation_dlq.arn
@@ -59,10 +59,10 @@ resource "aws_sqs_queue" "story_estimation" {
 
 # Story Estimation Dead Letter Queue
 resource "aws_sqs_queue" "story_estimation_dlq" {
-  name                       = "${var.environment}-agile-stories-estimation-dlq.fifo"
-  fifo_queue                = true
+  name                        = "${var.environment}-agile-stories-estimation-dlq.fifo"
+  fifo_queue                  = true
   content_based_deduplication = true
-  message_retention_seconds  = 1209600  # 14 days
+  message_retention_seconds   = 1209600 # 14 days
 
   tags = {
     Environment = var.environment

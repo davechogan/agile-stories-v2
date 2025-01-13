@@ -7,7 +7,7 @@ resource "aws_apigatewayv2_api" "main" {
     allow_origins = var.cors_allowed_origins
     allow_methods = ["GET", "POST", "PUT", "DELETE"]
     allow_headers = ["Content-Type", "Authorization"]
-    max_age      = 300
+    max_age       = 300
   }
 
   tags = {
@@ -26,13 +26,13 @@ resource "aws_apigatewayv2_stage" "main" {
     destination_arn = aws_cloudwatch_log_group.api_logs.arn
     format = jsonencode({
       requestId      = "$context.requestId"
-      ip            = "$context.identity.sourceIp"
-      requestTime   = "$context.requestTime"
-      httpMethod    = "$context.httpMethod"
-      routeKey      = "$context.routeKey"
-      status        = "$context.status"
-      protocol      = "$context.protocol"
-      responseTime  = "$context.responseLatency"
+      ip             = "$context.identity.sourceIp"
+      requestTime    = "$context.requestTime"
+      httpMethod     = "$context.httpMethod"
+      routeKey       = "$context.routeKey"
+      status         = "$context.status"
+      protocol       = "$context.protocol"
+      responseTime   = "$context.responseLatency"
       responseLength = "$context.responseLength"
     })
   }

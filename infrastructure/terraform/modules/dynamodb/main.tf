@@ -1,9 +1,9 @@
 # Stories Table
 resource "aws_dynamodb_table" "stories" {
-  name           = "${var.environment}-agile-stories"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "story_id"
-  stream_enabled = true
+  name             = "${var.environment}-agile-stories"
+  billing_mode     = "PAY_PER_REQUEST"
+  hash_key         = "story_id"
+  stream_enabled   = true
   stream_view_type = "NEW_AND_OLD_IMAGES"
 
   attribute {
@@ -23,10 +23,10 @@ resource "aws_dynamodb_table" "stories" {
 
   # GSI for status queries
   global_secondary_index {
-    name               = "status-created-index"
-    hash_key           = "status"
-    range_key          = "created_at"
-    projection_type    = "ALL"
+    name            = "status-created-index"
+    hash_key        = "status"
+    range_key       = "created_at"
+    projection_type = "ALL"
   }
 
   point_in_time_recovery {
@@ -45,11 +45,11 @@ resource "aws_dynamodb_table" "stories" {
 
 # Estimations Table
 resource "aws_dynamodb_table" "estimations" {
-  name           = "${var.environment}-agile-stories-estimations"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "estimation_id"
-  range_key      = "story_id"
-  stream_enabled = true
+  name             = "${var.environment}-agile-stories-estimations"
+  billing_mode     = "PAY_PER_REQUEST"
+  hash_key         = "estimation_id"
+  range_key        = "story_id"
+  stream_enabled   = true
   stream_view_type = "NEW_AND_OLD_IMAGES"
 
   attribute {
@@ -69,10 +69,10 @@ resource "aws_dynamodb_table" "estimations" {
 
   # GSI for story queries
   global_secondary_index {
-    name               = "story-created-index"
-    hash_key           = "story_id"
-    range_key          = "created_at"
-    projection_type    = "ALL"
+    name            = "story-created-index"
+    hash_key        = "story_id"
+    range_key       = "created_at"
+    projection_type = "ALL"
   }
 
   point_in_time_recovery {
@@ -92,7 +92,7 @@ resource "aws_dynamodb_table" "estimations" {
 # IAM Policy for Lambda access to DynamoDB
 resource "aws_iam_policy" "dynamodb_access" {
   name = "${var.environment}-agile-stories-dynamodb-access"
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
