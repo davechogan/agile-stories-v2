@@ -24,6 +24,8 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history for all branches and tags
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
@@ -78,11 +80,23 @@ jobs:
       run: terraform plan -no-color
       if: github.event_name == 'pull_request'
 
+    - name: Debug Directory
+      run: |
+        pwd
+        ls -la
+        ls -la infrastructure/terraform/environments/dev || echo "Dev directory not found"
+
     - name: Terraform Apply
-      working-directory: ./infrastructure/terraform/environments/dev
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       env:
         TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
       run: |
         cd infrastructure/terraform/environments/dev
-        terraform apply -auto-approve 
+        echo "Checking if OpenAI API key is set..."
+        if [ -n "$TF_VAR_openai_api_key" ]; then
+          echo "OpenAI API key is set"
+          terraform apply -auto-approve
+        else
+          echo "Error: OpenAI API key is not set"
+          exit 1
+        fi 
