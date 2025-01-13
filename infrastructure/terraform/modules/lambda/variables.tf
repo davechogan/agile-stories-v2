@@ -56,4 +56,9 @@ variable "additional_policy_arns" {
   description = "List of additional IAM policy ARNs to attach to the Lambda role"
   type        = list(string)
   default     = []
+}
+
+variable "dynamodb_table_arn" {
+  description = "ARN of the DynamoDB table"
+  type        = string
 } 

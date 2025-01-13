@@ -1,6 +1,6 @@
 variable "environment" {
-  description = "Environment name (e.g., dev, staging, prod)"
   type        = string
+  description = "Environment name (dev, prod, etc.)"
 }
 
 variable "aws_region" {

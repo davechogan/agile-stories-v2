@@ -35,4 +35,14 @@ output "lambda_function_names" {
     estimate_story = module.lambda_functions.estimate_story_lambda_name
     get_status     = module.lambda_functions.get_status_lambda_name
   }
+}
+
+output "dynamodb_table_name" {
+  description = "Name of the DynamoDB table"
+  value       = module.dynamodb.table_name
+}
+
+output "dynamodb_table_arn" {
+  description = "ARN of the DynamoDB table"
+  value       = module.dynamodb.table_arn
 } 

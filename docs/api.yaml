@@ -1,0 +1,162 @@
+openapi: 3.0.0
+paths:
+  /stories/analyze:
+    post:
+      summary: Submit a story for analysis
+      description: |
+        Submits a user story for AI analysis. The story is stored and queued
+        for processing by the Agile Coach AI.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - description
+                - acceptance_criteria
+              properties:
+                title:
+                  type: string
+                  description: Story title
+                description:
+                  type: string
+                  description: User story description
+                acceptance_criteria:
+                  type: array
+                  items:
+                    type: string
+                  description: List of acceptance criteria
+      responses:
+        '200':
+          description: Story submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  story_id:
+                    type: string
+                    format: uuid
+                  message:
+                    type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /stories/{story_id}/technical-review:
+    post:
+      summary: Queue story for technical review
+      description: |
+        Queues a story that has completed Agile Coach analysis for technical review
+        by the Senior Developer AI.
+      parameters:
+        - name: story_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the story to review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - story_id
+              properties:
+                story_id:
+                  type: string
+                  format: uuid
+                  description: Story ID (must match path parameter)
+      responses:
+        '200':
+          description: Story queued for technical review
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  story_id:
+                    type: string
+                    format: uuid
+                  message:
+                    type: string
+        '404':
+          description: Story not found or Agile Coach analysis not completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /stories/{story_id}/status:
+    get:
+      summary: Get story status
+      description: |
+        Retrieves the current status of a story in the workflow, including
+        which stages have been completed.
+      parameters:
+        - name: story_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the story to check
+      responses:
+        '200':
+          description: Story status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  story_id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [IN_PROGRESS, COMPLETED]
+                  steps:
+                    type: object
+                    properties:
+                      original:
+                        type: boolean
+                      agile_coach:
+                        type: boolean
+                      senior_dev:
+                        type: boolean
+                      team_estimates:
+                        type: boolean
+                      final:
+                        type: boolean
+                  current_step:
+                    type: string
+                    enum: [
+                      PENDING,
+                      AGILE_COACH_PENDING,
+                      SENIOR_DEV_PENDING,
+                      TEAM_ESTIMATES_PENDING,
+                      COMPLETED
+                    ] 

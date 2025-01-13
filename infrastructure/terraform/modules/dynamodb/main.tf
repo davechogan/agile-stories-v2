@@ -1,10 +1,9 @@
 # Stories Table
-resource "aws_dynamodb_table" "stories" {
-  name             = "${var.environment}-agile-stories"
-  billing_mode     = "PAY_PER_REQUEST"
-  hash_key         = "story_id"
-  stream_enabled   = true
-  stream_view_type = "NEW_AND_OLD_IMAGES"
+resource "aws_dynamodb_table" "agile_stories" {
+  name           = "${var.environment}-agile-stories"
+  billing_mode   = "PAY_PER_REQUEST"
+  hash_key       = "story_id"
+  range_key      = "version"
 
   attribute {
     name = "story_id"
@@ -12,29 +11,8 @@ resource "aws_dynamodb_table" "stories" {
   }
 
   attribute {
-    name = "status"
+    name = "version"
     type = "S"
-  }
-
-  attribute {
-    name = "created_at"
-    type = "S"
-  }
-
-  # GSI for status queries
-  global_secondary_index {
-    name            = "status-created-index"
-    hash_key        = "status"
-    range_key       = "created_at"
-    projection_type = "ALL"
-  }
-
-  point_in_time_recovery {
-    enabled = true
-  }
-
-  server_side_encryption {
-    enabled = true
   }
 
   tags = {
@@ -107,8 +85,8 @@ resource "aws_iam_policy" "dynamodb_access" {
           "dynamodb:Scan"
         ]
         Resource = [
-          aws_dynamodb_table.stories.arn,
-          "${aws_dynamodb_table.stories.arn}/index/*",
+          aws_dynamodb_table.agile_stories.arn,
+          "${aws_dynamodb_table.agile_stories.arn}/index/*",
           aws_dynamodb_table.estimations.arn,
           "${aws_dynamodb_table.estimations.arn}/index/*"
         ]

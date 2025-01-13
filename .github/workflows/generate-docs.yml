@@ -1,0 +1,30 @@
+name: Generate Documentation
+
+on:
+  push:
+    paths:
+      - 'backend/src/**/*.py'
+      - 'docs/templates/**/*.md'
+
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.11'
+        
+    - name: Generate Documentation
+      run: python scripts/generate_docs.py
+      
+    - name: Commit Documentation
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add docs/
+        git commit -m "Auto-generate documentation" || echo "No changes to commit"
+        git push 

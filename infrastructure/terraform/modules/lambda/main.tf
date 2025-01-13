@@ -157,4 +157,31 @@ resource "aws_cloudwatch_log_group" "estimate_story" {
 resource "aws_cloudwatch_log_group" "get_status" {
   name              = "/aws/lambda/${aws_lambda_function.get_status.function_name}"
   retention_in_days = var.log_retention_days
+}
+
+resource "aws_iam_role_policy" "dynamodb_access" {
+  name = "${var.environment}-agile-stories-dynamodb-access"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:BatchGetItem",
+          "dynamodb:BatchWriteItem"
+        ]
+        Resource = [
+          var.dynamodb_table_arn,
+          "${var.dynamodb_table_arn}/index/*"
+        ]
+      }
+    ]
+  })
 } 

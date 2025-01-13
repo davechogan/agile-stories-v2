@@ -54,6 +54,8 @@ module "lambda_functions" {
     module.dynamodb.dynamodb_policy_arn,
     module.queues.sqs_policy_arn
   ]
+
+  dynamodb_table_arn = module.dynamodb.stories_table_arn
 }
 
 # DynamoDB Tables
