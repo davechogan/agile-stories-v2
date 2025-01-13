@@ -27,16 +27,16 @@ jobs:
       with:
         fetch-depth: 0  # Fetch all history for all branches and tags
 
-    - name: Debug AWS Role
-      run: |
-        aws sts get-caller-identity
-        aws iam get-role --role-name github-actions
-
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: arn:aws:iam::784902437693:role/github-actions
         aws-region: us-east-1
+
+    - name: Debug AWS Role
+      run: |
+        aws sts get-caller-identity
+        aws iam get-role --role-name github-actions
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
