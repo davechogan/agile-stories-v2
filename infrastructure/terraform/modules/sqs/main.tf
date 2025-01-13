@@ -4,7 +4,7 @@ resource "aws_sqs_queue" "analysis_dlq" {
   fifo_queue                  = true
   content_based_deduplication = true
   message_retention_seconds   = var.dlq_message_retention_seconds
-  
+
   tags = {
     Environment = var.environment
     Project     = "agile-stories"
@@ -18,18 +18,18 @@ resource "aws_sqs_queue" "analysis_queue" {
   content_based_deduplication = true
   visibility_timeout_seconds  = var.visibility_timeout_seconds
   message_retention_seconds   = var.message_retention_seconds
-  
+
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.analysis_dlq.arn
     maxReceiveCount     = var.max_receive_count
   })
-  
+
   tags = {
     Environment = var.environment
     Project     = "agile-stories"
   }
 
-  depends_on = [aws_sqs_queue.analysis_dlq]  # Explicit dependency
+  depends_on = [aws_sqs_queue.analysis_dlq] # Explicit dependency
 }
 
 # Story Estimation Queue

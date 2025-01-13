@@ -1,9 +1,9 @@
 # Stories Table
 resource "aws_dynamodb_table" "agile_stories" {
-  name           = "${var.environment}-agile-stories"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "story_id"
-  range_key      = "version"
+  name         = "${var.environment}-agile-stories"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "story_id"
+  range_key    = "version"
 
   attribute {
     name = "story_id"

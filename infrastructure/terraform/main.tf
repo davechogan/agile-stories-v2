@@ -70,7 +70,7 @@ module "queues" {
   source = "./modules/sqs"
 
   environment = var.environment
-  prefix     = "${var.environment}-agile-stories"
+  prefix      = "${var.environment}-agile-stories"
 
   alarm_actions = var.alarm_actions
   ok_actions    = var.ok_actions
