@@ -76,7 +76,15 @@ resource "aws_iam_policy" "github_actions" {
           "dynamodb:*",
           "logs:*",
           "cloudwatch:*",
-          "iam:*"
+          "iam:*",
+          "ec2:DescribeVpcs",
+          "ec2:DescribeSecurityGroups",
+          "ec2:CreateSecurityGroup",
+          "ec2:DeleteSecurityGroup",
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:RevokeSecurityGroupIngress",
+          "ec2:AuthorizeSecurityGroupEgress",
+          "ec2:RevokeSecurityGroupEgress"
         ]
         Resource = "*"
       }
