@@ -34,4 +34,13 @@ module "agile_stories" {
 
   # Dev environment variables
   openai_api_key = var.openai_api_key
+}
+
+module "lambda_functions" {
+  source = "../../modules/lambda"
+  
+  account_id    = var.account_id
+  function_name = "agile-stories-${var.environment}"  # or however you want to name it
+  aws_region    = var.aws_region
+  # ... other existing variables ...
 } 

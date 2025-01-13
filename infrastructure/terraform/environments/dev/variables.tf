@@ -38,4 +38,15 @@ variable "dlq_messages_threshold" {
   description = "Number of messages in DLQ before alerting"
   type        = number
   default     = 5 # Higher threshold for dev
+}
+
+variable "aws_region" {
+  description = "AWS region for the resources"
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "account_id" {
+  description = "AWS account ID"
+  type        = string
 } 
