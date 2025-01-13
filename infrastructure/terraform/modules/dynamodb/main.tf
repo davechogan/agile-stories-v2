@@ -93,4 +93,5 @@ resource "aws_iam_policy" "dynamodb_access" {
       }
     ]
   })
-} 
+}
+

@@ -1,16 +1,18 @@
-variable "environment" {
-  description = "Environment name (dev/prod)"
-  type        = string
-}
-
 variable "account_id" {
   description = "AWS account ID"
   type        = string
 }
 
+variable "environment" {
+  description = "Environment name"
+  type        = string
+  default     = "dev"
+}
+
 variable "aws_region" {
   description = "AWS region"
   type        = string
+  default     = "us-east-1"
 }
 
 variable "vpc_id" {
@@ -29,14 +31,8 @@ variable "openai_api_key" {
   sensitive   = true
 }
 
-# Lambda package paths
 variable "analyze_story_package_path" {
   description = "Path to analyze story Lambda package"
-  type        = string
-}
-
-variable "technical_review_package_path" {
-  description = "Path to technical review Lambda package"
   type        = string
 }
 

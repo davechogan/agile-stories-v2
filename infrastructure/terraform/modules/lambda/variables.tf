@@ -74,7 +74,23 @@ variable "account_id" {
   type        = string
 }
 
+
+variable "stories_table_arn" {
+  description = "ARN of the main stories DynamoDB table"
+  type        = string
+}
+
+variable "estimations_table_arn" {
+  description = "ARN of the estimations DynamoDB table"
+  type        = string
+}
+
+variable "terraform_locks_table_arn" {
+  description = "ARN of the terraform locks DynamoDB table"
+  type        = string
+} 
+
 variable "function_name" {
   description = "Name of the Lambda function"
   type        = string
-} 
+}
