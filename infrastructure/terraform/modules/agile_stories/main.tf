@@ -1,66 +1,96 @@
-# Core infrastructure components
-module "vpc" {
-  source = "../vpc"
-
-  cidr_block           = var.cidr_block
-  public_subnet_cidrs  = var.public_subnet_cidrs
-  private_subnet_cidrs = var.private_subnet_cidrs
-  public_subnet_ids    = var.public_subnet_ids
-  environment          = var.environment
+# Configure AWS Provider
+provider "aws" {
+  region = var.aws_region
 }
 
+# DynamoDB Tables
 module "dynamodb" {
   source = "../dynamodb"
 
-  environment = var.environment
+  environment                    = var.environment
+  enable_point_in_time_recovery = true
+  enable_server_side_encryption = true
+  enable_stream                 = true
 }
 
-module "lambda" {
-  source = "../lambda"
-
-  account_id                  = var.account_id
-  environment                 = var.environment
-  vpc_id                      = var.vpc_id     # Pass vpc_id
-  subnet_ids                  = var.subnet_ids # Pass subnet_ids
-  openai_api_key              = var.openai_api_key
-  analyze_story_package_path  = var.analyze_story_package_path
-  estimate_story_package_path = var.estimate_story_package_path
-  get_status_package_path     = var.get_status_package_path
-  stories_table_arn           = module.dynamodb.stories_table_arn
-  estimations_table_arn       = module.dynamodb.estimations_table_arn
-  terraform_locks_table_arn   = module.dynamodb.locks_table_arn
-  dynamodb_table_arn          = module.dynamodb.stories_table_arn
-
-  function_name = "${var.environment}-agile-stories"
-}
-
+# SQS Queues
 module "sqs" {
   source = "../sqs"
 
-  environment   = var.environment
-  prefix        = "${var.environment}-agile-stories"
-  alarm_actions = var.alarm_actions
-  ok_actions    = var.ok_actions
-  lambda_function_names = [
-    module.lambda.analyze_story_lambda_name,
-    module.lambda.estimate_story_lambda_name,
-    module.lambda.get_status_lambda_name
-  ]
+  prefix      = var.prefix
+  environment = var.environment
+  
+  message_retention_seconds       = 86400
+  visibility_timeout_seconds      = 900
+  max_receive_count              = 3
+  dlq_message_retention_seconds  = 1209600
+  
+  alarm_actions                  = var.alarm_actions
+  ok_actions                     = var.ok_actions
+  max_message_age_threshold      = 3600
+  dlq_messages_threshold         = 1
+  high_throughput_threshold      = 1000
+  aws_region                     = var.aws_region
+  dashboard_refresh_interval     = 300
+  
+  cost_monitoring_thresholds = {
+    lambda_monthly_threshold     = 10
+    sqs_monthly_threshold        = 5
+    dynamodb_monthly_threshold   = 5
+    apigateway_monthly_threshold = 5
+  }
+  billing_currency = "USD"
+  
+  lambda_function_names = module.lambda.lambda_function_names
 }
 
+# Lambda Functions
+module "lambda" {
+  source = "../lambda"
+
+  environment = var.environment
+  account_id  = var.account_id
+  aws_region  = var.aws_region
+  vpc_id      = var.vpc_id
+  subnet_ids  = var.subnet_ids
+
+  dynamodb_table_arn       = module.dynamodb.stories_table_arn
+  stories_table_arn        = module.dynamodb.stories_table_arn
+  estimations_table_arn    = module.dynamodb.estimations_table_arn
+  terraform_locks_table_arn = module.dynamodb.terraform_locks_table_arn
+
+  analyze_story_package_path           = var.analyze_story_package_path
+  analyze_story_worker_package_path    = var.analyze_story_worker_package_path
+  team_estimate_package_path           = var.team_estimate_package_path
+  team_estimate_worker_package_path    = var.team_estimate_worker_package_path
+  technical_review_package_path        = var.technical_review_package_path
+  technical_review_worker_package_path = var.technical_review_worker_package_path
+  get_status_package_path             = var.get_status_package_path
+
+  openai_api_key = var.openai_api_key
+  log_retention_days    = 30
+  lambda_memory_size   = 256
+  lambda_timeout       = 30
+  additional_policy_arns = []
+  function_name = "${var.environment}-agile-stories"
+}
+
+# API Gateway
 module "api_gateway" {
   source = "../api_gateway"
 
   environment          = var.environment
-  vpc_id               = var.vpc_id     # Pass vpc_id
-  subnet_ids           = var.subnet_ids # Pass subnet_ids
+  vpc_id              = var.vpc_id
+  subnet_ids          = var.subnet_ids
   cors_allowed_origins = var.cors_allowed_origins
+  log_retention_days   = 30
 
   analyze_story_lambda_arn  = module.lambda.analyze_story_lambda_arn
-  estimate_story_lambda_arn = module.lambda.estimate_story_lambda_arn
-  get_status_lambda_arn     = module.lambda.get_status_lambda_arn
-
-  analyze_story_lambda_name  = module.lambda.analyze_story_lambda_name
-  estimate_story_lambda_name = module.lambda.estimate_story_lambda_name
-  get_status_lambda_name     = module.lambda.get_status_lambda_name
+  analyze_story_lambda_name = module.lambda.analyze_story_lambda_name
+  
+  team_estimate_lambda_arn  = module.lambda.team_estimate_lambda_arn
+  team_estimate_lambda_name = module.lambda.team_estimate_lambda_name
+  
+  get_status_lambda_arn  = module.lambda.get_status_lambda_arn
+  get_status_lambda_name = module.lambda.get_status_lambda_name
 }

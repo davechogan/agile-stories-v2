@@ -30,7 +30,7 @@ variable "analyze_story_lambda_arn" {
   type        = string
 }
 
-variable "estimate_story_lambda_arn" {
+variable "team_estimate_lambda_arn" {
   description = "ARN of the estimate story Lambda function"
   type        = string
 }
@@ -45,7 +45,7 @@ variable "analyze_story_lambda_name" {
   type        = string
 }
 
-variable "estimate_story_lambda_name" {
+variable "team_estimate_lambda_name" {
   description = "Name of the estimate story Lambda function"
   type        = string
 }

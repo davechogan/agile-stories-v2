@@ -96,3 +96,31 @@ resource "aws_iam_policy" "dynamodb_access" {
   })
 }
 
+# Terraform state locking table
+resource "aws_dynamodb_table" "terraform_locks" {
+  name         = "agile-stories-terraform-locks"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
+
+  attribute {
+    name = "LockID"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = var.enable_point_in_time_recovery
+  }
+
+  server_side_encryption {
+    enabled = var.enable_server_side_encryption
+  }
+
+  stream_enabled   = var.enable_stream
+  stream_view_type = var.enable_stream ? "NEW_AND_OLD_IMAGES" : null
+
+  tags = {
+    Environment = var.environment
+    Project     = "agile-stories"
+  }
+}
+

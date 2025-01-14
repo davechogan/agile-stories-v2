@@ -1,5 +1,10 @@
+variable "environment" {
+  description = "Environment name"
+  type        = string
+}
+
 variable "cidr_block" {
-  description = "CIDR block for the VPC"
+  description = "CIDR block for VPC"
   type        = string
 }
 
@@ -14,11 +19,11 @@ variable "private_subnet_cidrs" {
 }
 
 variable "public_subnet_ids" {
-  description = "IDs of public subnets"
+  description = "List of public subnet IDs"
   type        = list(string)
 }
 
-variable "environment" {
-  description = "Deployment environment (e.g., dev, staging, prod)"
-  type        = string
+variable "availability_zones" {
+  description = "List of availability zones"
+  type        = list(string)
 }

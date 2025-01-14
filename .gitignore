@@ -46,3 +46,9 @@ crash.log
 .cache/
 .temp/ 
 frontend-src/
+*.backup
+*.txt
+tfplan*
+plan.txt
+dist/
+

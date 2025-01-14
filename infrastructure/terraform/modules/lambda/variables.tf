@@ -20,17 +20,37 @@ variable "openai_api_key" {
 }
 
 variable "analyze_story_package_path" {
-  description = "Path to the analyze story Lambda deployment package"
+  description = "Path to the analyze story Lambda package"
   type        = string
 }
 
-variable "estimate_story_package_path" {
-  description = "Path to the estimate story Lambda deployment package"
+variable "analyze_story_worker_package_path" {
+  description = "Path to the analyze story worker Lambda package"
+  type        = string
+}
+
+variable "team_estimate_package_path" {
+  description = "Path to the team estimate Lambda package"
+  type        = string
+}
+
+variable "team_estimate_worker_package_path" {
+  description = "Path to the team estimate worker Lambda package"
+  type        = string
+}
+
+variable "technical_review_package_path" {
+  description = "Path to the technical review Lambda package"
+  type        = string
+}
+
+variable "technical_review_worker_package_path" {
+  description = "Path to the technical review worker Lambda package"
   type        = string
 }
 
 variable "get_status_package_path" {
-  description = "Path to the get status Lambda deployment package"
+  description = "Path to the get status Lambda package"
   type        = string
 }
 

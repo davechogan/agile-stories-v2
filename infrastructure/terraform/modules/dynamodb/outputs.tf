@@ -29,6 +29,11 @@ output "dynamodb_policy_arn" {
   value       = aws_iam_policy.dynamodb_access.arn
 }
 
+output "terraform_locks_table_arn" {
+  description = "ARN of the Terraform locks table"
+  value       = aws_dynamodb_table.terraform_locks.arn
+}
+
 
 
 

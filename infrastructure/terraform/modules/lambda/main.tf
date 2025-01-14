@@ -89,8 +89,8 @@ resource "aws_lambda_function" "analyze_story" {
 }
 
 # Story Estimation Lambda
-resource "aws_lambda_function" "estimate_story" {
-  filename      = var.estimate_story_package_path
+resource "aws_lambda_function" "team_estimate" {
+  filename      = var.team_estimate_package_path
   function_name = "${var.environment}-agile-stories-estimate"
   role          = aws_iam_role.lambda_role.arn
   handler       = "lambda_function.lambda_handler"
@@ -149,8 +149,8 @@ resource "aws_cloudwatch_log_group" "analyze_story" {
   retention_in_days = var.log_retention_days
 }
 
-resource "aws_cloudwatch_log_group" "estimate_story" {
-  name              = "/aws/lambda/${aws_lambda_function.estimate_story.function_name}"
+resource "aws_cloudwatch_log_group" "team_estimate" {
+  name              = "/aws/lambda/${aws_lambda_function.team_estimate.function_name}"
   retention_in_days = var.log_retention_days
 }
 
@@ -203,4 +203,89 @@ resource "aws_iam_role_policy" "secrets_manager_policy" {
       }
     ]
   })
+}
+
+# Worker Lambda functions
+resource "aws_lambda_function" "analyze_story_worker" {
+  filename         = var.analyze_story_worker_package_path
+  function_name    = "${var.environment}-agile-stories-analyze-worker"
+  role            = aws_iam_role.lambda_role.arn
+  handler         = "index.handler"
+  runtime         = "nodejs18.x"
+  memory_size     = var.lambda_memory_size
+  timeout         = var.lambda_timeout
+
+  vpc_config {
+    subnet_ids         = var.subnet_ids
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
+  environment {
+    variables = {
+      OPENAI_API_KEY = var.openai_api_key
+    }
+  }
+}
+
+resource "aws_lambda_function" "team_estimate_worker" {
+  filename         = var.team_estimate_worker_package_path
+  function_name    = "${var.environment}-agile-stories-estimate-worker"
+  role            = aws_iam_role.lambda_role.arn
+  handler         = "index.handler"
+  runtime         = "nodejs18.x"
+  memory_size     = var.lambda_memory_size
+  timeout         = var.lambda_timeout
+
+  vpc_config {
+    subnet_ids         = var.subnet_ids
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
+  environment {
+    variables = {
+      OPENAI_API_KEY = var.openai_api_key
+    }
+  }
+}
+
+resource "aws_lambda_function" "technical_review" {
+  filename         = var.technical_review_package_path
+  function_name    = "${var.environment}-agile-stories-review"
+  role            = aws_iam_role.lambda_role.arn
+  handler         = "index.handler"
+  runtime         = "nodejs18.x"
+  memory_size     = var.lambda_memory_size
+  timeout         = var.lambda_timeout
+
+  vpc_config {
+    subnet_ids         = var.subnet_ids
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
+  environment {
+    variables = {
+      OPENAI_API_KEY = var.openai_api_key
+    }
+  }
+}
+
+resource "aws_lambda_function" "technical_review_worker" {
+  filename         = var.technical_review_worker_package_path
+  function_name    = "${var.environment}-agile-stories-review-worker"
+  role            = aws_iam_role.lambda_role.arn
+  handler         = "index.handler"
+  runtime         = "nodejs18.x"
+  memory_size     = var.lambda_memory_size
+  timeout         = var.lambda_timeout
+
+  vpc_config {
+    subnet_ids         = var.subnet_ids
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
+  environment {
+    variables = {
+      OPENAI_API_KEY = var.openai_api_key
+    }
+  }
 } 

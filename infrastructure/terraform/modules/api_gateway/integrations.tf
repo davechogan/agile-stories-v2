@@ -14,18 +14,18 @@ resource "aws_apigatewayv2_route" "analyze_story" {
 }
 
 # Story Estimation Integration
-resource "aws_apigatewayv2_integration" "estimate_story" {
+resource "aws_apigatewayv2_integration" "team_estimate" {
   api_id                 = aws_apigatewayv2_api.main.id
   integration_type       = "AWS_PROXY"
-  integration_uri        = var.estimate_story_lambda_arn
+  integration_uri        = var.team_estimate_lambda_arn
   payload_format_version = "2.0"
   description            = "Integration for story estimation"
 }
 
-resource "aws_apigatewayv2_route" "estimate_story" {
+resource "aws_apigatewayv2_route" "team_estimate" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "POST /stories/estimate"
-  target    = "integrations/${aws_apigatewayv2_integration.estimate_story.id}"
+  target    = "integrations/${aws_apigatewayv2_integration.team_estimate.id}"
 }
 
 # Get Estimation Status Integration
@@ -52,10 +52,10 @@ resource "aws_lambda_permission" "analyze_story" {
   source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
 
-resource "aws_lambda_permission" "estimate_story" {
+resource "aws_lambda_permission" "team_estimate" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
-  function_name = var.estimate_story_lambda_name
+  function_name = var.team_estimate_lambda_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
