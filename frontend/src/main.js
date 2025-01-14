@@ -38,6 +38,12 @@ const vuetify = createVuetify({
     sets: {
       mdi,
     },
+  },
+  display: {
+    // ...
+  },
+  defaults: {
+    // ...
   }
 })
 

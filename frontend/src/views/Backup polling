@@ -1,0 +1,17 @@
+// Backup of polling logic
+const checkStatus = async () => {
+  try {
+    const storyId = storyStore.currentStoryId
+    if (!storyId) return
+
+    const response = await getStoryStatus(storyId)
+    console.log('Status check:', response)
+
+    if (response.status === 'completed') {
+      analysis.value = response.result
+      clearInterval(pollInterval.value)
+    }
+  } catch (error) {
+    console.error('Error checking status:', error)
+  }
+}

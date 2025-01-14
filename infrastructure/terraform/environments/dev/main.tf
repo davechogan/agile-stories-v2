@@ -13,7 +13,7 @@ provider "aws" {
 
 # Fetch existing VPC
 data "aws_vpc" "existing" {
-  cidr_block = var.vpc_cidr_block
+  id = "vpc-075ca467a1d924c87"
 }
 
 # Fetch private subnets in the VPC
@@ -33,6 +33,15 @@ variable "vpc_cidr_block" {
   default = "10.0.0.0/16"
 }
 
+# Retrieve OpenAI API Key from Secrets Manager
+data "aws_secretsmanager_secret" "openai_key" {
+  name = "openai_key"
+}
+
+data "aws_secretsmanager_secret_version" "openai_key_version" {
+  secret_id = data.aws_secretsmanager_secret.openai_key.id
+}
+
 # Agile Stories Module
 module "agile_stories" {
   source = "../../modules/agile_stories"
@@ -43,12 +52,11 @@ module "agile_stories" {
   private_subnet_cidrs = ["10.0.3.0/24", "10.0.4.0/24"]
   public_subnet_ids    = ["subnet-05c29484564e0db92"]
 
-
   # Required variables
   account_id                  = var.account_id
   environment                 = var.environment
   aws_region                  = var.aws_region
-  openai_api_key              = var.openai_api_key
+  openai_api_key              = data.aws_secretsmanager_secret_version.openai_key_version.secret_string
   vpc_id                      = var.vpc_id
   subnet_ids                  = var.subnet_ids
   analyze_story_package_path  = var.analyze_story_package_path
@@ -71,7 +79,7 @@ module "lambda_functions" {
   environment                 = var.environment
   vpc_id                      = var.vpc_id
   subnet_ids                  = var.subnet_ids
-  openai_api_key              = var.openai_api_key
+  openai_api_key              = data.aws_secretsmanager_secret_version.openai_key_version.secret_string
   analyze_story_package_path  = var.analyze_story_package_path
   estimate_story_package_path = var.estimate_story_package_path
   get_status_package_path     = var.get_status_package_path

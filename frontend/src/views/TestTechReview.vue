@@ -169,20 +169,16 @@
             <div class="footer-buttons">
               <v-btn 
                 color="success" 
-                prepend-icon="mdi-check-circle"
                 class="mr-4"
-                :disabled="editingStory || editingAC"
                 @click="acceptTechReview"
               >
                 ACCEPT TECH REVIEW
               </v-btn>
               <v-btn 
-                color="primary" 
-                prepend-icon="mdi-account-group"
-                :disabled="editingStory || editingAC"
+                color="primary"
                 @click="submitForEstimation"
               >
-                GET TEAM ESTIMATE
+                SEND FOR ESTIMATION
               </v-btn>
             </div>
             <div class="footer-hint" v-if="editingStory || editingAC">
@@ -398,20 +394,25 @@ const submitForEstimation = async () => {
   max-width: 1800px;
   margin: 0 auto;
   min-height: 100vh;
+  position: relative;
 }
 
 .primary-content-wrapper {
-  width: 100%;
-  min-width: 0;
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .primary-content {
-  flex-grow: 1;
-  margin-bottom: 2rem;
+  position: sticky;
+  top: 2rem;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   padding: 2rem;
+  max-height: calc(100vh - 8rem);
   overflow-y: auto;
+  flex-grow: 1;
 }
 
 /* Implementation Details Styles */
@@ -484,8 +485,6 @@ const submitForEstimation = async () => {
 
 /* Analysis Panel Styles */
 .analysis-panel {
-  width: 100%;
-  min-width: 0;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   padding: 2rem;

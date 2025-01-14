@@ -144,17 +144,21 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const storyStore = useStoryStore()
-const analysis = computed(() => {
-  console.log('Current analysis:', storyStore.currentAnalysis)
-  return storyStore.currentAnalysis
-})
+const analysis = ref(null)
 
 onMounted(() => {
-  if (!storyStore.currentAnalysis) {
-    console.log('No analysis data, redirecting to input')
+  // Use mock data instead of redirecting
+  analysis.value = mockAnalysisResult
+})
+
+// Comment out or remove the redirect logic
+/*
+watch(analysis, (newValue) => {
+  if (!newValue) {
     router.push('/')
   }
 })
+*/
 
 // Story editing
 const editingStory = ref(false)

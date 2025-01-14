@@ -30,6 +30,27 @@
         >
           Estimates
         </v-btn>
+        <v-btn 
+          to="/test-tech-review-view" 
+          variant="text"
+          color="primary"
+        >
+          Test Tech Review View
+        </v-btn>
+        <v-btn 
+          to="/test-tech-review" 
+          variant="text"
+          color="primary"
+        >
+          Test Tech Review
+        </v-btn>
+        <v-btn 
+          :to="'/test-agile-results'" 
+          variant="text"
+          color="primary"
+        >
+          Test Agile Results
+        </v-btn>
       </v-container>
     </v-app-bar>
 
@@ -70,5 +91,20 @@ html, body {
 
 .v-btn {
   text-transform: none;
+}
+
+/* Check these global styles */
+.v-application {
+  /* Are there any width/height constraints? */
+}
+
+.v-main {
+  /* Check main content container settings */
+}
+
+/* Add responsive container width */
+.v-container {
+  max-width: 100% !important;
+  width: 100%;
 }
 </style>

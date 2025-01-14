@@ -45,6 +45,7 @@ resource "aws_dynamodb_table" "estimations" {
     type = "S"
   }
 
+
   # GSI for story queries
   global_secondary_index {
     name            = "story-created-index"
