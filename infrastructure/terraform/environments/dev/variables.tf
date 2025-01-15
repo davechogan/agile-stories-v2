@@ -1,3 +1,4 @@
+# 1. AWS Configuration Variables
 variable "account_id" {
   description = "AWS Account ID"
   type        = string
@@ -15,23 +16,43 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
+# 2. VPC Configuration
 variable "vpc_id" {
   description = "VPC ID where resources will be created"
   type        = string
 }
 
-variable "subnet_ids" {
-  description = "List of subnet IDs for the resources"
-  type        = list(string)
-}
-
-variable "openai_api_key" {
-  description = "OpenAI API Key (stored in AWS Secrets Manager)"
+variable "cidr_block" {
+  description = "CIDR block for VPC"
   type        = string
-  default     = ""
 }
 
-# Lambda package paths
+variable "vpc_cidr" {
+  description = "CIDR block for VPC"
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+variable "availability_zones" {
+  description = "List of availability zones"
+  type        = list(string)
+  default     = ["us-east-1a", "us-east-1b"]
+}
+
+# 3. Subnet Configuration
+variable "public_subnet_cidrs" {
+  description = "List of public subnet CIDR blocks"
+  type        = list(string)
+  default     = ["10.0.101.0/24", "10.0.102.0/24"]
+}
+
+variable "private_subnet_cidrs" {
+  description = "List of private subnet CIDR blocks"
+  type        = list(string)
+  default     = ["10.0.103.0/24", "10.0.104.0/24"]
+}
+
+# 4. Lambda Package Paths
 variable "analyze_story_package_path" {
   description = "Path to analyze story Lambda package"
   type        = string
@@ -67,68 +88,9 @@ variable "get_status_package_path" {
   type        = string
 }
 
-# Other variables from terraform.tfvars that need declaration
-variable "dlq_messages_threshold" {
-  description = "Threshold for DLQ messages alarm"
-  type        = number
-  default     = 1
-}
-
-variable "region" {
-  description = "AWS region"
+# 5. API Configuration
+variable "openai_api_key" {
+  description = "OpenAI API Key (stored in AWS Secrets Manager)"
   type        = string
-  default     = "us-east-1"
-}
-
-variable "lambda_memory_size" {
-  description = "Memory size for Lambda functions in MB"
-  type        = number
-  default     = 256
-}
-
-variable "enable_detailed_monitoring" {
-  description = "Enable detailed CloudWatch monitoring"
-  type        = bool
-  default     = false
-}
-
-# Add these variables
-variable "availability_zones" {
-  description = "List of availability zones"
-  type        = list(string)
-  default     = ["us-east-1a", "us-east-1b"]
-}
-
-variable "lambda_timeout" {
-  description = "Timeout for Lambda functions"
-  type        = number
-  default     = 30
-}
-
-variable "cidr_block" {
-  description = "CIDR block for VPC"
-  type        = string
-}
-
-variable "public_subnet_cidrs" {
-  description = "List of public subnet CIDR blocks"
-  type        = list(string)
-  default     = ["10.0.1.0/24", "10.0.2.0/24"]
-}
-
-variable "private_subnet_cidrs" {
-  description = "List of private subnet CIDR blocks"
-  type        = list(string)
-  default     = ["10.0.3.0/24", "10.0.4.0/24"]
-}
-
-variable "public_subnet_ids" {
-  description = "List of public subnet IDs"
-  type        = list(string)
-}
-
-variable "vpc_cidr" {
-  description = "CIDR block for VPC"
-  type        = string
-  default     = "10.0.0.0/16"
+  default     = ""
 } 
