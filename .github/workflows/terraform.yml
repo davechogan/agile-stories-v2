@@ -99,18 +99,20 @@ jobs:
         TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
         TF_VAR_account_id: ${{ secrets.AWS_ACCOUNT_ID }}
       run: |
-    cd infrastructure/terraform/environments/dev
-    echo "Checking if OpenAI API key and AWS Account ID are set..."
-    if [ -n "$TF_VAR_openai_api_key" ]; then
-      echo "OpenAI API key is set"
-    else
-      echo "Error: OpenAI API key is not set"
-      exit 1
-    fi
-    if [ -n "$TF_VAR_account_id" ]; then
-      echo "AWS Account ID is set"
-    else
-      echo "Error: AWS Account ID is not set"
-      exit 1
-    fi
-    terraform apply -auto-approve
+        cd infrastructure/terraform/environments/dev
+        echo "Checking if OpenAI API key and AWS Account ID are set..."
+        if [ -n "$TF_VAR_openai_api_key" ]; then
+          echo "OpenAI API key is set"
+        else
+          echo "Error: OpenAI API key is not set"
+          exit 1
+        fi
+        if [ -n "$TF_VAR_account_id" ]; then
+          echo "AWS Account ID is set"
+        else
+          echo "Error: AWS Account ID is not set"
+          exit 1
+        fi
+        terraform apply -auto-approve
+
+
