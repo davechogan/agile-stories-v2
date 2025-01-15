@@ -94,14 +94,38 @@ variable "account_id" {
   type        = string
 }
 
+variable "stories_table_name" {
+  description = "Name of the stories DynamoDB table"
+  type        = string
+}
 
 variable "stories_table_arn" {
-  description = "ARN of the main stories DynamoDB table"
+  description = "ARN of the stories DynamoDB table"
+  type        = string
+}
+
+variable "stories_table_stream_arn" {
+  description = "Stream ARN of the stories DynamoDB table"
+  type        = string
+}
+
+variable "estimations_table_name" {
+  description = "Name of the estimations DynamoDB table"
   type        = string
 }
 
 variable "estimations_table_arn" {
   description = "ARN of the estimations DynamoDB table"
+  type        = string
+}
+
+variable "estimations_table_stream_arn" {
+  description = "Stream ARN of the estimations DynamoDB table"
+  type        = string
+}
+
+variable "tenant_index_name" {
+  description = "Name of the tenant GSI for DynamoDB tables"
   type        = string
 }
 

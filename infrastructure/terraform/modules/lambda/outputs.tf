@@ -82,4 +82,21 @@ output "lambda_function_names" {
     aws_lambda_function.technical_review_worker.function_name,
     aws_lambda_function.get_status.function_name
   ]
+}
+
+# New outputs for DynamoDB configurations
+output "lambda_dynamodb_policy_arn" {
+  description = "ARN of the IAM policy for Lambda DynamoDB access"
+  value       = aws_iam_policy.dynamodb_access.arn
+}
+
+output "lambda_environment_variables" {
+  description = "Environment variables configured for Lambda functions"
+  value       = local.lambda_environment_variables
+}
+
+# Note: Sensitive information should be marked as sensitive
+output "lambda_role_arn" {
+  description = "ARN of the IAM role used by Lambda functions"
+  value       = aws_iam_role.lambda_role.arn
 } 

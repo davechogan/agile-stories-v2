@@ -77,4 +77,9 @@ module "agile_stories" {
   technical_review_package_path        = var.technical_review_package_path
   technical_review_worker_package_path = var.technical_review_worker_package_path
   get_status_package_path             = var.get_status_package_path
+
+  estimations_table_name      = "${var.environment}-agile-stories-estimations"
+  estimations_table_arn       = "arn:aws:dynamodb:${var.aws_region}:${var.account_id}:table/${var.environment}-agile-stories-estimations"
+  estimations_table_stream_arn = "arn:aws:dynamodb:${var.aws_region}:${var.account_id}:table/${var.environment}-agile-stories-estimations/stream/*"
+  tenant_index_name           = "tenant-index"
 }

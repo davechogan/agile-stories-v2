@@ -288,4 +288,92 @@ resource "aws_lambda_function" "technical_review_worker" {
       OPENAI_API_KEY = var.openai_api_key
     }
   }
-} 
+}
+
+# Update environment variables
+locals {
+  lambda_environment_variables = {
+    STORIES_TABLE     = var.stories_table_name
+    ESTIMATIONS_TABLE = var.estimations_table_name
+    TENANT_INDEX      = var.tenant_index_name
+  }
+}
+
+# Update IAM policy
+data "aws_iam_policy_document" "lambda_dynamodb_policy" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:DeleteItem",
+      "dynamodb:Query",
+      "dynamodb:Scan"
+    ]
+    resources = [
+      var.stories_table_arn,
+      "${var.stories_table_arn}/index/*",
+      var.estimations_table_arn,
+      "${var.estimations_table_arn}/index/*"
+    ]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "dynamodb:GetRecords",
+      "dynamodb:GetShardIterator",
+      "dynamodb:DescribeStream",
+      "dynamodb:ListStreams"
+    ]
+    resources = [
+      var.stories_table_stream_arn,
+      var.estimations_table_stream_arn
+    ]
+  }
+}
+
+# Add the IAM policy for DynamoDB access
+resource "aws_iam_policy" "dynamodb_access" {
+  name = "${var.environment}-lambda-dynamodb-access"
+  description = "IAM policy for Lambda to access DynamoDB tables"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:Scan"
+        ]
+        Resource = [
+          var.stories_table_arn,
+          "${var.stories_table_arn}/index/*",
+          var.estimations_table_arn,
+          "${var.estimations_table_arn}/index/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetRecords",
+          "dynamodb:GetShardIterator",
+          "dynamodb:DescribeStream",
+          "dynamodb:ListStreams"
+        ]
+        Resource = [
+          var.stories_table_stream_arn,
+          var.estimations_table_stream_arn
+        ]
+      }
+    ]
+  })
+}
+
+# ... rest of the Lambda configurations using local.lambda_environment_variables ... 

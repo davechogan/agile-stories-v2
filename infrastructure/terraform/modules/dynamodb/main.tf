@@ -3,7 +3,8 @@ resource "aws_dynamodb_table" "agile_stories" {
   name           = "${var.environment}-agile-stories"
   billing_mode   = "PAY_PER_REQUEST"
   hash_key       = "story_id"
-  range_key      = "version"
+  stream_enabled = true
+  stream_view_type = "NEW_AND_OLD_IMAGES"
 
   attribute {
     name = "story_id"
@@ -11,12 +12,40 @@ resource "aws_dynamodb_table" "agile_stories" {
   }
 
   attribute {
-    name = "version"
+    name = "tenantId"
     type = "S"
+  }
+
+  attribute {
+    name = "created_at"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "tenant-index"
+    hash_key        = "tenantId"
+    range_key       = "story_id"
+    projection_type = "ALL"
+  }
+
+  global_secondary_index {
+    name            = "story-created-index"
+    hash_key        = "story_id"
+    range_key       = "created_at"
+    projection_type = "ALL"
+  }
+
+  point_in_time_recovery {
+    enabled = var.enable_point_in_time_recovery
+  }
+
+  server_side_encryption {
+    enabled = var.enable_server_side_encryption
   }
 
   tags = {
     Environment = var.environment
+    Project     = "agile-stories"
   }
 }
 
@@ -44,11 +73,24 @@ resource "aws_dynamodb_table" "estimations" {
     type = "S"
   }
 
+  attribute {
+    name = "tenantId"
+    type = "S"
+  }
+
   # GSI for story queries
   global_secondary_index {
     name            = "story-created-index"
     hash_key        = "story_id"
     range_key       = "created_at"
+    projection_type = "ALL"
+  }
+
+  # Add GSI for tenant queries
+  global_secondary_index {
+    name            = "tenant-index"
+    hash_key        = "tenantId"
+    range_key       = "story_id"
     projection_type = "ALL"
   }
 

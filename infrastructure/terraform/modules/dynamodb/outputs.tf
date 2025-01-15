@@ -9,6 +9,10 @@ output "stories_table_arn" {
   value       = aws_dynamodb_table.agile_stories.arn
 }
 
+output "stories_table_stream_arn" {
+  value = aws_dynamodb_table.agile_stories.stream_arn
+}
+
 output "estimations_table_name" {
   description = "Name of the estimations table"
   value       = aws_dynamodb_table.estimations.name
@@ -17,6 +21,10 @@ output "estimations_table_name" {
 output "estimations_table_arn" {
   description = "ARN of the estimations table"
   value       = aws_dynamodb_table.estimations.arn
+}
+
+output "estimations_table_stream_arn" {
+  value = aws_dynamodb_table.estimations.stream_arn
 }
 
 output "locks_table_name" {
@@ -37,6 +45,10 @@ output "dynamodb_policy_arn" {
 output "terraform_locks_table_arn" {
   description = "ARN of the terraform locks table"
   value       = aws_dynamodb_table.terraform_locks.arn
+}
+
+output "tenant_index_name" {
+  value = "tenant-index"
 }
 
 

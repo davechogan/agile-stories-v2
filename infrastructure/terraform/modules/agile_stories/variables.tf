@@ -1,5 +1,5 @@
 variable "environment" {
-  description = "Deployment environment (e.g., dev, staging, prod)"
+  description = "Environment name (dev, prod, etc)"
   type        = string
 }
 
@@ -48,7 +48,6 @@ variable "get_status_package_path" {
   description = "Path to the get status Lambda package"
   type        = string
 }
-
 variable "alarm_actions" {
   description = "List of ARNs to notify when an alarm triggers"
   type        = list(string)
@@ -107,3 +106,24 @@ variable "prefix" {
   type        = string
   default     = "agile-stories"
 }
+
+variable "estimations_table_name" {
+  description = "Name of the estimations DynamoDB table"
+  type        = string
+}
+
+variable "estimations_table_arn" {
+  description = "ARN of the estimations DynamoDB table"
+  type        = string
+}
+
+variable "estimations_table_stream_arn" {
+  description = "Stream ARN of the estimations DynamoDB table"
+  type        = string
+}
+
+variable "tenant_index_name" {
+  description = "Name of the tenant GSI for DynamoDB tables"
+  type        = string
+}
+

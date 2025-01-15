@@ -19,4 +19,17 @@ variable "enable_stream" {
   description = "Enable DynamoDB Streams"
   type        = bool
   default     = true
+}
+
+# New variables for estimates table
+variable "estimates_table_name" {
+  description = "Name of the estimates table"
+  type        = string
+  default     = "agile-stories-estimations"
+}
+
+variable "tags" {
+  description = "Additional tags for the DynamoDB tables"
+  type        = map(string)
+  default     = {}
 } 

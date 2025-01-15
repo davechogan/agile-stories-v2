@@ -3,16 +3,6 @@ output "api_endpoint" {
   value       = module.api_gateway.api_endpoint
 }
 
-output "stories_table_name" {
-  description = "Name of the DynamoDB stories table"
-  value       = module.dynamodb.stories_table_name
-}
-
-output "stories_table_arn" {
-  description = "ARN of the DynamoDB stories table"
-  value       = module.dynamodb.stories_table_arn
-}
-
 output "analysis_queue_url" {
   description = "URL of the SQS analysis queue"
   value       = module.sqs.analysis_queue_url
@@ -91,4 +81,19 @@ output "technical_review_lambda_arn" {
 output "get_status_lambda_arn" {
   description = "ARN of the get status Lambda function"
   value       = module.lambda.get_status_lambda_arn
+}
+
+output "stories_table_name" {
+  description = "Name of the stories DynamoDB table"
+  value       = module.dynamodb.stories_table_name
+}
+
+output "stories_table_arn" {
+  description = "ARN of the stories DynamoDB table"
+  value       = module.dynamodb.stories_table_arn
+}
+
+output "stories_table_stream_arn" {
+  description = "Stream ARN of the stories DynamoDB table"
+  value       = module.dynamodb.stories_table_stream_arn
 }

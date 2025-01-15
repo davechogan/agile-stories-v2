@@ -56,7 +56,8 @@ module "lambda" {
 
   dynamodb_table_arn       = module.dynamodb.stories_table_arn
   stories_table_arn        = module.dynamodb.stories_table_arn
-  estimations_table_arn    = module.dynamodb.estimations_table_arn
+  stories_table_name       = module.dynamodb.stories_table_name
+  stories_table_stream_arn = module.dynamodb.stories_table_stream_arn
   terraform_locks_table_arn = module.dynamodb.terraform_locks_table_arn
 
   analyze_story_package_path           = var.analyze_story_package_path
@@ -76,6 +77,12 @@ module "lambda" {
 
   dynamodb_table_name = module.dynamodb.stories_table_name
   analysis_queue_url  = module.sqs.analysis_queue_url
+
+  # Consolidated estimations table config and new variables
+  estimations_table_name      = module.dynamodb.estimations_table_name
+  estimations_table_arn       = module.dynamodb.estimations_table_arn
+  estimations_table_stream_arn = module.dynamodb.estimations_table_stream_arn
+  tenant_index_name           = module.dynamodb.tenant_index_name
 }
 
 # API Gateway
