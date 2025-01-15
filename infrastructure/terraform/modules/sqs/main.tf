@@ -93,4 +93,12 @@ resource "aws_iam_policy" "sqs_access" {
       }
     ]
   })
+}
+
+resource "aws_sqs_queue" "analysis" {
+  name = "${var.environment}-agile-stories-analysis"
+
+  tags = {
+    Environment = var.environment
+  }
 } 

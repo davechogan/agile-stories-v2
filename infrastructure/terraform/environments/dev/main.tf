@@ -46,17 +46,19 @@ data "aws_secretsmanager_secret_version" "openai_key_version" {
 module "agile_stories" {
   source = "../../modules/agile_stories"
 
-  # Required variables
-  account_id                           = var.account_id
-  environment                          = var.environment
-  aws_region                           = var.aws_region
-  openai_api_key                       = data.aws_secretsmanager_secret_version.openai_key_version.secret_string
-  vpc_id                               = var.vpc_id
-  subnet_ids                           = var.subnet_ids
-  public_subnet_ids                    = var.public_subnet_ids
-  cidr_block                          = var.cidr_block
-  public_subnet_cidrs                 = var.public_subnet_cidrs
-  private_subnet_cidrs                = var.private_subnet_cidrs
+  # Update subnet references
+  subnet_ids        = module.vpc.private_subnet_ids
+  public_subnet_ids = module.vpc.public_subnet_ids
+  vpc_id           = module.vpc.vpc_id
+
+  # Other configurations remain the same
+  account_id       = var.account_id
+  environment      = var.environment
+  aws_region       = var.aws_region
+  openai_api_key   = data.aws_secretsmanager_secret_version.openai_key_version.secret_string
+  cidr_block       = var.cidr_block
+  public_subnet_cidrs = var.public_subnet_cidrs
+  private_subnet_cidrs = var.private_subnet_cidrs
 
   # Lambda package paths
   analyze_story_package_path           = var.analyze_story_package_path
@@ -81,8 +83,8 @@ module "lambda_functions" {
   # Other required variables
   account_id                  = var.account_id
   environment                 = var.environment
-  vpc_id                      = var.vpc_id
-  subnet_ids                  = var.subnet_ids
+  vpc_id                      = module.vpc.vpc_id
+  subnet_ids                  = module.vpc.private_subnet_ids
   openai_api_key              = data.aws_secretsmanager_secret_version.openai_key_version.secret_string
   analyze_story_package_path  = "../../../../backend/src/analyze_story/package.zip"
   analyze_story_worker_package_path    = "../../../../backend/src/analyze_story_worker/package.zip"
@@ -93,10 +95,34 @@ module "lambda_functions" {
   get_status_package_path             = "../../../../backend/src/get_status/package.zip"
 
   function_name = "${var.environment}-lambda-functions"
+
+  dynamodb_table_name = "${var.environment}-agile-stories"
+  analysis_queue_url  = module.sqs.analysis_queue_url
 }
 
 # DynamoDB Module
 module "dynamodb" {
   source      = "../../modules/dynamodb"
   environment = var.environment
+}
+
+module "vpc" {
+  source = "../../modules/vpc"
+  
+  environment = var.environment
+  cidr_block  = var.vpc_cidr
+  
+  # Update these with new CIDR ranges that don't conflict
+  public_subnet_cidrs  = ["10.0.101.0/24", "10.0.102.0/24"]
+  private_subnet_cidrs = ["10.0.103.0/24", "10.0.104.0/24"]
+  
+  # Remove hardcoded subnet IDs
+  public_subnet_ids    = []
+  availability_zones   = ["us-east-1a", "us-east-1b"]
+}
+
+module "sqs" {
+  source      = "../../modules/sqs"
+  environment = var.environment
+  prefix      = "agile-stories"
 }

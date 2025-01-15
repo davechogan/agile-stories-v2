@@ -1,6 +1,6 @@
 output "analysis_queue_url" {
   description = "URL of the analysis queue"
-  value       = aws_sqs_queue.analysis_queue.url
+  value       = aws_sqs_queue.analysis.url
 }
 
 output "analysis_queue_arn" {

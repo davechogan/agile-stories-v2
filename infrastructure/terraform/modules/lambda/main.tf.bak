@@ -65,7 +65,7 @@ resource "aws_lambda_function" "analyze_story" {
   filename      = var.analyze_story_package_path
   function_name = "${var.environment}-agile-stories-analyze"
   role          = aws_iam_role.lambda_role.arn
-  handler = "app.handler"
+  handler       = "lambda_function.lambda_handler"
   runtime       = "python3.11"
   timeout       = 30
   memory_size   = 256
@@ -74,8 +74,6 @@ resource "aws_lambda_function" "analyze_story" {
     variables = {
       ENVIRONMENT    = var.environment
       OPENAI_API_KEY = var.openai_api_key
-      DYNAMODB_TABLE = var.dynamodb_table_name
-      ANALYSIS_QUEUE_URL = var.analysis_queue_url
     }
   }
 
@@ -95,7 +93,7 @@ resource "aws_lambda_function" "team_estimate" {
   filename      = var.team_estimate_package_path
   function_name = "${var.environment}-agile-stories-estimate"
   role          = aws_iam_role.lambda_role.arn
-  handler = "app.handler"
+  handler       = "lambda_function.lambda_handler"
   runtime       = "python3.11"
   timeout       = 30
   memory_size   = 256
@@ -123,7 +121,7 @@ resource "aws_lambda_function" "get_status" {
   filename      = var.get_status_package_path
   function_name = "${var.environment}-agile-stories-status"
   role          = aws_iam_role.lambda_role.arn
-  handler = "app.handler"
+  handler       = "lambda_function.lambda_handler"
   runtime       = "python3.11"
   timeout       = 10
   memory_size   = 128
@@ -213,7 +211,7 @@ resource "aws_lambda_function" "analyze_story_worker" {
   function_name    = "${var.environment}-agile-stories-analyze-worker"
   role            = aws_iam_role.lambda_role.arn
   handler         = "index.handler"
-  runtime = "python3.11"
+  runtime         = "nodejs18.x"
   memory_size     = var.lambda_memory_size
   timeout         = var.lambda_timeout
 
@@ -234,7 +232,7 @@ resource "aws_lambda_function" "team_estimate_worker" {
   function_name    = "${var.environment}-agile-stories-estimate-worker"
   role            = aws_iam_role.lambda_role.arn
   handler         = "index.handler"
-  runtime = "python3.11"
+  runtime         = "nodejs18.x"
   memory_size     = var.lambda_memory_size
   timeout         = var.lambda_timeout
 
@@ -255,7 +253,7 @@ resource "aws_lambda_function" "technical_review" {
   function_name    = "${var.environment}-agile-stories-review"
   role            = aws_iam_role.lambda_role.arn
   handler         = "index.handler"
-  runtime = "python3.11"
+  runtime         = "nodejs18.x"
   memory_size     = var.lambda_memory_size
   timeout         = var.lambda_timeout
 
@@ -276,7 +274,7 @@ resource "aws_lambda_function" "technical_review_worker" {
   function_name    = "${var.environment}-agile-stories-review-worker"
   role            = aws_iam_role.lambda_role.arn
   handler         = "index.handler"
-  runtime = "python3.11"
+  runtime         = "nodejs18.x"
   memory_size     = var.lambda_memory_size
   timeout         = var.lambda_timeout
 

@@ -1,9 +1,9 @@
 # Stories Table
 resource "aws_dynamodb_table" "agile_stories" {
-  name         = "${var.environment}-agile-stories"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "story_id"
-  range_key    = "version"
+  name           = "${var.environment}-agile-stories"
+  billing_mode   = "PAY_PER_REQUEST"
+  hash_key       = "story_id"
+  range_key      = "version"
 
   attribute {
     name = "story_id"
@@ -17,7 +17,6 @@ resource "aws_dynamodb_table" "agile_stories" {
 
   tags = {
     Environment = var.environment
-    Project     = "agile-stories"
   }
 }
 
@@ -44,7 +43,6 @@ resource "aws_dynamodb_table" "estimations" {
     name = "created_at"
     type = "S"
   }
-
 
   # GSI for story queries
   global_secondary_index {
@@ -98,9 +96,9 @@ resource "aws_iam_policy" "dynamodb_access" {
 
 # Terraform state locking table
 resource "aws_dynamodb_table" "terraform_locks" {
-  name         = "agile-stories-terraform-locks"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "LockID"
+  name           = "agile-stories-terraform-locks"
+  billing_mode   = "PAY_PER_REQUEST"
+  hash_key       = "LockID"
 
   attribute {
     name = "LockID"

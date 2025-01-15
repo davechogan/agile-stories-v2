@@ -1,10 +1,11 @@
 variable "prefix" {
-  description = "Prefix for resource names"
+  description = "Prefix for SQS queue names"
   type        = string
+  default     = "agile-stories"
 }
 
 variable "environment" {
-  description = "Environment name (e.g., dev, staging, prod)"
+  description = "Environment name (e.g., dev, prod)"
   type        = string
 }
 

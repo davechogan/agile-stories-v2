@@ -42,7 +42,7 @@ resource "aws_subnet" "private" {
 
 # Elastic IPs for NAT Gateways
 resource "aws_eip" "nat" {
-  count  = length(var.public_subnet_ids)
+  count  = length(var.public_subnet_cidrs)
   domain = "vpc"
 
   tags = {
@@ -52,9 +52,9 @@ resource "aws_eip" "nat" {
 
 # NAT Gateways
 resource "aws_nat_gateway" "main" {
-  count         = length(var.public_subnet_ids)
+  count         = length(var.public_subnet_cidrs)
   allocation_id = aws_eip.nat[count.index].id
-  subnet_id     = var.public_subnet_ids[count.index]
+  subnet_id     = aws_subnet.public[count.index].id
 
   tags = {
     Name = "${var.environment}-nat-gateway-${count.index + 1}"
@@ -102,4 +102,54 @@ resource "aws_route_table_association" "private" {
   count          = length(var.private_subnet_cidrs)
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private[count.index].id
+}
+
+# DynamoDB VPC Endpoint
+resource "aws_vpc_endpoint" "dynamodb" {
+  vpc_id       = aws_vpc.main.id
+  service_name = "com.amazonaws.${var.aws_region}.dynamodb"
+  
+  route_table_ids = aws_route_table.private[*].id
+  
+  tags = {
+    Name        = "${var.environment}-dynamodb-endpoint"
+    Environment = var.environment
+  }
+}
+
+# SQS VPC Endpoint
+resource "aws_vpc_endpoint" "sqs" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.aws_region}.sqs"
+  vpc_endpoint_type = "Interface"
+  
+  subnet_ids = aws_subnet.private[*].id
+  
+  security_group_ids = [aws_security_group.vpc_endpoints.id]
+  
+  private_dns_enabled = true
+  
+  tags = {
+    Name        = "${var.environment}-sqs-endpoint"
+    Environment = var.environment
+  }
+}
+
+# Security group for VPC endpoints
+resource "aws_security_group" "vpc_endpoints" {
+  name        = "${var.environment}-vpc-endpoints"
+  description = "Security group for VPC endpoints"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [var.cidr_block]
+  }
+
+  tags = {
+    Name        = "${var.environment}-vpc-endpoints"
+    Environment = var.environment
+  }
 }

@@ -114,3 +114,13 @@ variable "function_name" {
   description = "Name of the Lambda function"
   type        = string
 }
+
+variable "dynamodb_table_name" {
+  description = "Name of the DynamoDB table"
+  type        = string
+}
+
+variable "analysis_queue_url" {
+  description = "URL of the SQS queue for analysis"
+  type        = string
+}

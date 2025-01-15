@@ -73,6 +73,9 @@ module "lambda" {
   lambda_timeout       = 30
   additional_policy_arns = []
   function_name = "${var.environment}-agile-stories"
+
+  dynamodb_table_name = module.dynamodb.stories_table_name
+  analysis_queue_url  = module.sqs.analysis_queue_url
 }
 
 # API Gateway
