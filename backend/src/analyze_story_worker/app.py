@@ -17,102 +17,79 @@ Environment Variables:
 
 import json
 import os
-from datetime import datetime
 import boto3
 from botocore.exceptions import ClientError
-from openai import OpenAI
 
+# Initialize AWS client
 dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
 
-def get_agile_coach_prompt():
-    return """You are an experienced Agile Coach reviewing a user story.
-    Analyze the story and provide:
-    1. An improved version of the story
-    2. INVEST analysis
-    3. Specific suggestions for improvement
+def get_story(story_id, table):
+    """
+    Retrieve a story from DynamoDB by its ID and version
     
-    Respond with a JSON object containing:
-    {
-        "improved_story": {
-            "title": "string",
-            "description": "string",
-            "acceptance_criteria": ["string"]
-        },
-        "invest_analysis": [
-            {
-                "letter": "I",
-                "title": "Independent",
-                "content": "Analysis of independence"
-            },
-            ...
-        ],
-        "suggestions": [
-            {
-                "title": "Suggestion title",
-                "content": "Detailed suggestion"
-            }
-        ]
-    }"""
-
-def get_secret():
-    secret_name = "openai_key"
-    region_name = "us-east-1"
-
-    session = boto3.session.Session()
-    client = session.client(
-        service_name='secretsmanager',
-        region_name=region_name
-    )
-
+    Args:
+        story_id (str): The story ID (HASH/Partition key)
+        table: DynamoDB table object
+        
+    Returns:
+        dict: The story item from DynamoDB
+    """
     try:
-        get_secret_value_response = client.get_secret_value(
-            SecretId=secret_name
+        response = table.get_item(
+            Key={
+                'story_id': story_id,    # HASH/Partition key
+                'version': 'ORIGINAL'     # RANGE/Sort key
+            }
         )
-        return get_secret_value_response['SecretString']
+        return response.get('Item')
     except ClientError as e:
-        raise e
+        print(f"Error retrieving story: {e.response['Error']['Message']}")
+        raise
+    except Exception as e:
+        print(f"Unexpected error retrieving story: {str(e)}")
+        raise
+
+def analyze_story(story):
+    """
+    Analyze the story content and return analysis results
+    """
+    # For now, just return a formatted version of the content
+    return f"\nTitle: {story['content']['title']}\nDescription: {story['content']['description']}\nAcceptance Criteria:\n" + \
+           "\n".join([f"- {criterion}" for criterion in story['content']['acceptance_criteria']])
 
 def handler(event, context):
     try:
+        # Initialize table inside handler
+        table = dynamodb.Table(os.environ.get('STORIES_TABLE', 'dev-agile-stories'))
+        
         for record in event['Records']:
-            # Get message from SQS
-            message = json.loads(record['body'])
-            story_id = message['story_id']
+            body = json.loads(record['body'])
+            story_id = body['story_id']
+            print(f"Processing story: {story_id}")
             
-            # Get original story from DynamoDB
-            response = table.get_item(
-                Key={
-                    'story_id': story_id,
-                    'version': 'ORIGINAL'
-                }
-            )
-            original_story = response['Item']
+            # Get the original story
+            original_story = get_story(story_id, table)
+            print(f"Retrieved story: {json.dumps(original_story)}")
             
-            # Get OpenAI API key from Secrets Manager
-            openai_api_key = get_secret()
-            client = OpenAI(api_key=openai_api_key)
+            # Process the story
+            analysis = analyze_story(original_story)
+            print(f"Analysis complete: {json.dumps(analysis)}")
             
-            # Send to OpenAI
-            response = client.chat.completions.create(
-                model="gpt-4-1106-preview",
-                messages=[
-                    {"role": "system", "content": get_agile_coach_prompt()},
-                    {"role": "user", "content": json.dumps(original_story['content'])}
-                ]
-            )
-            
-            # Store analysis
-            analysis_item = {
+            # Create the analyzed story object
+            analyzed_story = {
                 'story_id': story_id,
-                'version': 'AGILE_COACH',
-                'content': json.loads(response.choices[0].message.content),
-                'created_at': datetime.utcnow().isoformat(),
-                'updated_at': datetime.utcnow().isoformat()
+                'content': original_story['content'],
+                'analysis': analysis,
+                'version': 'AGILE_COACH'
             }
             
-            table.put_item(Item=analysis_item)
+            # Save the analyzed story back to DynamoDB
+            table.put_item(Item=analyzed_story)
             
-    except Exception as e:
+    except KeyError as e:
         print(f"Error processing message: {str(e)}")
+        print(f"Event: {json.dumps(event)}")
+        raise
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
         raise 
