@@ -97,3 +97,13 @@ output "stories_table_stream_arn" {
   description = "Stream ARN of the stories DynamoDB table"
   value       = module.dynamodb.stories_table_stream_arn
 }
+
+output "analyze_story_worker_lambda_arn" {
+  description = "ARN of the analyze story worker Lambda function"
+  value       = module.lambda.analyze_story_worker_lambda_arn
+}
+
+output "technical_review_worker_lambda_arn" {
+  description = "ARN of the technical review worker Lambda function"
+  value       = module.lambda.technical_review_worker_lambda_arn
+}

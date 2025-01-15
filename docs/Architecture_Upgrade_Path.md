@@ -2,23 +2,29 @@
 
 This document outlines the ordered sequence for implementing architectural improvements to the Agile Stories application.
 
-## 1. Core Infrastructure Updates
-- Add API Gateway integration
-  - Set up REST API endpoints
-  - Update Lambda integrations
-  - Update frontend to use API Gateway endpoints
-- Implement multi-tenant support
-  - Add tenantId to all data structures
-  - Update Lambda functions to handle tenantId
-  - Modify queries to filter by tenantId
-- Split into two DynamoDB tables
-  - Create separate tables for stories and estimates
-  - Migrate existing data
-  - Update Lambda functions to use appropriate tables
+## 1. Core Infrastructure Updates ✅
+- Add API Gateway integration ✅
+  - Set up REST API endpoints ✅
+  - Update Lambda integrations ✅
+  - Update frontend to use API Gateway endpoints ✅
+- Implement multi-tenant support ✅
+  - Add tenantId to all data structures ✅
+  - Update Lambda functions to handle tenantId ✅
+  - Modify queries to filter by tenantId ✅
+- Split into two DynamoDB tables ✅
+  - Create separate tables for stories and estimates ✅
+  - Migrate existing data ✅
+  - Update Lambda functions to use appropriate tables ✅
 
-## 2. Workflow Orchestration
+## 2. Workflow Orchestration 🔄
 - Implement AWS Step Functions
   - Define state machine for story progression
+    - Story Analysis Flow
+      - Submit Story → Analyze → Update Status
+    - Team Estimation Flow
+      - Request Estimates → Collect Responses → Calculate Final
+    - Technical Review Flow
+      - Submit Review → Process → Update Story
   - Replace SQS orchestration
   - Add error handling and retry logic
   - Update Lambda functions to work with Step Functions

@@ -65,16 +65,17 @@ resource "aws_lambda_function" "analyze_story" {
   filename      = var.analyze_story_package_path
   function_name = "${var.environment}-agile-stories-analyze"
   role          = aws_iam_role.lambda_role.arn
-  handler       = "lambda_function.lambda_handler"
+  handler       = "app.handler"
   runtime       = "python3.11"
   timeout       = 30
   memory_size   = 256
 
+
   environment {
-    variables = {
-      ENVIRONMENT    = var.environment
-      OPENAI_API_KEY = var.openai_api_key
-    }
+    variables = merge(local.lambda_environment_variables, {
+      STEP_FUNCTION_ARN = aws_sfn_state_machine.story_analysis.arn
+      ERROR_SNS_TOPIC = var.error_sns_topic_arn
+    })
   }
 
   vpc_config {
@@ -376,4 +377,32 @@ resource "aws_iam_policy" "dynamodb_access" {
   })
 }
 
+# New Lambda functions needed:
+resource "aws_lambda_function" "error_handler" {
+  filename         = var.error_handler_package_path
+  function_name    = "${var.function_name}-error-handler"
+  role            = aws_iam_role.lambda_role.arn
+  handler         = "index.handler"
+  runtime         = "nodejs18.x"
+  timeout         = var.lambda_timeout
+  memory_size     = var.lambda_memory_size
+
+  environment {
+    variables = merge(local.lambda_environment_variables, {
+      ERROR_SNS_TOPIC = aws_sns_topic.error_notifications.arn
+    })
+  }
+}
+
+
 # ... rest of the Lambda configurations using local.lambda_environment_variables ... 
+
+resource "aws_lambda_function" "analyze_story" {
+  # Other Lambda configurations...
+
+  environment {
+    variables = {
+      STEP_FUNCTION_ARN = var.step_function_arn
+    }
+  }
+}

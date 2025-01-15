@@ -61,6 +61,8 @@ module "agile_stories" {
   subnet_ids        = module.vpc.private_subnet_ids
   public_subnet_ids = module.vpc.public_subnet_ids
   vpc_id            = module.vpc.vpc_id
+  step_function_arn = module.step_functions.state_machine_arn
+  error_sns_topic_arn = aws_sns_topic.error_notifications.arn
 
   account_id           = var.account_id
   environment          = var.environment
@@ -83,3 +85,21 @@ module "agile_stories" {
   estimations_table_stream_arn = "arn:aws:dynamodb:${var.aws_region}:${var.account_id}:table/${var.environment}-agile-stories-estimations/stream/*"
   tenant_index_name            = "tenant-index"
 }
+
+module "step_functions" {
+  source            = "../../modules/step_functions"
+  name_prefix       = "dev"
+  lambda_arns       = [
+    module.agile_stories.analyze_story_lambda_arn,
+    module.agile_stories.team_estimate_lambda_arn,
+    module.agile_stories.technical_review_lambda_arn,
+    module.agile_stories.get_status_lambda_arn
+  ]
+  workflow_definition = file("${path.module}/workflow.json")
+}
+
+resource "aws_sns_topic" "error_notifications" {
+  name = "error-notifications"
+}
+
+

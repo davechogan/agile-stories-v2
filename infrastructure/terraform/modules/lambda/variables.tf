@@ -148,3 +148,18 @@ variable "analysis_queue_url" {
   description = "URL of the SQS queue for analysis"
   type        = string
 }
+
+variable "step_function_arn" {
+  description = "ARN of the Step Functions state machine"
+  type        = string
+}
+
+variable "error_sns_topic_arn" {
+  description = "ARN of the error notification SNS topic"
+  type        = string
+}
+
+variable "step_function_arn" {
+  description = "ARN of the Step Functions state machine"
+  type        = string
+}
