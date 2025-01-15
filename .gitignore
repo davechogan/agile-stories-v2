@@ -39,6 +39,7 @@ coverage/
 *.tfstate.*
 crash.log
 *.tfvars
+!infrastructure/terraform/environments/dev/terraform.tfvars
 !example.tfvars
 .terraform.lock.hcl
 
