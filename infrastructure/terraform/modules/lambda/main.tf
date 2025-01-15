@@ -207,13 +207,13 @@ resource "aws_iam_role_policy" "secrets_manager_policy" {
 
 # Worker Lambda functions
 resource "aws_lambda_function" "analyze_story_worker" {
-  filename         = var.analyze_story_worker_package_path
-  function_name    = "${var.environment}-agile-stories-analyze-worker"
-  role            = aws_iam_role.lambda_role.arn
-  handler         = "index.handler"
-  runtime         = "nodejs18.x"
-  memory_size     = var.lambda_memory_size
-  timeout         = var.lambda_timeout
+  filename      = var.analyze_story_worker_package_path
+  function_name = "${var.environment}-agile-stories-analyze-worker"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "index.handler"
+  runtime       = "nodejs18.x"
+  memory_size   = var.lambda_memory_size
+  timeout       = var.lambda_timeout
 
   vpc_config {
     subnet_ids         = var.subnet_ids
@@ -228,13 +228,13 @@ resource "aws_lambda_function" "analyze_story_worker" {
 }
 
 resource "aws_lambda_function" "team_estimate_worker" {
-  filename         = var.team_estimate_worker_package_path
-  function_name    = "${var.environment}-agile-stories-estimate-worker"
-  role            = aws_iam_role.lambda_role.arn
-  handler         = "index.handler"
-  runtime         = "nodejs18.x"
-  memory_size     = var.lambda_memory_size
-  timeout         = var.lambda_timeout
+  filename      = var.team_estimate_worker_package_path
+  function_name = "${var.environment}-agile-stories-estimate-worker"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "index.handler"
+  runtime       = "nodejs18.x"
+  memory_size   = var.lambda_memory_size
+  timeout       = var.lambda_timeout
 
   vpc_config {
     subnet_ids         = var.subnet_ids
@@ -249,13 +249,13 @@ resource "aws_lambda_function" "team_estimate_worker" {
 }
 
 resource "aws_lambda_function" "technical_review" {
-  filename         = var.technical_review_package_path
-  function_name    = "${var.environment}-agile-stories-review"
-  role            = aws_iam_role.lambda_role.arn
-  handler         = "index.handler"
-  runtime         = "nodejs18.x"
-  memory_size     = var.lambda_memory_size
-  timeout         = var.lambda_timeout
+  filename      = var.technical_review_package_path
+  function_name = "${var.environment}-agile-stories-review"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "index.handler"
+  runtime       = "nodejs18.x"
+  memory_size   = var.lambda_memory_size
+  timeout       = var.lambda_timeout
 
   vpc_config {
     subnet_ids         = var.subnet_ids
@@ -270,13 +270,13 @@ resource "aws_lambda_function" "technical_review" {
 }
 
 resource "aws_lambda_function" "technical_review_worker" {
-  filename         = var.technical_review_worker_package_path
-  function_name    = "${var.environment}-agile-stories-review-worker"
-  role            = aws_iam_role.lambda_role.arn
-  handler         = "index.handler"
-  runtime         = "nodejs18.x"
-  memory_size     = var.lambda_memory_size
-  timeout         = var.lambda_timeout
+  filename      = var.technical_review_worker_package_path
+  function_name = "${var.environment}-agile-stories-review-worker"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "index.handler"
+  runtime       = "nodejs18.x"
+  memory_size   = var.lambda_memory_size
+  timeout       = var.lambda_timeout
 
   vpc_config {
     subnet_ids         = var.subnet_ids
@@ -336,7 +336,7 @@ data "aws_iam_policy_document" "lambda_dynamodb_policy" {
 
 # Add the IAM policy for DynamoDB access
 resource "aws_iam_policy" "dynamodb_access" {
-  name = "${var.environment}-lambda-dynamodb-access"
+  name        = "${var.environment}-lambda-dynamodb-access"
   description = "IAM policy for Lambda to access DynamoDB tables"
 
   policy = jsonencode({

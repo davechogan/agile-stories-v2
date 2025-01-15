@@ -1,9 +1,9 @@
 # Stories Table
 resource "aws_dynamodb_table" "agile_stories" {
-  name           = "${var.environment}-agile-stories"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "story_id"
-  stream_enabled = true
+  name             = "${var.environment}-agile-stories"
+  billing_mode     = "PAY_PER_REQUEST"
+  hash_key         = "story_id"
+  stream_enabled   = true
   stream_view_type = "NEW_AND_OLD_IMAGES"
 
   attribute {
@@ -138,9 +138,9 @@ resource "aws_iam_policy" "dynamodb_access" {
 
 # Terraform state locking table
 resource "aws_dynamodb_table" "terraform_locks" {
-  name           = "agile-stories-terraform-locks"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "LockID"
+  name         = "agile-stories-terraform-locks"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
 
   attribute {
     name = "LockID"
