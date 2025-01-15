@@ -82,6 +82,8 @@ jobs:
 
     - name: Terraform Plan
       working-directory: ./infrastructure/terraform/environments/dev
+      env:
+        TF_VAR_account_id: ${{ secrets.AWS_ACCOUNT_ID }}
       run: terraform plan -no-color
       if: github.event_name == 'pull_request'
 
