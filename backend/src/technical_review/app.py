@@ -1,86 +1,132 @@
 """
-Technical Review Lambda Handler
+technical_review Lambda Function
 
-This module handles technical review submissions.
-It stores the review in DynamoDB and integrates with Step Functions workflow.
+This Lambda is triggered by API Gateway when a user submits a story for technical review.
+It creates a SENIOR_DEV_PENDING version in DynamoDB and starts the Step Functions workflow.
 
-Flow:
-1. Receives review from API Gateway or Step Functions
-2. Stores review details in DynamoDB
-3. Returns review status
-4. Notifies Step Functions of task completion if called from workflow
+Environment Variables:
+    DYNAMODB_TABLE (str): Name of the DynamoDB table for storing stories
+    ENVIRONMENT (str): Environment name (e.g., 'dev', 'prod')
+
+Returns:
+    dict: API Gateway response object
+        statusCode (int): HTTP status code
+        body (str): JSON string containing:
+            story_id (str): UUID of the story
+            message (str): Success/error message
+            status (str): Status of the operation
 """
 
-import json
 import os
-from datetime import datetime
+import json
 import boto3
+import logging
+from datetime import datetime
 
+# Set up logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+# Initialize AWS clients
 dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
 sfn = boto3.client('stepfunctions')
+ssm = boto3.client('ssm')
+
+# Get DynamoDB table
+table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
+
+def get_step_function_arn():
+    """
+    Retrieves the Step Functions state machine ARN from SSM Parameter Store.
+    
+    Returns:
+        str: The ARN of the Step Functions state machine
+    
+    Raises:
+        Exception: If unable to retrieve the ARN from SSM
+    """
+    try:
+        response = ssm.get_parameter(
+            Name=f"/{os.environ['ENVIRONMENT']}/step-functions/workflow-arn"
+        )
+        return response['Parameter']['Value']
+    except Exception as e:
+        logger.error(f"Error getting Step Functions ARN: {str(e)}")
+        raise Exception(f"Failed to get Step Functions ARN: {str(e)}")
 
 def handler(event, context):
+    """
+    Lambda handler for processing technical review requests.
+    
+    Creates a new story version SENIOR_DEV_PENDING in DynamoDB with the user's
+    edited content and starts the Step Functions workflow for technical review.
+    
+    Args:
+        event (dict): API Gateway event object containing:
+            body (str): JSON string with:
+                story_id (str): UUID of the story
+                content (dict): User's edited story content
+                tenant_id (str, optional): Tenant identifier
+        context (obj): Lambda context object
+    
+    Returns:
+        dict: API Gateway response object
+    
+    Raises:
+        Exception: For any processing errors
+    """
     try:
-        # Get task token if exists (Step Functions invocation)
-        task_token = event.get('taskToken')
+        logger.info(f"Event received: {json.dumps(event)}")
         
-        # Parse input (handle both API Gateway and Step Functions input)
-        body = json.loads(event['body']) if 'body' in event else event
+        # Parse request body
+        body = json.loads(event['body'])
         story_id = body['story_id']
+        tenant_id = body.get('tenant_id', 'default')
+        content = body['content']  # User's edited version after agile coach review
+        timestamp = datetime.utcnow().isoformat()
         
-        # Store review submission
-        review_item = {
+        # Store the user's edited version as PENDING for tech review
+        item = {
             'story_id': story_id,
-            'version': 'TECH_REVIEW_REQUEST',
-            'content': {
-                'reviewer': body.get('reviewer', 'system'),
-                'review_notes': body.get('review_notes', ''),
-                'status': 'SUBMITTED'
-            },
-            'created_at': datetime.utcnow().isoformat(),
-            'updated_at': datetime.utcnow().isoformat()
+            'version': 'SENIOR_DEV_PENDING',
+            'tenant_id': tenant_id,
+            'content': content,
+            'created_at': timestamp,
+            'updated_at': timestamp
         }
         
-        # Store in DynamoDB
-        table.put_item(Item=review_item)
+        logger.info(f"Storing user edited version in DynamoDB: {json.dumps(item)}")
+        table.put_item(Item=item)
         
-        result = {
+        # Start Step Functions workflow
+        workflow_input = {
             'story_id': story_id,
-            'message': 'Technical review submitted',
-            'status': 'SUBMITTED'
+            'tenant_id': tenant_id,
+            'content': content
         }
         
-        # If called from Step Functions, send task success
-        if task_token:
-            sfn.send_task_success(
-                taskToken=task_token,
-                output=json.dumps(result)
-            )
-            return result
+        # Get Step Functions ARN and start execution
+        step_function_arn = get_step_function_arn()
+        logger.info(f"Starting Step Functions execution with input: {json.dumps(workflow_input)}")
+        sfn.start_execution(
+            stateMachineArn=step_function_arn,
+            input=json.dumps(workflow_input)
+        )
         
-        # If called from API Gateway, return formatted response
         return {
             'statusCode': 200,
-            'body': json.dumps(result)
+            'body': json.dumps({
+                'story_id': story_id,
+                'message': 'Story sent for technical review',
+                'status': 'SUBMITTED'
+            })
         }
         
     except Exception as e:
-        error_response = {
-            'error': str(e)
-        }
-        
-        # If called from Step Functions, send task failure
-        if task_token:
-            sfn.send_task_failure(
-                taskToken=task_token,
-                error='TechnicalReviewError',
-                cause=str(e)
-            )
-            return error_response
-            
-        # If called from API Gateway, return error response
+        logger.error(f"Error in handler: {str(e)}", exc_info=True)
         return {
             'statusCode': 500,
-            'body': json.dumps(error_response)
+            'body': json.dumps({
+                'error': str(e)
+            })
         } 

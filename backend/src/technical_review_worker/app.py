@@ -1,100 +1,123 @@
 """
-Technical Review Worker Lambda
+technical_review_worker Lambda Function
 
-This module processes technical reviews of user stories.
-It handles review analysis from Step Functions and updates results in DynamoDB.
+This Lambda is triggered by Step Functions to perform technical review analysis on a story.
+It creates a SENIOR_DEV version with technical review results in DynamoDB.
 
-Flow:
-1. Receives review from Step Functions task
-2. Processes technical review
-3. Stores review results in DynamoDB
-4. Returns review status to Step Functions
+Environment Variables:
+    DYNAMODB_TABLE (str): Name of the DynamoDB table for storing stories
+    OPENAI_API_KEY (str): OpenAI API key for technical analysis
+
+Returns:
+    dict: Step Functions response object containing:
+        story_id (str): UUID of the processed story
+        tenant_id (str): Tenant identifier
+        technical_review (dict): Technical review results
+        content (dict): Story content
 """
 
-import json
 import os
-from datetime import datetime
+import json
 import boto3
-import openai
+import logging
+from datetime import datetime
 
+# Set up logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+# Initialize AWS clients
 dynamodb = boto3.resource('dynamodb')
+
+# Get DynamoDB table
 table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
 
+def perform_technical_review(content):
+    """
+    Analyzes the story from a technical perspective using AI.
+    
+    Args:
+        content (dict): Story content containing:
+            title (str): Story title
+            description (str): Story description
+            story (str): User story
+            acceptance_criteria (list): List of acceptance criteria
+            analysis (dict): Previous agile coach analysis
+    
+    Returns:
+        dict: Technical review results containing:
+            technical_considerations (list): List of technical points
+            complexity_score (int): Complexity rating (1-10)
+            estimated_effort (str): Estimated effort level
+    
+    Note:
+        This is currently a placeholder. Actual implementation will use OpenAI.
+    """
+    return {
+        "technical_considerations": [
+            "Consider adding API rate limiting",
+            "Need to handle offline scenarios"
+        ],
+        "complexity_score": 7,
+        "estimated_effort": "medium"
+    }
+
 def handler(event, context):
+    """
+    Lambda handler for processing technical review requests.
+    
+    Performs technical analysis of the story and creates a SENIOR_DEV
+    version with the results.
+    
+    Args:
+        event (dict): Step Functions event object containing:
+            story_id (str): UUID of the story
+            tenant_id (str): Tenant identifier
+            content (dict): Story content to analyze
+        context (obj): Lambda context object
+    
+    Returns:
+        dict: Step Functions response object
+    
+    Raises:
+        Exception: For any processing errors
+    """
     try:
-        # Get task token from Step Functions
-        task_token = event.get('taskToken')
+        logger.info(f"Event received: {json.dumps(event)}")
         
-        # Get story details
+        # Extract data from Step Functions input
         story_id = event['story_id']
+        tenant_id = event.get('tenant_id', 'default')
+        content = event['content']
+        timestamp = datetime.utcnow().isoformat()
         
-        # Process technical review (your existing review logic)
-        review_result = {
-            'status': 'REVIEWED',
-            'technical_complexity': 'MEDIUM',
-            'implementation_notes': [
-                'Consider using AWS Cognito for auth',
-                'Implement rate limiting',
-                'Add email verification'
-            ],
-            'security_considerations': [
-                'Password complexity requirements',
-                'Token expiration',
-                'Rate limiting'
-            ],
-            'estimated_effort': 'MEDIUM'
-        }
+        # Perform technical review
+        tech_review_results = perform_technical_review(content)
         
-        # Store review results
-        review_item = {
+        # Store technical review results as new version
+        complete_item = {
             'story_id': story_id,
-            'version': 'TECH_REVIEW',
-            'content': review_result,
-            'created_at': datetime.utcnow().isoformat(),
-            'updated_at': datetime.utcnow().isoformat()
+            'version': 'SENIOR_DEV',
+            'tenant_id': tenant_id,
+            'content': {
+                **content,  # Previous content
+                'technical_review': tech_review_results
+            },
+            'created_at': timestamp,
+            'updated_at': timestamp
         }
         
-        # Update DynamoDB
-        table.put_item(Item=review_item)
+        logger.info(f"Storing SENIOR_DEV version in DynamoDB: {json.dumps(complete_item)}")
+        table.put_item(Item=complete_item)
         
-        # Return result to Step Functions
-        if task_token:
-            sfn = boto3.client('stepfunctions')
-            sfn.send_task_success(
-                taskToken=task_token,
-                output=json.dumps({
-                    'story_id': story_id,
-                    'status': 'REVIEWED',
-                    'review': review_result
-                })
-            )
-        
+        # Return results to Step Functions
         return {
-            'statusCode': 200,
-            'body': json.dumps({
-                'story_id': story_id,
-                'message': 'Technical review completed',
-                'status': 'COMPLETED',
-                'review': review_result
-            })
+            'story_id': story_id,
+            'tenant_id': tenant_id,
+            'technical_review': tech_review_results,
+            'content': content
         }
         
     except Exception as e:
-        error_response = {
-            'error': str(e),
-            'story_id': event.get('story_id')
-        }
-        
-        # Notify Step Functions of failure
-        if task_token:
-            sfn = boto3.client('stepfunctions')
-            sfn.send_task_failure(
-                taskToken=task_token,
-                error='TechnicalReviewWorkerError',
-                cause=str(e)
-            )
-        
-        return {
-            'statusCode': 500,
-            'body': json.dumps(error_response)
-        } 
+        logger.error(f"Error in handler: {str(e)}", exc_info=True)
+        raise 

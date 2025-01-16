@@ -1,97 +1,134 @@
 """
-Story Analysis Worker Lambda
+analyze_story_worker Lambda Function
 
-This module performs the AI analysis of user stories.
-It processes stories from Step Functions and updates results in DynamoDB.
+This Lambda is triggered by Step Functions to perform AI analysis on a submitted story.
+It creates an AGILE_COACH version with analysis results in DynamoDB.
 
-Flow:
-1. Receives story from Step Functions task
-2. Performs AI analysis
-3. Stores analysis results in DynamoDB
-4. Returns analysis status to Step Functions
+Environment Variables:
+    DYNAMODB_TABLE (str): Name of the DynamoDB table for storing stories
+    OPENAI_API_KEY (str): OpenAI API key for story analysis
+    
+Returns:
+    dict: Step Functions response object containing:
+        story_id (str): UUID of the processed story
+        tenant_id (str): Tenant identifier
+        analysis (dict): Analysis results from AI
+        content (dict): Original story content
 """
 
-import json
 import os
-from datetime import datetime
+import json
 import boto3
-import openai
+import logging
+from datetime import datetime
 
+# Set up logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+# Initialize AWS clients
 dynamodb = boto3.resource('dynamodb')
+
+# Get DynamoDB table
 table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
 
+def analyze_story(content):
+    """
+    Analyzes the user story using AI to provide suggestions and improvements.
+    
+    Args:
+        content (dict): Story content containing:
+            title (str): Story title
+            description (str): Story description
+            story (str): User story
+            acceptance_criteria (list): List of acceptance criteria
+    
+    Returns:
+        dict: Analysis results containing:
+            suggestions (list): List of improvement suggestions
+            score (int): Story quality score (0-100)
+    
+    Note:
+        This is currently a placeholder. Actual implementation will use OpenAI.
+    """
+    # Placeholder for actual analysis
+    return {
+        "suggestions": [
+            "Consider adding more specific acceptance criteria",
+            "The story description could be more detailed"
+        ],
+        "score": 85
+    }
+
 def handler(event, context):
+    """
+    Lambda handler for processing story analysis requests.
+    
+    Creates a PENDING version first, then performs AI analysis and creates
+    an AGILE_COACH version with the results.
+    
+    Args:
+        event (dict): Step Functions event object containing:
+            story_id (str): UUID of the story to analyze
+            tenant_id (str): Tenant identifier
+            content (dict): Story content to analyze
+        context (obj): Lambda context object
+    
+    Returns:
+        dict: Step Functions response object
+    
+    Raises:
+        Exception: For any processing errors
+    """
     try:
-        # Get task token if exists
-        task_token = event.get('taskToken')
+        logger.info(f"Event received: {json.dumps(event)}")
         
-        # Get story details
+        # Extract data from Step Functions input
         story_id = event['story_id']
-        title = event['title']
-        description = event['description']
-        acceptance_criteria = event['acceptance_criteria']
+        tenant_id = event.get('tenant_id', 'default')
+        content = event['content']
+        timestamp = datetime.utcnow().isoformat()
         
-        # Perform analysis (your existing analysis logic)
-        analysis_result = {
-            'status': 'AGILE_COACH',
-            'analysis': 'AI analysis results here',
-            'suggestions': [
-                'Suggestion 1',
-                'Suggestion 2'
-            ],
-            'complexity_score': 3
-        }
-        
-        # Store analysis results
-        analysis_item = {
+        # First, create PENDING version
+        pending_item = {
             'story_id': story_id,
-            'version': 'ANALYSIS',
-            'content': analysis_result,
-            'created_at': datetime.utcnow().isoformat(),
-            'updated_at': datetime.utcnow().isoformat()
+            'version': 'AGILE_COACH_PENDING',
+            'tenant_id': tenant_id,
+            'content': content,  # Original content
+            'created_at': timestamp,
+            'updated_at': timestamp
         }
         
-        # Update DynamoDB
-        table.put_item(Item=analysis_item)
+        logger.info(f"Storing PENDING version in DynamoDB: {json.dumps(pending_item)}")
+        table.put_item(Item=pending_item)
         
-        # Return result to Step Functions
-        if task_token:
-            sfn = boto3.client('stepfunctions')
-            sfn.send_task_success(
-                taskToken=task_token,
-                output=json.dumps({
-                    'story_id': story_id,
-                    'status': 'AGILE_COACH',
-                    'analysis': analysis_result
-                })
-            )
+        # Perform analysis
+        analysis_results = analyze_story(content)
         
+        # Store analysis results as new version
+        complete_item = {
+            'story_id': story_id,
+            'version': 'AGILE_COACH',
+            'tenant_id': tenant_id,
+            'content': {
+                **content,  # Original story content
+                'analysis': analysis_results
+            },
+            'created_at': timestamp,
+            'updated_at': timestamp
+        }
+        
+        logger.info(f"Storing AGILE_COACH version in DynamoDB: {json.dumps(complete_item)}")
+        table.put_item(Item=complete_item)
+        
+        # Return results to Step Functions
         return {
-            'statusCode': 200,
-            'body': json.dumps({
-                'story_id': story_id,
-                'message': 'Analysis completed',
-                'status': 'COMPLETED',
-                'analysis': analysis_result
-            })
+            'story_id': story_id,
+            'tenant_id': tenant_id,
+            'analysis': analysis_results,
+            'content': content
         }
         
     except Exception as e:
-        error_response = {
-            'error': str(e),
-            'story_id': event.get('story_id')
-        }
-        
-        # Notify Step Functions of failure
-        if task_token:
-            sfn = boto3.client('stepfunctions')
-            sfn.send_task_failure(
-                taskToken=task_token,
-                error='AnalysisWorkerError',
-                cause=str(e)
-            )
-        
-        return {
-            'statusCode': 500,
-            'body': json.dumps(error_response)
-        } 
+        logger.error(f"Error in handler: {str(e)}", exc_info=True)
+        raise 
