@@ -86,12 +86,12 @@ output "lambda_function_names" {
 
 # New outputs for DynamoDB configurations
 output "lambda_dynamodb_policy_arn" {
-  description = "ARN of the IAM policy for Lambda DynamoDB access"
-  value       = aws_iam_policy.dynamodb_access.arn
+  description = "ARN of the DynamoDB access policy"
+  value       = aws_iam_role_policy.dynamodb_access.id
 }
 
 output "lambda_environment_variables" {
-  description = "Environment variables configured for Lambda functions"
+  description = "Common environment variables for Lambda functions"
   value       = local.lambda_environment_variables
 }
 

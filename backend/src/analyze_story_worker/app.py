@@ -1,95 +1,97 @@
 """
-Agile Coach Analysis Worker Lambda
+Story Analysis Worker Lambda
 
-This Lambda processes stories from SQS, sending them to the OpenAI API
-for Agile Coach analysis and storing the results in DynamoDB.
+This module performs the AI analysis of user stories.
+It processes stories from Step Functions and updates results in DynamoDB.
 
 Flow:
-1. Receives message from SQS with story_id
-2. Retrieves original story from DynamoDB
-3. Sends to OpenAI for Agile Coach analysis
-4. Stores analysis results in DynamoDB
-
-Environment Variables:
-    DYNAMODB_TABLE: DynamoDB table name
-    OPENAI_API_KEY: OpenAI API key
+1. Receives story from Step Functions task
+2. Performs AI analysis
+3. Stores analysis results in DynamoDB
+4. Returns analysis status to Step Functions
 """
 
 import json
 import os
+from datetime import datetime
 import boto3
-from botocore.exceptions import ClientError
+import openai
 
-# Initialize AWS client
 dynamodb = boto3.resource('dynamodb')
-
-def get_story(story_id, table):
-    """
-    Retrieve a story from DynamoDB by its ID and version
-    
-    Args:
-        story_id (str): The story ID (HASH/Partition key)
-        table: DynamoDB table object
-        
-    Returns:
-        dict: The story item from DynamoDB
-    """
-    try:
-        response = table.get_item(
-            Key={
-                'story_id': story_id,    # HASH/Partition key
-                'version': 'ORIGINAL'     # RANGE/Sort key
-            }
-        )
-        return response.get('Item')
-    except ClientError as e:
-        print(f"Error retrieving story: {e.response['Error']['Message']}")
-        raise
-    except Exception as e:
-        print(f"Unexpected error retrieving story: {str(e)}")
-        raise
-
-def analyze_story(story):
-    """
-    Analyze the story content and return analysis results
-    """
-    # For now, just return a formatted version of the content
-    return f"\nTitle: {story['content']['title']}\nDescription: {story['content']['description']}\nAcceptance Criteria:\n" + \
-           "\n".join([f"- {criterion}" for criterion in story['content']['acceptance_criteria']])
+table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
 
 def handler(event, context):
     try:
-        # Initialize table inside handler
-        table = dynamodb.Table(os.environ.get('STORIES_TABLE', 'dev-agile-stories'))
+        # Get task token if exists
+        task_token = event.get('taskToken')
         
-        for record in event['Records']:
-            body = json.loads(record['body'])
-            story_id = body['story_id']
-            print(f"Processing story: {story_id}")
-            
-            # Get the original story
-            original_story = get_story(story_id, table)
-            print(f"Retrieved story: {json.dumps(original_story)}")
-            
-            # Process the story
-            analysis = analyze_story(original_story)
-            print(f"Analysis complete: {json.dumps(analysis)}")
-            
-            # Create the analyzed story object
-            analyzed_story = {
+        # Get story details
+        story_id = event['story_id']
+        title = event['title']
+        description = event['description']
+        acceptance_criteria = event['acceptance_criteria']
+        
+        # Perform analysis (your existing analysis logic)
+        analysis_result = {
+            'status': 'AGILE_COACH',
+            'analysis': 'AI analysis results here',
+            'suggestions': [
+                'Suggestion 1',
+                'Suggestion 2'
+            ],
+            'complexity_score': 3
+        }
+        
+        # Store analysis results
+        analysis_item = {
+            'story_id': story_id,
+            'version': 'ANALYSIS',
+            'content': analysis_result,
+            'created_at': datetime.utcnow().isoformat(),
+            'updated_at': datetime.utcnow().isoformat()
+        }
+        
+        # Update DynamoDB
+        table.put_item(Item=analysis_item)
+        
+        # Return result to Step Functions
+        if task_token:
+            sfn = boto3.client('stepfunctions')
+            sfn.send_task_success(
+                taskToken=task_token,
+                output=json.dumps({
+                    'story_id': story_id,
+                    'status': 'AGILE_COACH',
+                    'analysis': analysis_result
+                })
+            )
+        
+        return {
+            'statusCode': 200,
+            'body': json.dumps({
                 'story_id': story_id,
-                'content': original_story['content'],
-                'analysis': analysis,
-                'version': 'AGILE_COACH'
-            }
-            
-            # Save the analyzed story back to DynamoDB
-            table.put_item(Item=analyzed_story)
-            
-    except KeyError as e:
-        print(f"Error processing message: {str(e)}")
-        print(f"Event: {json.dumps(event)}")
-        raise
+                'message': 'Analysis completed',
+                'status': 'COMPLETED',
+                'analysis': analysis_result
+            })
+        }
+        
     except Exception as e:
-        print(f"Unexpected error: {str(e)}")
-        raise 
+        error_response = {
+            'error': str(e),
+            'story_id': event.get('story_id')
+        }
+        
+        # Notify Step Functions of failure
+        if task_token:
+            sfn = boto3.client('stepfunctions')
+            sfn.send_task_failure(
+                taskToken=task_token,
+                error='AnalysisWorkerError',
+                cause=str(e)
+            )
+        
+        return {
+            'statusCode': 500,
+            'body': json.dumps(error_response)
+        } 

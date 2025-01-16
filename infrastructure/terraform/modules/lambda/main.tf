@@ -1,3 +1,10 @@
+# Add this at the top of the file, after the variables
+locals {
+  lambda_environment_variables = {
+    ENVIRONMENT = var.environment
+  }
+}
+
 # IAM role for Lambda functions
 resource "aws_iam_role" "lambda_role" {
   name = "${var.environment}-agile-stories-lambda-role"
@@ -60,6 +67,7 @@ resource "aws_security_group" "lambda" {
   }
 }
 
+# Story Analysis Lambda
 resource "aws_lambda_function" "analyze_story" {
   filename      = var.analyze_story_package_path
   function_name = "${var.environment}-agile-stories-analyze"
@@ -71,38 +79,10 @@ resource "aws_lambda_function" "analyze_story" {
 
   environment {
     variables = merge(local.lambda_environment_variables, {
-      STEP_FUNCTION_ARN = var.step_function_arn, # Use the variable version
+      DYNAMODB_TABLE    = var.dynamodb_table_name
       ERROR_SNS_TOPIC   = var.error_sns_topic_arn
+      STEP_FUNCTION_ARN = var.step_function_arn
     })
-  }
-
-  vpc_config {
-    subnet_ids         = var.subnet_ids
-    security_group_ids = [aws_security_group.lambda.id] # Ensure this SG exists
-  }
-
-  tags = {
-    Environment = var.environment
-    Project     = "agile-stories"
-  }
-}
-
-
-# Story Estimation Lambda
-resource "aws_lambda_function" "team_estimate" {
-  filename      = var.team_estimate_package_path
-  function_name = "${var.environment}-agile-stories-estimate"
-  role          = aws_iam_role.lambda_role.arn
-  handler       = "lambda_function.lambda_handler"
-  runtime       = "python3.11"
-  timeout       = 30
-  memory_size   = 256
-
-  environment {
-    variables = {
-      ENVIRONMENT    = var.environment
-      OPENAI_API_KEY = var.openai_api_key
-    }
   }
 
   vpc_config {
@@ -113,6 +93,129 @@ resource "aws_lambda_function" "team_estimate" {
   tags = {
     Environment = var.environment
     Project     = "agile-stories"
+  }
+}
+
+# Story Analysis Worker Lambda
+resource "aws_lambda_function" "analyze_story_worker" {
+  filename      = var.analyze_story_worker_package_path
+  function_name = "${var.environment}-agile-stories-analyze-worker"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "app.handler"
+  runtime       = "python3.11"
+  timeout       = var.lambda_timeout
+  memory_size   = var.lambda_memory_size
+
+  environment {
+    variables = merge(local.lambda_environment_variables, {
+      DYNAMODB_TABLE    = var.dynamodb_table_name
+      ERROR_SNS_TOPIC   = var.error_sns_topic_arn
+      STEP_FUNCTION_ARN = var.step_function_arn
+      OPENAI_API_KEY    = var.openai_api_key
+    })
+  }
+
+  vpc_config {
+    subnet_ids         = var.subnet_ids
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+}
+
+# Technical Review Lambda
+resource "aws_lambda_function" "technical_review" {
+  filename      = var.technical_review_package_path
+  function_name = "${var.environment}-agile-stories-review"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "app.handler"
+  runtime       = "python3.11"
+  timeout       = var.lambda_timeout
+  memory_size   = var.lambda_memory_size
+
+  environment {
+    variables = merge(local.lambda_environment_variables, {
+      DYNAMODB_TABLE    = var.dynamodb_table_name
+      ERROR_SNS_TOPIC   = var.error_sns_topic_arn
+      STEP_FUNCTION_ARN = var.step_function_arn
+    })
+  }
+
+  vpc_config {
+    subnet_ids         = var.subnet_ids
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+}
+
+# Technical Review Worker Lambda
+resource "aws_lambda_function" "technical_review_worker" {
+  filename      = var.technical_review_worker_package_path
+  function_name = "${var.environment}-agile-stories-review-worker"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "app.handler"
+  runtime       = "python3.11"
+  timeout       = var.lambda_timeout
+  memory_size   = var.lambda_memory_size
+
+  environment {
+    variables = merge(local.lambda_environment_variables, {
+      DYNAMODB_TABLE    = var.dynamodb_table_name
+      ERROR_SNS_TOPIC   = var.error_sns_topic_arn
+      STEP_FUNCTION_ARN = var.step_function_arn
+      OPENAI_API_KEY    = var.openai_api_key
+    })
+  }
+
+  vpc_config {
+    subnet_ids         = var.subnet_ids
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+}
+
+# Team Estimate Lambda
+resource "aws_lambda_function" "team_estimate" {
+  filename      = var.team_estimate_package_path
+  function_name = "${var.environment}-agile-stories-estimate"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "app.handler"
+  runtime       = "python3.11"
+  timeout       = var.lambda_timeout
+  memory_size   = var.lambda_memory_size
+
+  environment {
+    variables = merge(local.lambda_environment_variables, {
+      DYNAMODB_TABLE    = var.dynamodb_table_name
+      ERROR_SNS_TOPIC   = var.error_sns_topic_arn
+      STEP_FUNCTION_ARN = var.step_function_arn
+    })
+  }
+
+  vpc_config {
+    subnet_ids         = var.subnet_ids
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+}
+
+# Team Estimate Worker Lambda
+resource "aws_lambda_function" "team_estimate_worker" {
+  filename      = var.team_estimate_worker_package_path
+  function_name = "${var.environment}-agile-stories-estimate-worker"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "app.handler"
+  runtime       = "python3.11"
+  timeout       = var.lambda_timeout
+  memory_size   = var.lambda_memory_size
+
+  environment {
+    variables = merge(local.lambda_environment_variables, {
+      DYNAMODB_TABLE    = var.dynamodb_table_name
+      ERROR_SNS_TOPIC   = var.error_sns_topic_arn
+      STEP_FUNCTION_ARN = var.step_function_arn
+      OPENAI_API_KEY    = var.openai_api_key
+    })
+  }
+
+  vpc_config {
+    subnet_ids         = var.subnet_ids
+    security_group_ids = [aws_security_group.lambda.id]
   }
 }
 
@@ -205,177 +308,6 @@ resource "aws_iam_role_policy" "secrets_manager_policy" {
   })
 }
 
-# Worker Lambda functions
-resource "aws_lambda_function" "analyze_story_worker" {
-  filename      = var.analyze_story_worker_package_path
-  function_name = "${var.environment}-agile-stories-analyze-worker"
-  role          = aws_iam_role.lambda_role.arn
-  handler       = "index.handler"
-  runtime       = "nodejs18.x"
-  memory_size   = var.lambda_memory_size
-  timeout       = var.lambda_timeout
-
-  vpc_config {
-    subnet_ids         = var.subnet_ids
-    security_group_ids = [aws_security_group.lambda.id]
-  }
-
-  environment {
-    variables = {
-      OPENAI_API_KEY = var.openai_api_key
-    }
-  }
-}
-
-resource "aws_lambda_function" "team_estimate_worker" {
-  filename      = var.team_estimate_worker_package_path
-  function_name = "${var.environment}-agile-stories-estimate-worker"
-  role          = aws_iam_role.lambda_role.arn
-  handler       = "index.handler"
-  runtime       = "nodejs18.x"
-  memory_size   = var.lambda_memory_size
-  timeout       = var.lambda_timeout
-
-  vpc_config {
-    subnet_ids         = var.subnet_ids
-    security_group_ids = [aws_security_group.lambda.id]
-  }
-
-  environment {
-    variables = {
-      OPENAI_API_KEY = var.openai_api_key
-    }
-  }
-}
-
-resource "aws_lambda_function" "technical_review" {
-  filename      = var.technical_review_package_path
-  function_name = "${var.environment}-agile-stories-review"
-  role          = aws_iam_role.lambda_role.arn
-  handler       = "index.handler"
-  runtime       = "nodejs18.x"
-  memory_size   = var.lambda_memory_size
-  timeout       = var.lambda_timeout
-
-  vpc_config {
-    subnet_ids         = var.subnet_ids
-    security_group_ids = [aws_security_group.lambda.id]
-  }
-
-  environment {
-    variables = {
-      OPENAI_API_KEY = var.openai_api_key
-    }
-  }
-}
-
-resource "aws_lambda_function" "technical_review_worker" {
-  filename      = var.technical_review_worker_package_path
-  function_name = "${var.environment}-agile-stories-review-worker"
-  role          = aws_iam_role.lambda_role.arn
-  handler       = "index.handler"
-  runtime       = "nodejs18.x"
-  memory_size   = var.lambda_memory_size
-  timeout       = var.lambda_timeout
-
-  vpc_config {
-    subnet_ids         = var.subnet_ids
-    security_group_ids = [aws_security_group.lambda.id]
-  }
-
-  environment {
-    variables = {
-      OPENAI_API_KEY = var.openai_api_key
-    }
-  }
-}
-
-# Update environment variables
-locals {
-  lambda_environment_variables = {
-    STORIES_TABLE     = var.stories_table_name
-    ESTIMATIONS_TABLE = var.estimations_table_name
-    TENANT_INDEX      = var.tenant_index_name
-  }
-}
-
-# Update IAM policy
-data "aws_iam_policy_document" "lambda_dynamodb_policy" {
-  statement {
-    effect = "Allow"
-    actions = [
-      "dynamodb:GetItem",
-      "dynamodb:PutItem",
-      "dynamodb:UpdateItem",
-      "dynamodb:DeleteItem",
-      "dynamodb:Query",
-      "dynamodb:Scan"
-    ]
-    resources = [
-      var.stories_table_arn,
-      "${var.stories_table_arn}/index/*",
-      var.estimations_table_arn,
-      "${var.estimations_table_arn}/index/*"
-    ]
-  }
-
-  statement {
-    effect = "Allow"
-    actions = [
-      "dynamodb:GetRecords",
-      "dynamodb:GetShardIterator",
-      "dynamodb:DescribeStream",
-      "dynamodb:ListStreams"
-    ]
-    resources = [
-      var.stories_table_stream_arn,
-      var.estimations_table_stream_arn
-    ]
-  }
-}
-
-# Add the IAM policy for DynamoDB access
-resource "aws_iam_policy" "dynamodb_access" {
-  name        = "${var.environment}-lambda-dynamodb-access"
-  description = "IAM policy for Lambda to access DynamoDB tables"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "dynamodb:GetItem",
-          "dynamodb:PutItem",
-          "dynamodb:UpdateItem",
-          "dynamodb:DeleteItem",
-          "dynamodb:Query",
-          "dynamodb:Scan"
-        ]
-        Resource = [
-          var.stories_table_arn,
-          "${var.stories_table_arn}/index/*",
-          var.estimations_table_arn,
-          "${var.estimations_table_arn}/index/*"
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "dynamodb:GetRecords",
-          "dynamodb:GetShardIterator",
-          "dynamodb:DescribeStream",
-          "dynamodb:ListStreams"
-        ]
-        Resource = [
-          var.stories_table_stream_arn,
-          var.estimations_table_stream_arn
-        ]
-      }
-    ]
-  })
-}
-
 # New Lambda functions needed:
 resource "aws_lambda_function" "error_handler" {
   filename      = var.error_handler_package_path
@@ -391,6 +323,31 @@ resource "aws_lambda_function" "error_handler" {
       ERROR_SNS_TOPIC = var.error_sns_topic_arn
     })
   }
+}
+
+# Add Step Functions permissions to Lambda role
+resource "aws_iam_role_policy" "lambda_step_functions" {
+  name = "lambda_step_functions_policy"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "states:SendTaskSuccess",
+          "states:SendTaskFailure",
+          "states:SendTaskHeartbeat",
+          "states:GetActivityTask",
+          "states:GetExecutionHistory",
+          "states:ListActivities",
+          "states:ListExecutions"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
 }
 
 
