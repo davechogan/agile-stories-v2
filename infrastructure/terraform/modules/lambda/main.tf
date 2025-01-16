@@ -78,11 +78,11 @@ resource "aws_lambda_function" "analyze_story" {
   memory_size   = 256
 
   environment {
-    variables = merge(local.lambda_environment_variables, {
-      DYNAMODB_TABLE    = var.dynamodb_table_name
-      ERROR_SNS_TOPIC   = var.error_sns_topic_arn
-      STEP_FUNCTION_ARN = var.step_function_arn
-    })
+    variables = {
+      DYNAMODB_TABLE   = var.dynamodb_table_name
+      ENVIRONMENT      = var.environment
+      ERROR_SNS_TOPIC  = var.error_sns_topic_arn
+    }
   }
 
   vpc_config {
@@ -110,7 +110,6 @@ resource "aws_lambda_function" "analyze_story_worker" {
     variables = merge(local.lambda_environment_variables, {
       DYNAMODB_TABLE    = var.dynamodb_table_name
       ERROR_SNS_TOPIC   = var.error_sns_topic_arn
-      STEP_FUNCTION_ARN = var.step_function_arn
       OPENAI_API_KEY    = var.openai_api_key
     })
   }
@@ -135,7 +134,6 @@ resource "aws_lambda_function" "technical_review" {
     variables = merge(local.lambda_environment_variables, {
       DYNAMODB_TABLE    = var.dynamodb_table_name
       ERROR_SNS_TOPIC   = var.error_sns_topic_arn
-      STEP_FUNCTION_ARN = var.step_function_arn
     })
   }
 
@@ -159,7 +157,6 @@ resource "aws_lambda_function" "technical_review_worker" {
     variables = merge(local.lambda_environment_variables, {
       DYNAMODB_TABLE    = var.dynamodb_table_name
       ERROR_SNS_TOPIC   = var.error_sns_topic_arn
-      STEP_FUNCTION_ARN = var.step_function_arn
       OPENAI_API_KEY    = var.openai_api_key
     })
   }
@@ -184,7 +181,6 @@ resource "aws_lambda_function" "team_estimate" {
     variables = merge(local.lambda_environment_variables, {
       DYNAMODB_TABLE    = var.dynamodb_table_name
       ERROR_SNS_TOPIC   = var.error_sns_topic_arn
-      STEP_FUNCTION_ARN = var.step_function_arn
     })
   }
 
@@ -208,7 +204,6 @@ resource "aws_lambda_function" "team_estimate_worker" {
     variables = merge(local.lambda_environment_variables, {
       DYNAMODB_TABLE    = var.dynamodb_table_name
       ERROR_SNS_TOPIC   = var.error_sns_topic_arn
-      STEP_FUNCTION_ARN = var.step_function_arn
       OPENAI_API_KEY    = var.openai_api_key
     })
   }
@@ -349,6 +344,5 @@ resource "aws_iam_role_policy" "lambda_step_functions" {
     ]
   })
 }
-
 
 # ... rest of the Lambda configurations using local.lambda_environment_variables ... 

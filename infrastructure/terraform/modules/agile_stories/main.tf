@@ -48,15 +48,15 @@ module "sqs" {
 module "lambda" {
   source = "../lambda"
 
-  environment = var.environment
+  environment            = var.environment
+  vpc_id                = var.vpc_id
+  subnet_ids            = var.subnet_ids
+  openai_api_key        = var.openai_api_key
+  dynamodb_table_name   = var.dynamodb_table_name
+  error_sns_topic_arn   = var.error_sns_topic_arn
+
   account_id  = var.account_id
   aws_region  = var.aws_region
-  vpc_id      = var.vpc_id
-  subnet_ids  = var.subnet_ids
-  # step_function_arn = module.step_functions.state_machine_arn
-  error_sns_topic_arn        = var.error_sns_topic_arn
-  error_handler_package_path = var.error_handler_package_path
-
 
   dynamodb_table_arn        = module.dynamodb.stories_table_arn
   stories_table_arn         = module.dynamodb.stories_table_arn
@@ -72,14 +72,12 @@ module "lambda" {
   technical_review_worker_package_path = var.technical_review_worker_package_path
   get_status_package_path              = var.get_status_package_path
 
-  openai_api_key         = var.openai_api_key
   log_retention_days     = 30
   lambda_memory_size     = 256
   lambda_timeout         = 30
   additional_policy_arns = []
   function_name          = "${var.environment}-agile-stories"
 
-  dynamodb_table_name = module.dynamodb.stories_table_name
   analysis_queue_url  = module.sqs.analysis_queue_url
 
   # Consolidated estimations table config and new variables
@@ -87,6 +85,8 @@ module "lambda" {
   estimations_table_arn        = module.dynamodb.estimations_table_arn
   estimations_table_stream_arn = module.dynamodb.estimations_table_stream_arn
   tenant_index_name            = module.dynamodb.tenant_index_name
+
+  error_handler_package_path = var.error_handler_package_path
 }
 
 # API Gateway

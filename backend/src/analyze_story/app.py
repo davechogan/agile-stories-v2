@@ -11,43 +11,50 @@ import uuid
 from datetime import datetime
 import boto3
 
+# Initialize AWS clients
 dynamodb = boto3.resource('dynamodb')
+sfn = boto3.client('sfn')
+ssm = boto3.client('ssm')
+
+# Get DynamoDB table
 table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
-sfn = boto3.client('stepfunctions')
 
 def handler(event, context):
     try:
-        # Parse input
-        body = json.loads(event['body']) if 'body' in event else event
-        story_id = body.get('story_id', str(uuid.uuid4()))
+        # Parse request body
+        body = json.loads(event['body'])
         
-        # Store original story
-        original_item = {
-            'story_id': story_id,
-            'version': 'ORIGINAL',
-            'content': {
-                'title': body['title'],
-                'description': body['description'],
-                'acceptance_criteria': body['acceptance_criteria']
-            },
-            'created_at': datetime.utcnow().isoformat(),
-            'updated_at': datetime.utcnow().isoformat()
+        # Generate story ID
+        story_id = str(uuid.uuid4())
+        timestamp = datetime.utcnow().isoformat()
+        
+        # Store story in DynamoDB
+        item = {
+            'id': story_id,
+            'title': body['title'],
+            'description': body['description'],
+            'story': body['story'],
+            'acceptance_criteria': body['acceptance_criteria'],
+            'status': 'SUBMITTED',
+            'created_at': timestamp,
+            'updated_at': timestamp
         }
         
-        # Store in DynamoDB
-        table.put_item(Item=original_item)
+        table.put_item(Item=item)
         
         # Start Step Functions workflow
         workflow_input = {
             'story_id': story_id,
             'title': body['title'],
             'description': body['description'],
+            'story': body['story'],
             'acceptance_criteria': body['acceptance_criteria']
         }
         
-        # Start execution
         sfn.start_execution(
-            stateMachineArn=os.environ['STEP_FUNCTION_ARN'],
+            stateMachineArn=ssm.get_parameter(
+                Name=f"/{os.environ['ENVIRONMENT']}/step-functions/workflow-arn"
+            )['Parameter']['Value'],
             input=json.dumps(workflow_input)
         )
         
@@ -61,6 +68,7 @@ def handler(event, context):
         }
         
     except Exception as e:
+        print(f"Error: {str(e)}")  # Add logging
         return {
             'statusCode': 500,
             'body': json.dumps({

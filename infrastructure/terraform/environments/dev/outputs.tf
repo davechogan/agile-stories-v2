@@ -87,4 +87,9 @@ output "technical_review_lambda_arn" {
 output "get_status_lambda_arn" {
   description = "ARN of the get status Lambda function"
   value       = module.agile_stories.get_status_lambda_arn
+}
+
+output "step_functions_workflow_arn" {
+  description = "ARN of the Story Refinement Step Functions workflow"
+  value       = module.step_functions.workflow_arn
 } 

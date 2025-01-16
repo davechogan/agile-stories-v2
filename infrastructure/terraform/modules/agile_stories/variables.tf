@@ -127,16 +127,16 @@ variable "tenant_index_name" {
   type        = string
 }
 
-variable "step_function_arn" {
-  description = "ARN of the Step Functions state machine"
-  type        = string
-}
-
 variable "error_sns_topic_arn" {
   description = "ARN of the error notification SNS topic"
   type        = string
 }
 variable "error_handler_package_path" {
-  description = "Path to the deployment package for the error handler Lambda function"
+  description = "Path to the error handler Lambda package"
+  type        = string
+}
+
+variable "dynamodb_table_name" {
+  description = "Name of the DynamoDB table"
   type        = string
 }

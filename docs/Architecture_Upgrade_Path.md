@@ -18,17 +18,17 @@ This document outlines the ordered sequence for implementing architectural impro
 
 ## 2. Workflow Orchestration 🔄
 - Implement AWS Step Functions
-  - Define state machine for story progression
-    - Story Analysis Flow
+  - Define state machine for story progression ✅
+    - Story Analysis Flow ✅
       - Submit Story → Analyze → Update Status
-    - Team Estimation Flow
+    - Team Estimation Flow ✅
       - Request Estimates → Collect Responses → Calculate Final
-    - Technical Review Flow
+    - Technical Review Flow ✅
       - Submit Review → Process → Update Story
-  - Replace SQS orchestration
-  - Add error handling and retry logic
-  - Update Lambda functions to work with Step Functions
-  - Add monitoring for workflow states
+  - Replace SQS orchestration (In Progress)
+  - Add error handling and retry logic ✅
+  - Update Lambda functions to work with Step Functions (In Progress)
+  - Add monitoring for workflow states (TODO)
 
 ## 3. Real-time Updates
 - Add AppSync for GraphQL API

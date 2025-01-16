@@ -96,6 +96,7 @@ variable "openai_api_key" {
 }
 
 variable "error_handler_package_path" {
-  description = "Path to error handler Lambda package"
+  description = "Path to the error handler Lambda package"
   type        = string
+  default     = "../../../backend/src/error_handler/package.zip"
 }
