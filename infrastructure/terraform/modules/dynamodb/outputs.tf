@@ -1,30 +1,32 @@
 ## Updated outputs.tf for the DynamoDB module
 output "stories_table_name" {
-  description = "Name of the stories table"
+  description = "Name of the stories DynamoDB table"
   value       = aws_dynamodb_table.agile_stories.name
 }
 
 output "stories_table_arn" {
-  description = "ARN of the stories table"
+  description = "ARN of the stories DynamoDB table"
   value       = aws_dynamodb_table.agile_stories.arn
 }
 
 output "stories_table_stream_arn" {
-  value = aws_dynamodb_table.agile_stories.stream_arn
+  description = "Stream ARN of the stories DynamoDB table"
+  value       = aws_dynamodb_table.agile_stories.stream_arn
 }
 
 output "estimations_table_name" {
-  description = "Name of the estimations table"
+  description = "Name of the estimations DynamoDB table"
   value       = aws_dynamodb_table.estimations.name
 }
 
 output "estimations_table_arn" {
-  description = "ARN of the estimations table"
+  description = "ARN of the estimations DynamoDB table"
   value       = aws_dynamodb_table.estimations.arn
 }
 
 output "estimations_table_stream_arn" {
-  value = aws_dynamodb_table.estimations.stream_arn
+  description = "Stream ARN of the estimations DynamoDB table"
+  value       = aws_dynamodb_table.estimations.stream_arn
 }
 
 output "locks_table_name" {
