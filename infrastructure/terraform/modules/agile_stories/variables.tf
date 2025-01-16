@@ -136,3 +136,7 @@ variable "error_sns_topic_arn" {
   description = "ARN of the error notification SNS topic"
   type        = string
 }
+variable "error_handler_package_path" {
+  description = "Path to the deployment package for the error handler Lambda function"
+  type        = string
+}

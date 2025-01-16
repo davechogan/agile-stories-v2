@@ -152,6 +152,7 @@ variable "analysis_queue_url" {
 variable "step_function_arn" {
   description = "ARN of the Step Functions state machine"
   type        = string
+  default     = ""
 }
 
 variable "error_sns_topic_arn" {
@@ -159,7 +160,7 @@ variable "error_sns_topic_arn" {
   type        = string
 }
 
-variable "step_function_arn" {
-  description = "ARN of the Step Functions state machine"
+variable "error_handler_package_path" {
+  description = "Path to the deployment package for the error handler Lambda function"
   type        = string
 }

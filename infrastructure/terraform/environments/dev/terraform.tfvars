@@ -22,6 +22,7 @@ team_estimate_worker_package_path    = "../../../../backend/src/team_estimate_wo
 technical_review_package_path        = "../../../../backend/src/technical_review/package.zip"
 technical_review_worker_package_path = "../../../../backend/src/technical_review_worker/package.zip"
 get_status_package_path              = "../../../../backend/src/get_status/package.zip"
+error_handler_package_path           = "../../../../backend/src/error_handler/package.zip"
 
 # API Configuration
 openai_api_key = "" # Note: comes from GitHub Secrets 

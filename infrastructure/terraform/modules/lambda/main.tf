@@ -60,7 +60,6 @@ resource "aws_security_group" "lambda" {
   }
 }
 
-# Story Analysis Lambda
 resource "aws_lambda_function" "analyze_story" {
   filename      = var.analyze_story_package_path
   function_name = "${var.environment}-agile-stories-analyze"
@@ -70,17 +69,16 @@ resource "aws_lambda_function" "analyze_story" {
   timeout       = 30
   memory_size   = 256
 
-
   environment {
     variables = merge(local.lambda_environment_variables, {
-      STEP_FUNCTION_ARN = aws_sfn_state_machine.story_analysis.arn
-      ERROR_SNS_TOPIC = var.error_sns_topic_arn
+      STEP_FUNCTION_ARN = var.step_function_arn, # Use the variable version
+      ERROR_SNS_TOPIC   = var.error_sns_topic_arn
     })
   }
 
   vpc_config {
     subnet_ids         = var.subnet_ids
-    security_group_ids = [aws_security_group.lambda.id]
+    security_group_ids = [aws_security_group.lambda.id] # Ensure this SG exists
   }
 
   tags = {
@@ -88,6 +86,7 @@ resource "aws_lambda_function" "analyze_story" {
     Project     = "agile-stories"
   }
 }
+
 
 # Story Estimation Lambda
 resource "aws_lambda_function" "team_estimate" {
@@ -389,20 +388,10 @@ resource "aws_lambda_function" "error_handler" {
 
   environment {
     variables = merge(local.lambda_environment_variables, {
-      ERROR_SNS_TOPIC = aws_sns_topic.error_notifications.arn
+      ERROR_SNS_TOPIC = var.error_sns_topic_arn
     })
   }
 }
 
 
 # ... rest of the Lambda configurations using local.lambda_environment_variables ... 
-
-resource "aws_lambda_function" "analyze_story" {
-  # Other Lambda configurations...
-
-  environment {
-    variables = {
-      STEP_FUNCTION_ARN = var.step_function_arn
-    }
-  }
-}

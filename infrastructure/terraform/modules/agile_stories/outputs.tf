@@ -68,14 +68,29 @@ output "analyze_story_lambda_arn" {
   value       = module.lambda.analyze_story_lambda_arn
 }
 
+output "analyze_story_worker_lambda_arn" {
+  description = "ARN of the analyze story worker Lambda function"
+  value       = module.lambda.analyze_story_worker_lambda_arn
+}
+
 output "team_estimate_lambda_arn" {
   description = "ARN of the team estimate Lambda function"
   value       = module.lambda.team_estimate_lambda_arn
 }
 
+output "team_estimate_worker_lambda_arn" {
+  description = "ARN of the team estimate worker Lambda function"
+  value       = module.lambda.team_estimate_worker_lambda_arn
+}
+
 output "technical_review_lambda_arn" {
   description = "ARN of the technical review Lambda function"
   value       = module.lambda.technical_review_lambda_arn
+}
+
+output "technical_review_worker_lambda_arn" {
+  description = "ARN of the technical review worker Lambda function"
+  value       = module.lambda.technical_review_worker_lambda_arn
 }
 
 output "get_status_lambda_arn" {
@@ -96,14 +111,4 @@ output "stories_table_arn" {
 output "stories_table_stream_arn" {
   description = "Stream ARN of the stories DynamoDB table"
   value       = module.dynamodb.stories_table_stream_arn
-}
-
-output "analyze_story_worker_lambda_arn" {
-  description = "ARN of the analyze story worker Lambda function"
-  value       = module.lambda.analyze_story_worker_lambda_arn
-}
-
-output "technical_review_worker_lambda_arn" {
-  description = "ARN of the technical review worker Lambda function"
-  value       = module.lambda.technical_review_worker_lambda_arn
 }

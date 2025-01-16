@@ -79,6 +79,7 @@ module "agile_stories" {
   technical_review_package_path        = var.technical_review_package_path
   technical_review_worker_package_path = var.technical_review_worker_package_path
   get_status_package_path              = var.get_status_package_path
+  error_handler_package_path           = var.error_handler_package_path
 
   estimations_table_name       = "${var.environment}-agile-stories-estimations"
   estimations_table_arn        = "arn:aws:dynamodb:${var.aws_region}:${var.account_id}:table/${var.environment}-agile-stories-estimations"
@@ -87,15 +88,27 @@ module "agile_stories" {
 }
 
 module "step_functions" {
-  source            = "../../modules/step_functions"
-  name_prefix       = "dev"
-  lambda_arns       = [
+  source = "../../modules/step_functions"
+  name_prefix = "dev"
+  lambda_arns = [
     module.agile_stories.analyze_story_lambda_arn,
-    module.agile_stories.team_estimate_lambda_arn,
+    module.agile_stories.analyze_story_worker_lambda_arn,
     module.agile_stories.technical_review_lambda_arn,
-    module.agile_stories.get_status_lambda_arn
+    module.agile_stories.technical_review_worker_lambda_arn,
+    module.agile_stories.team_estimate_lambda_arn,
+    module.agile_stories.team_estimate_worker_lambda_arn
   ]
-  workflow_definition = file("${path.module}/workflow.json")
+  workflow_definition = templatefile(
+    "${path.module}/../../modules/step_functions/workflow.json",
+    {
+      analyze_story_arn = module.agile_stories.analyze_story_lambda_arn,
+      analyze_story_worker_arn = module.agile_stories.analyze_story_worker_lambda_arn,
+      technical_review_arn = module.agile_stories.technical_review_lambda_arn,
+      technical_review_worker_arn = module.agile_stories.technical_review_worker_lambda_arn,
+      team_estimate_arn = module.agile_stories.team_estimate_lambda_arn,
+      team_estimate_worker_arn = module.agile_stories.team_estimate_worker_lambda_arn
+    }
+  )
 }
 
 resource "aws_sns_topic" "error_notifications" {
