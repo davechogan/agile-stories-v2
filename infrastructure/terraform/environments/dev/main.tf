@@ -90,6 +90,7 @@ module "agile_stories" {
 module "step_functions" {
   source      = "../../modules/step_functions"
   name_prefix = "dev"
+  environment = var.environment
   lambda_arns = [
     module.agile_stories.analyze_story_lambda_arn,
     module.agile_stories.analyze_story_worker_lambda_arn,

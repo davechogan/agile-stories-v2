@@ -12,3 +12,8 @@ variable "workflow_definition" {
   description = "JSON definition of the Step Functions workflow"
   type        = string
 }
+
+variable "environment" {
+  description = "Environment name (e.g., dev, staging, prod)"
+  type        = string
+}

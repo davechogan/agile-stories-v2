@@ -85,7 +85,7 @@ You’d still write to DynamoDB as before, but the orchestration logic moves int
 Initiate the Workflow:
 
 When the user clicks “Analyze,” the front end (Vue.js) would make an API Gateway call to a new “startStateMachine” Lambda (or directly to Step Functions via API Gateway integration).
-That call includes the story data and indicates whether you need a technical review, team estimates, or both.
+That call includes the story data and ***indicates whether you need a technical review, team estimates, or both.*** First button sends story, tenant, etc to the Agile Coach for review.
 3. Benefits of Step Functions
 Visual: You get a nice workflow diagram in the AWS console.
 Less Glue Code: Step Functions handles chaining, retries, timeouts, and error handling.

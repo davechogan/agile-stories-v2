@@ -56,35 +56,18 @@ def get_step_function_arn():
         raise Exception(f"Failed to get Step Functions ARN: {str(e)}")
 
 def handler(event, context):
-    """
-    Lambda handler for processing new story submissions.
-    
-    Creates a new story record in DynamoDB with version AGILE_COACH_PENDING and
-    starts the Step Functions workflow for story analysis.
-    
-    Args:
-        event (dict): API Gateway event object containing:
-            body (str): JSON string with:
-                title (str): Story title
-                description (str): Story description
-                story (str): User story
-                acceptance_criteria (list): List of acceptance criteria
-                tenant_id (str, optional): Tenant identifier
-        context (obj): Lambda context object
-    
-    Returns:
-        dict: API Gateway response object
-    
-    Raises:
-        Exception: For any processing errors
-    """
+    """Lambda handler for analyzing stories."""
     try:
         logger.info(f"Event received: {json.dumps(event)}")
         
-        # Parse request body
+        # Parse the API Gateway event body
         body = json.loads(event['body'])
         logger.info(f"Parsed body: {json.dumps(body)}")
         
+        # Extract data from the body
+        content = body['content']
+        tenant_id = body['tenant_id']
+
         # Generate story ID and timestamp
         story_id = str(uuid.uuid4())
         timestamp = datetime.utcnow().isoformat()
@@ -93,13 +76,8 @@ def handler(event, context):
         item = {
             'story_id': story_id,
             'version': 'AGILE_COACH_PENDING',
-            'tenant_id': body.get('tenant_id', 'default'),
-            'content': {
-                'title': body['title'],
-                'description': body['description'],
-                'story': body['story'],
-                'acceptance_criteria': body['acceptance_criteria']
-            },
+            'tenant_id': tenant_id,
+            'content': content,
             'created_at': timestamp,
             'updated_at': timestamp
         }
@@ -109,9 +87,7 @@ def handler(event, context):
         
         # Start Step Functions workflow
         workflow_input = {
-            'story_id': story_id,
-            'tenant_id': item['tenant_id'],
-            'content': item['content']
+            'story_id': story_id
         }
         
         # Get Step Functions ARN and start execution

@@ -1,19 +1,11 @@
 """
 analyze_story_worker Lambda Function
 
-This Lambda is triggered by Step Functions to perform AI analysis on a submitted story.
-It creates an AGILE_COACH version with analysis results in DynamoDB.
+This Lambda processes stories and creates the AGILE_COACH version with analysis.
+It's triggered by Step Functions.
 
 Environment Variables:
     DYNAMODB_TABLE (str): Name of the DynamoDB table for storing stories
-    OPENAI_API_KEY (str): OpenAI API key for story analysis
-    
-Returns:
-    dict: Step Functions response object containing:
-        story_id (str): UUID of the processed story
-        tenant_id (str): Tenant identifier
-        analysis (dict): Analysis results from AI
-        content (dict): Original story content
 """
 
 import os
@@ -28,107 +20,82 @@ logger.setLevel(logging.INFO)
 
 # Initialize AWS clients
 dynamodb = boto3.resource('dynamodb')
-
-# Get DynamoDB table
 table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
 
 def analyze_story(content):
-    """
-    Analyzes the user story using AI to provide suggestions and improvements.
-    
-    Args:
-        content (dict): Story content containing:
-            title (str): Story title
-            description (str): Story description
-            story (str): User story
-            acceptance_criteria (list): List of acceptance criteria
-    
-    Returns:
-        dict: Analysis results containing:
-            suggestions (list): List of improvement suggestions
-            score (int): Story quality score (0-100)
-    
-    Note:
-        This is currently a placeholder. Actual implementation will use OpenAI.
-    """
-    # Placeholder for actual analysis
+    """Analyzes the user story (stubbed for testing).
+    Returns both original content and analysis for testing purposes."""
     return {
-        "suggestions": [
-            "Consider adding more specific acceptance criteria",
-            "The story description could be more detailed"
-        ],
-        "score": 85
+        # Keep original story content for testing
+        "title": content["title"],
+        "description": content["description"],
+        "story": content["story"],
+        "acceptance_criteria": content["acceptance_criteria"],
+        
+        # Add analysis results
+        "analysis": {
+            "suggestions": ["Make acceptance criteria more specific"],
+            "score": 85,
+            "feedback": "Good story structure, could use more detailed acceptance criteria",
+            "invest_analysis": {
+                "independent": True,
+                "negotiable": True,
+                "valuable": True,
+                "estimable": False,
+                "small": True,
+                "testable": True
+            }
+        }
     }
 
 def handler(event, context):
-    """
-    Lambda handler for processing story analysis requests.
-    
-    Creates a PENDING version first, then performs AI analysis and creates
-    an AGILE_COACH version with the results.
-    
-    Args:
-        event (dict): Step Functions event object containing:
-            story_id (str): UUID of the story to analyze
-            tenant_id (str): Tenant identifier
-            content (dict): Story content to analyze
-        context (obj): Lambda context object
-    
-    Returns:
-        dict: Step Functions response object
-    
-    Raises:
-        Exception: For any processing errors
-    """
+    """Lambda handler for analyzing stories."""
     try:
         logger.info(f"Event received: {json.dumps(event)}")
         
-        # Extract data from Step Functions input
+        # Get story_id from event
         story_id = event['story_id']
-        tenant_id = event.get('tenant_id', 'default')
-        content = event['content']
-        timestamp = datetime.utcnow().isoformat()
         
-        # First, create PENDING version
-        pending_item = {
-            'story_id': story_id,
-            'version': 'AGILE_COACH_PENDING',
-            'tenant_id': tenant_id,
-            'content': content,  # Original content
-            'created_at': timestamp,
-            'updated_at': timestamp
-        }
+        # Get the PENDING version from DynamoDB using composite key
+        response = table.get_item(
+            Key={
+                'story_id': story_id,
+                'version': 'AGILE_COACH_PENDING'  # This is the composite key
+            }
+        )
         
-        logger.info(f"Storing PENDING version in DynamoDB: {json.dumps(pending_item)}")
-        table.put_item(Item=pending_item)
+        if 'Item' not in response:
+            raise ValueError(f"No PENDING story found for story_id: {story_id}")
+            
+        item = response['Item']
         
-        # Perform analysis
+        # Extract data
+        content = item['content']
+        tenant_id = item['tenant_id']
+        
+        # Analyze the story (will be OpenAI later)
         analysis_results = analyze_story(content)
         
-        # Store analysis results as new version
-        complete_item = {
+        # Store analyzed version (just the analysis results)
+        timestamp = datetime.utcnow().isoformat()
+        analyzed_item = {
             'story_id': story_id,
-            'version': 'AGILE_COACH',
+            'version': 'AGILE_COACH',  # This version for the analyzed content
             'tenant_id': tenant_id,
-            'content': {
-                **content,  # Original story content
-                'analysis': analysis_results
-            },
+            'content': analysis_results,  # Store just the AI analysis
             'created_at': timestamp,
             'updated_at': timestamp
         }
         
-        logger.info(f"Storing AGILE_COACH version in DynamoDB: {json.dumps(complete_item)}")
-        table.put_item(Item=complete_item)
+        logger.info(f"Storing analyzed item in DynamoDB: {json.dumps(analyzed_item)}")
+        table.put_item(Item=analyzed_item)
         
-        # Return results to Step Functions
         return {
             'story_id': story_id,
-            'tenant_id': tenant_id,
-            'analysis': analysis_results,
-            'content': content
+           
         }
         
     except Exception as e:
         logger.error(f"Error in handler: {str(e)}", exc_info=True)
-        raise 
+        raise
+

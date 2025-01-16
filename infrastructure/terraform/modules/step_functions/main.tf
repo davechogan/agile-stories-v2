@@ -45,3 +45,36 @@ resource "aws_sfn_state_machine" "state_machine" {
 
   definition = var.workflow_definition
 }
+
+# Add SSM Parameter for Step Functions ARN
+resource "aws_ssm_parameter" "step_functions_arn" {
+  name  = "/${var.environment}/step-functions/workflow-arn"
+  type  = "String"
+  value = aws_sfn_state_machine.state_machine.arn
+
+  tags = {
+    Environment = var.environment
+    Project     = "agile-stories"
+  }
+}
+
+# IAM role for Step Functions to manage SSM parameters
+resource "aws_iam_role_policy" "step_functions_ssm" {
+  name = "${var.name_prefix}-step-functions-ssm"
+  role = aws_iam_role.step_function_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:PutParameter",
+          "ssm:GetParameter",
+          "ssm:DeleteParameter"
+        ]
+        Resource = "arn:aws:ssm:*:*:parameter/${var.environment}/step-functions/*"
+      }
+    ]
+  })
+}

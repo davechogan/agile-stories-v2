@@ -1,89 +1,51 @@
 {
-    "Comment": "Story Refinement Workflow",
-    "StartAt": "AnalyzeStory",
+    "Comment": "Story Refinement Workflow (Automated Testing Version)",
+    "StartAt": "AnalyzeStoryWorker",
     "States": {
-      "AnalyzeStory": {
-        "Type": "Task",
-        "Resource": "${analyze_story_arn}",
-        "Next": "AnalyzeStoryWorker"
-      },
       "AnalyzeStoryWorker": {
         "Type": "Task",
         "Resource": "${analyze_story_worker_arn}",
-        "Next": "CheckAnalysisResult"
-      },
-      "CheckAnalysisResult": {
-        "Type": "Choice",
-        "Choices": [
-          {
-            "Variable": "$.status",
-            "StringEquals": "AGILE_COACH",
-            "Next": "DisplayAnalysisResult"
-          }
-        ],
-        "Default": "ErrorState"
-      },
-      "DisplayAnalysisResult": {
-        "Type": "Pass",
-        "Result": "Analysis ready for user review.",
-        "Next": "UserDecision"
-      },
-      "UserDecision": {
-        "Type": "Choice",
-        "Choices": [
-          {
-            "Variable": "$.userDecision",
-            "StringEquals": "SendToTechReview",
-            "Next": "TechnicalReview"
-          },
-          {
-            "Variable": "$.userDecision",
-            "StringEquals": "Skip",
-            "Next": "CompleteState"
-          }
-        ],
-        "Default": "ErrorState"
+        "Next": "TechnicalReview",
+        "Catch": [{
+          "ErrorEquals": ["States.ALL"],
+          "Next": "ErrorState"
+        }]
       },
       "TechnicalReview": {
         "Type": "Task",
         "Resource": "${technical_review_arn}",
-        "Next": "TechnicalReviewWorker"
+        "Next": "TechnicalReviewWorker",
+        "Catch": [{
+          "ErrorEquals": ["States.ALL"],
+          "Next": "ErrorState"
+        }]
       },
       "TechnicalReviewWorker": {
         "Type": "Task",
         "Resource": "${technical_review_worker_arn}",
-        "Next": "UserTeamEstimateDecision"
-      },
-      "UserTeamEstimateDecision": {
-        "Type": "Choice",
-        "Choices": [
-          {
-            "Variable": "$.userDecision",
-            "StringEquals": "RequestTeamEstimate",
-            "Next": "TeamEstimation"
-          },
-          {
-            "Variable": "$.userDecision",
-            "StringEquals": "Accept",
-            "Next": "CompleteState"
-          }
-        ],
-        "Default": "ErrorState"
+        "Next": "TeamEstimation",
+        "Catch": [{
+          "ErrorEquals": ["States.ALL"],
+          "Next": "ErrorState"
+        }]
       },
       "TeamEstimation": {
         "Type": "Task",
         "Resource": "${team_estimate_arn}",
-        "Next": "TeamEstimationWorker"
+        "Next": "TeamEstimationWorker",
+        "Catch": [{
+          "ErrorEquals": ["States.ALL"],
+          "Next": "ErrorState"
+        }]
       },
       "TeamEstimationWorker": {
         "Type": "Task",
         "Resource": "${team_estimate_worker_arn}",
-        "Next": "FinalizeEstimates"
-      },
-      "FinalizeEstimates": {
-        "Type": "Pass",
-        "Result": "Estimates finalized and saved.",
-        "Next": "CompleteState"
+        "Next": "CompleteState",
+        "Catch": [{
+          "ErrorEquals": ["States.ALL"],
+          "Next": "ErrorState"
+        }]
       },
       "CompleteState": {
         "Type": "Succeed"
@@ -94,5 +56,5 @@
         "Cause": "An error occurred in the workflow."
       }
     }
-  }
+}
   

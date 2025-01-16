@@ -322,7 +322,7 @@ resource "aws_lambda_function" "error_handler" {
 
 # Add Step Functions permissions to Lambda role
 resource "aws_iam_role_policy" "lambda_step_functions" {
-  name = "lambda_step_functions_policy"
+  name = "${var.environment}-lambda-step-functions"
   role = aws_iam_role.lambda_role.id
 
   policy = jsonencode({
@@ -331,6 +331,7 @@ resource "aws_iam_role_policy" "lambda_step_functions" {
       {
         Effect = "Allow"
         Action = [
+          "states:StartExecution",
           "states:SendTaskSuccess",
           "states:SendTaskFailure",
           "states:SendTaskHeartbeat",
@@ -339,7 +340,29 @@ resource "aws_iam_role_policy" "lambda_step_functions" {
           "states:ListActivities",
           "states:ListExecutions"
         ]
-        Resource = "*"
+        Resource = [
+          "arn:aws:states:${var.aws_region}:${var.account_id}:stateMachine:${var.environment}-StoryRefinementWorkflow",
+          "arn:aws:states:${var.aws_region}:${var.account_id}:execution:${var.environment}-StoryRefinementWorkflow:*"
+        ]
+      }
+    ]
+  })
+}
+
+# Add SSM read permission to Lambda role
+resource "aws_iam_role_policy" "lambda_ssm" {
+  name = "${var.environment}-lambda-ssm-access"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter"
+        ]
+        Resource = "arn:aws:ssm:*:*:parameter/${var.environment}/step-functions/*"
       }
     ]
   })
