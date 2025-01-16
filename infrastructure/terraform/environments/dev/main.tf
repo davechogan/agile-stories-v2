@@ -58,10 +58,10 @@ module "vpc" {
 module "agile_stories" {
   source = "../../modules/agile_stories"
 
-  subnet_ids        = module.vpc.private_subnet_ids
-  public_subnet_ids = module.vpc.public_subnet_ids
-  vpc_id            = module.vpc.vpc_id
-  step_function_arn = module.step_functions.state_machine_arn
+  subnet_ids          = module.vpc.private_subnet_ids
+  public_subnet_ids   = module.vpc.public_subnet_ids
+  vpc_id              = module.vpc.vpc_id
+  step_function_arn   = module.step_functions.state_machine_arn
   error_sns_topic_arn = aws_sns_topic.error_notifications.arn
 
   account_id           = var.account_id
@@ -88,7 +88,7 @@ module "agile_stories" {
 }
 
 module "step_functions" {
-  source = "../../modules/step_functions"
+  source      = "../../modules/step_functions"
   name_prefix = "dev"
   lambda_arns = [
     module.agile_stories.analyze_story_lambda_arn,
@@ -101,12 +101,12 @@ module "step_functions" {
   workflow_definition = templatefile(
     "${path.module}/../../modules/step_functions/workflow.json",
     {
-      analyze_story_arn = module.agile_stories.analyze_story_lambda_arn,
-      analyze_story_worker_arn = module.agile_stories.analyze_story_worker_lambda_arn,
-      technical_review_arn = module.agile_stories.technical_review_lambda_arn,
+      analyze_story_arn           = module.agile_stories.analyze_story_lambda_arn,
+      analyze_story_worker_arn    = module.agile_stories.analyze_story_worker_lambda_arn,
+      technical_review_arn        = module.agile_stories.technical_review_lambda_arn,
       technical_review_worker_arn = module.agile_stories.technical_review_worker_lambda_arn,
-      team_estimate_arn = module.agile_stories.team_estimate_lambda_arn,
-      team_estimate_worker_arn = module.agile_stories.team_estimate_worker_lambda_arn
+      team_estimate_arn           = module.agile_stories.team_estimate_lambda_arn,
+      team_estimate_worker_arn    = module.agile_stories.team_estimate_worker_lambda_arn
     }
   )
 }

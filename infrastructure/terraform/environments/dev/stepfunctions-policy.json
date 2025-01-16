@@ -1,0 +1,18 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "states:*",
+                "states:ValidateStateMachineDefinition",
+                "states:CreateStateMachine",
+                "states:DeleteStateMachine",
+                "states:UpdateStateMachine",
+                "states:ListStateMachines",
+                "states:DescribeStateMachine"
+            ],
+            "Resource": "*"
+        }
+    ]
+}

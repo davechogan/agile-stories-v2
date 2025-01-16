@@ -1,0 +1,61 @@
+{
+  "Comment": "Story Analysis Workflow",
+  "StartAt": "SubmitStory",
+  "States": {
+    "SubmitStory": {
+      "Type": "Task",
+      "Resource": "${analyze_story_lambda_arn}",
+      "Next": "CheckAnalysisStatus",
+      "Retry": [
+        {
+          "ErrorEquals": ["States.TaskFailed"],
+          "IntervalSeconds": 30,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleError"
+        }
+      ]
+    },
+    "CheckAnalysisStatus": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.status",
+          "StringEquals": "COMPLETED",
+          "Next": "UpdateStoryStatus"
+        },
+        {
+          "Variable": "$.status",
+          "StringEquals": "FAILED",
+          "Next": "HandleError"
+        }
+      ],
+      "Default": "WaitForAnalysis"
+    },
+    "WaitForAnalysis": {
+      "Type": "Wait",
+      "Seconds": 30,
+      "Next": "CheckAnalysisWorker"
+    },
+    "CheckAnalysisWorker": {
+      "Type": "Task",
+      "Resource": "${analyze_story_worker_lambda_arn}",
+      "Next": "CheckAnalysisStatus"
+    },
+    "UpdateStoryStatus": {
+      "Type": "Task",
+      "Resource": "${update_status_lambda_arn}",
+      "End": true
+    },
+    "HandleError": {
+      "Type": "Task",
+      "Resource": "${error_handler_lambda_arn}",
+      "End": true
+    }
+  }
+} 

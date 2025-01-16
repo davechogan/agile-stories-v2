@@ -93,7 +93,7 @@ variable "openai_api_key" {
   description = "OpenAI API Key (stored in AWS Secrets Manager)"
   type        = string
   default     = ""
-} 
+}
 
 variable "error_handler_package_path" {
   description = "Path to error handler Lambda package"

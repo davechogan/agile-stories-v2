@@ -378,13 +378,13 @@ resource "aws_iam_policy" "dynamodb_access" {
 
 # New Lambda functions needed:
 resource "aws_lambda_function" "error_handler" {
-  filename         = var.error_handler_package_path
-  function_name    = "${var.function_name}-error-handler"
-  role            = aws_iam_role.lambda_role.arn
-  handler         = "index.handler"
-  runtime         = "nodejs18.x"
-  timeout         = var.lambda_timeout
-  memory_size     = var.lambda_memory_size
+  filename      = var.error_handler_package_path
+  function_name = "${var.function_name}-error-handler"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "index.handler"
+  runtime       = "nodejs18.x"
+  timeout       = var.lambda_timeout
+  memory_size   = var.lambda_memory_size
 
   environment {
     variables = merge(local.lambda_environment_variables, {

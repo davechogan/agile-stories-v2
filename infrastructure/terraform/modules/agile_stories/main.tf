@@ -54,9 +54,9 @@ module "lambda" {
   vpc_id      = var.vpc_id
   subnet_ids  = var.subnet_ids
   # step_function_arn = module.step_functions.state_machine_arn
-  error_sns_topic_arn = var.error_sns_topic_arn
+  error_sns_topic_arn        = var.error_sns_topic_arn
   error_handler_package_path = var.error_handler_package_path
-  
+
 
   dynamodb_table_arn        = module.dynamodb.stories_table_arn
   stories_table_arn         = module.dynamodb.stories_table_arn
