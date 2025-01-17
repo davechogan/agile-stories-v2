@@ -2,17 +2,17 @@ import { defineStore } from 'pinia'
 
 export const useStoryStore = defineStore('story', {
   state: () => ({
-    currentAnalysis: null
+    currentStoryId: null,
+    storyDetails: null
   }),
 
   actions: {
-    setCurrentAnalysis(analysis) {
-      console.log('Setting analysis:', analysis)
-      this.currentAnalysis = analysis
+    setCurrentStoryId(id) {
+      this.currentStoryId = id
     },
 
-    clearCurrentAnalysis() {
-      this.currentAnalysis = null
+    setStoryDetails(details) {
+      this.storyDetails = details
     }
   }
 }) 

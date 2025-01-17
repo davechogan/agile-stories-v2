@@ -1,0 +1,24 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:*",
+                "iam:*",
+                "dynamodb:*",
+                "secretsmanager:*",
+                "lambda:*",
+                "apigateway:*",
+                "logs:*",
+                "cloudwatch:*",
+                "sqs:*",
+                "states:*",
+                "s3:*",
+                "vpc:*",
+                "cloudfront:*"
+            ],
+            "Resource": "*"
+        }
+    ]
+}

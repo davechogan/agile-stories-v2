@@ -94,22 +94,60 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useStoryStore } from '@/stores/storyStore'
+import { useStoryStore } from '../stores/storyStore'
 import { submitStoryForAgileReview } from '@/api/storyApi'
 
 const router = useRouter()
 const storyStore = useStoryStore()
 const loading = ref(false)
 
+// Story data structure
 const story = ref({
-  title: 'Test Story',
-  text: 'As a user, I want to save my preferences, so that I can customize my experience',
-  acceptance_criteria: [
-    'User preferences are saved immediately after changes',
-    'Preferences persist between sessions',
-    'User can reset preferences to default'
-  ]
+  title: '',
+  text: '',
+  description: '',
+  acceptance_criteria: ['']
 })
+
+// Form validation
+const isValid = computed(() => {
+  return story.value.title.trim() !== '' &&
+         story.value.text.trim() !== '' &&
+         story.value.acceptance_criteria.some(c => c.trim() !== '')
+})
+
+// Submit handler
+const submitStory = async () => {
+  try {
+    loading.value = true
+    console.log('Starting story submission...')
+    
+    const storyData = {
+      tenant_id: 'test-tenant-001',
+      content: {
+        title: story.value.title,
+        description: story.value.description,
+        story: story.value.text,
+        acceptance_criteria: story.value.acceptance_criteria.filter(c => c.trim() !== '')
+      }
+    }
+
+    console.log('Submitting to API Gateway:', storyData)
+    const response = await submitStoryForAgileReview(storyData)
+    console.log('API Response:', response)
+    
+    // Make sure storyStore is initialized
+    if (storyStore && typeof storyStore.setCurrentStoryId === 'function') {
+      storyStore.setCurrentStoryId(response.story_id)
+      router.push('/agile')
+    } else {
+      console.error('Story store not properly initialized')
+    }
+  } catch (error) {
+    console.error('Error submitting story:', error)
+    loading.value = false
+  }
+}
 
 const writingTips = [
   {
@@ -134,12 +172,6 @@ const writingTips = [
   }
 ]
 
-const isValid = computed(() => {
-  return story.value.title.trim() !== '' &&
-         story.value.text.trim() !== '' &&
-         story.value.acceptance_criteria.some(c => c.trim() !== '')
-})
-
 const addCriteria = () => {
   story.value.acceptance_criteria.push('')
 }
@@ -148,20 +180,6 @@ const removeCriteria = (index) => {
   story.value.acceptance_criteria.splice(index, 1)
   if (story.value.acceptance_criteria.length === 0) {
     story.value.acceptance_criteria.push('')
-  }
-}
-
-const submitStory = async () => {
-  try {
-    loading.value = true
-    const response = await submitStoryForAgileReview(story.value)
-    console.log('API Response:', response)  // Debug log
-    storyStore.setCurrentAnalysis(response)
-    router.push('/agile')
-  } catch (error) {
-    console.error('Error:', error)
-  } finally {
-    loading.value = false
   }
 }
 

@@ -116,4 +116,18 @@ resource "aws_sns_topic" "error_notifications" {
   name = "error-notifications"
 }
 
+module "frontend_hosting" {
+  source      = "../../modules/frontend_hosting"
+  environment = var.environment
+}
+
+# Update to use CloudFront domain
+output "frontend_url" {
+  value = module.frontend_hosting.cloudfront_domain
+}
+
+output "cloudfront_id" {
+  value = module.frontend_hosting.cloudfront_id
+}
+
 
