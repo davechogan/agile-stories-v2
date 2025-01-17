@@ -3,7 +3,9 @@ import { defineStore } from 'pinia'
 export const useStoryStore = defineStore('story', {
   state: () => ({
     currentStoryId: null,
-    storyDetails: null
+    storyDetails: null,
+    status: 'SUBMITTED',
+    feedback: null
   }),
 
   actions: {
@@ -13,6 +15,11 @@ export const useStoryStore = defineStore('story', {
 
     setStoryDetails(details) {
       this.storyDetails = details
+    },
+
+    updateFromSubscription(data) {
+      this.status = data.status
+      this.feedback = data.feedback
     }
   }
 }) 

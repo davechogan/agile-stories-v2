@@ -130,4 +130,19 @@ output "cloudfront_id" {
   value = module.frontend_hosting.cloudfront_id
 }
 
+module "appsync" {
+  source           = "../../modules/appsync"
+  environment      = var.environment
+  story_table_name = "${var.environment}-agile-stories"
+}
+
+output "appsync_endpoint" {
+  value = module.appsync.api_endpoint
+}
+
+output "appsync_api_key" {
+  value     = module.appsync.api_key
+  sensitive = true
+}
+
 

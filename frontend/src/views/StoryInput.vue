@@ -94,8 +94,19 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useStoryStore } from '../stores/storyStore'
+import { useStoryStore } from '@/stores/storyStore'
 import { submitStoryForAgileReview } from '@/api/storyApi'
+import { apolloClient } from '@/plugins/apollo'
+import gql from 'graphql-tag'
+
+const GET_STORY_STATUS = gql`
+  query GetStoryStatus($storyId: ID!) {
+    getStoryStatus(storyId: $storyId) {
+      story_id
+      version
+    }
+  }
+`
 
 const router = useRouter()
 const storyStore = useStoryStore()
@@ -209,6 +220,45 @@ const guidelines = {
       }
     ]
   }
+}
+
+// After story submission success:
+const handleSubmitSuccess = async (response) => {
+  const storyId = response.story_id
+  storyStore.setCurrentStoryId(storyId)
+  
+  // Start polling for AGILE_COACH version
+  let pollAttempts = 0
+  const MAX_POLL_ATTEMPTS = 10
+  
+  const pollInterval = setInterval(async () => {
+    try {
+      pollAttempts++
+      console.log(`Polling attempt ${pollAttempts}/${MAX_POLL_ATTEMPTS} for story: ${storyId}`)
+      
+      const { data } = await apolloClient.query({
+        query: GET_STORY_STATUS,
+        variables: { storyId },
+        fetchPolicy: 'network-only'
+      })
+      
+      console.log('Poll response:', data?.getStoryStatus)
+      
+      if (data?.getStoryStatus?.version === 'AGILE_COACH') {
+        console.log('✅ Found AGILE_COACH version - navigating to results')
+        clearInterval(pollInterval)
+        router.push('/agile')
+      } else if (pollAttempts >= MAX_POLL_ATTEMPTS) {
+        console.log('🛑 Max polling attempts reached')
+        clearInterval(pollInterval)
+      }
+    } catch (error) {
+      console.error('❌ Polling error:', error)
+      if (pollAttempts >= MAX_POLL_ATTEMPTS) {
+        clearInterval(pollInterval)
+      }
+    }
+  }, 2000)
 }
 </script>
 

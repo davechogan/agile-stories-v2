@@ -16,7 +16,8 @@
                 "states:*",
                 "s3:*",
                 "vpc:*",
-                "cloudfront:*"
+                "cloudfront:*",
+                "appsync:*"
             ],
             "Resource": "*"
         }

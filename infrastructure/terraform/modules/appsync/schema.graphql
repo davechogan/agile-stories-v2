@@ -1,0 +1,12 @@
+type StoryStatus {
+  story_id: ID!
+  version: String
+}
+
+type Query {
+  getStoryStatus(storyId: ID!): StoryStatus
+}
+
+schema {
+  query: Query
+} 

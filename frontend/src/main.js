@@ -5,6 +5,7 @@ import { createPinia } from 'pinia'
 
 import App from './App.vue'
 import router from './router'
+import { apolloProvider } from './plugins/apollo'
 
 // Vuetify
 import 'vuetify/styles'
@@ -53,5 +54,6 @@ const pinia = createPinia()
 app.use(pinia)
 app.use(router)
 app.use(vuetify)
+app.use(apolloProvider)
 
 app.mount('#app')
