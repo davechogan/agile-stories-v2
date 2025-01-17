@@ -1,11 +1,10 @@
 """
 analyze_story_worker Lambda Function
 
-This Lambda processes stories and creates the AGILE_COACH version with analysis.
-It's triggered by Step Functions.
-
-Environment Variables:
-    DYNAMODB_TABLE (str): Name of the DynamoDB table for storing stories
+This Lambda:
+1. Gets AGILE_COACH_PENDING version from DynamoDB
+2. Will send to OpenAI for analysis (currently mocked)
+3. Stores results as AGILE_COACH version
 """
 
 import os
@@ -23,10 +22,12 @@ dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
 
 def analyze_story(content):
-    """Analyzes the user story (stubbed for testing).
-    Returns both original content and analysis for testing purposes."""
+    """
+    Analyzes the user story (stubbed for testing).
+    Returns both original content and analysis results.
+    """
     return {
-        # Keep original story content for testing
+        # Keep original story content
         "title": content["title"],
         "description": content["description"],
         "story": content["story"],
@@ -56,11 +57,11 @@ def handler(event, context):
         # Get story_id from event
         story_id = event['story_id']
         
-        # Get the PENDING version from DynamoDB using composite key
+        # Get the PENDING version from DynamoDB
         response = table.get_item(
             Key={
                 'story_id': story_id,
-                'version': 'AGILE_COACH_PENDING'  # This is the composite key
+                'version': 'AGILE_COACH_PENDING'
             }
         )
         
@@ -68,31 +69,28 @@ def handler(event, context):
             raise ValueError(f"No PENDING story found for story_id: {story_id}")
             
         item = response['Item']
-        
-        # Extract data
         content = item['content']
         tenant_id = item['tenant_id']
         
-        # Analyze the story (will be OpenAI later)
+        # Analyze the story and create new content
         analysis_results = analyze_story(content)
         
-        # Store analyzed version (just the analysis results)
+        # Store analyzed version - just like analyze_story/app.py does
         timestamp = datetime.utcnow().isoformat()
         analyzed_item = {
             'story_id': story_id,
-            'version': 'AGILE_COACH',  # This version for the analyzed content
+            'version': 'AGILE_COACH',
             'tenant_id': tenant_id,
-            'content': analysis_results,  # Store just the AI analysis
+            'content': analysis_results,
             'created_at': timestamp,
             'updated_at': timestamp
         }
         
-        logger.info(f"Storing analyzed item in DynamoDB: {json.dumps(analyzed_item)}")
+        logger.info(f"Storing AGILE_COACH version in DynamoDB")
         table.put_item(Item=analyzed_item)
         
         return {
-            'story_id': story_id,
-           
+            'story_id': story_id
         }
         
     except Exception as e:

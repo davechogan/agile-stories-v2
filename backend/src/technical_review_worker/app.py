@@ -1,19 +1,10 @@
 """
 technical_review_worker Lambda Function
 
-This Lambda is triggered by Step Functions to perform technical review analysis on a story.
-It creates a SENIOR_DEV version with technical review results in DynamoDB.
-
-Environment Variables:
-    DYNAMODB_TABLE (str): Name of the DynamoDB table for storing stories
-    OPENAI_API_KEY (str): OpenAI API key for technical analysis
-
-Returns:
-    dict: Step Functions response object containing:
-        story_id (str): UUID of the processed story
-        tenant_id (str): Tenant identifier
-        technical_review (dict): Technical review results
-        content (dict): Story content
+This Lambda:
+1. Gets SENIOR_DEV_PENDING version from DynamoDB
+2. Will send to OpenAI for technical analysis (currently mocked)
+3. Stores results as SENIOR_DEV version
 """
 
 import os
@@ -28,94 +19,78 @@ logger.setLevel(logging.INFO)
 
 # Initialize AWS clients
 dynamodb = boto3.resource('dynamodb')
-
-# Get DynamoDB table
 table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
 
-def perform_technical_review(content):
+def analyze_technical_aspects(content):
     """
-    Analyzes the story from a technical perspective using AI.
-    
-    Args:
-        content (dict): Story content containing:
-            title (str): Story title
-            description (str): Story description
-            story (str): User story
-            acceptance_criteria (list): List of acceptance criteria
-            analysis (dict): Previous agile coach analysis
-    
-    Returns:
-        dict: Technical review results containing:
-            technical_considerations (list): List of technical points
-            complexity_score (int): Complexity rating (1-10)
-            estimated_effort (str): Estimated effort level
-    
-    Note:
-        This is currently a placeholder. Actual implementation will use OpenAI.
+    TEMPORARY: Mock technical analysis that would come from OpenAI.
+    Returns both original content and technical analysis.
     """
     return {
-        "technical_considerations": [
-            "Consider adding API rate limiting",
-            "Need to handle offline scenarios"
-        ],
-        "complexity_score": 7,
-        "estimated_effort": "medium"
+        # Keep original story content
+        "title": content["title"],
+        "description": content["description"],
+        "story": content["story"],
+        "acceptance_criteria": content["acceptance_criteria"],
+        
+        # Add technical analysis
+        "technical_analysis": {
+            "architecture_impact": "Minor - extends existing user management system",
+            "security_considerations": [
+                "Password hashing required",
+                "Rate limiting for registration attempts",
+                "Email verification tokens must be secure"
+            ],
+            "implementation_complexity": "Medium",
+            "estimated_effort_days": 5,
+            "technical_dependencies": [
+                "User management service",
+                "Email service",
+                "Database migrations"
+            ]
+        }
     }
 
 def handler(event, context):
-    """
-    Lambda handler for processing technical review requests.
-    
-    Performs technical analysis of the story and creates a SENIOR_DEV
-    version with the results.
-    
-    Args:
-        event (dict): Step Functions event object containing:
-            story_id (str): UUID of the story
-            tenant_id (str): Tenant identifier
-            content (dict): Story content to analyze
-        context (obj): Lambda context object
-    
-    Returns:
-        dict: Step Functions response object
-    
-    Raises:
-        Exception: For any processing errors
-    """
+    """Lambda handler for technical review analysis."""
     try:
         logger.info(f"Event received: {json.dumps(event)}")
         
-        # Extract data from Step Functions input
+        # Get story_id from Step Functions
         story_id = event['story_id']
-        tenant_id = event.get('tenant_id', 'default')
-        content = event['content']
+        
+        # Get SENIOR_DEV_PENDING version from DynamoDB
+        response = table.get_item(
+            Key={
+                'story_id': story_id,
+                'version': 'SENIOR_DEV_PENDING'
+            }
+        )
+        
+        if 'Item' not in response:
+            raise ValueError(f"No SENIOR_DEV_PENDING version found for story_id: {story_id}")
+            
+        pending_item = response['Item']
+        
+        # Analyze technical aspects (mocked for now)
+        analysis_results = analyze_technical_aspects(pending_item['content'])
+        
+        # Store SENIOR_DEV version
         timestamp = datetime.utcnow().isoformat()
-        
-        # Perform technical review
-        tech_review_results = perform_technical_review(content)
-        
-        # Store technical review results as new version
-        complete_item = {
+        analyzed_item = {
             'story_id': story_id,
             'version': 'SENIOR_DEV',
-            'tenant_id': tenant_id,
-            'content': {
-                **content,  # Previous content
-                'technical_review': tech_review_results
-            },
+            'tenant_id': pending_item['tenant_id'],
+            'content': analysis_results,
             'created_at': timestamp,
             'updated_at': timestamp
         }
         
-        logger.info(f"Storing SENIOR_DEV version in DynamoDB: {json.dumps(complete_item)}")
-        table.put_item(Item=complete_item)
+        logger.info(f"Storing SENIOR_DEV version: {json.dumps(analyzed_item)}")
+        table.put_item(Item=analyzed_item)
         
-        # Return results to Step Functions
         return {
-            'story_id': story_id,
-            'tenant_id': tenant_id,
-            'technical_review': tech_review_results,
-            'content': content
+            'story_id': story_id
         }
         
     except Exception as e:
