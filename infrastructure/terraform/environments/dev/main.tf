@@ -84,7 +84,7 @@ module "agile_stories" {
   estimations_table_arn        = "arn:aws:dynamodb:${var.aws_region}:${var.account_id}:table/${var.environment}-agile-stories-estimations"
   estimations_table_stream_arn = "arn:aws:dynamodb:${var.aws_region}:${var.account_id}:table/${var.environment}-agile-stories-estimations/stream/*"
   tenant_index_name            = "tenant-index"
-  dynamodb_table_name         = "${var.environment}-agile-stories"
+  dynamodb_table_name          = "${var.environment}-agile-stories"
 }
 
 module "step_functions" {

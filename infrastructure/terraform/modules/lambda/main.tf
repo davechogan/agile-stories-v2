@@ -79,9 +79,9 @@ resource "aws_lambda_function" "analyze_story" {
 
   environment {
     variables = {
-      DYNAMODB_TABLE   = var.dynamodb_table_name
-      ENVIRONMENT      = var.environment
-      ERROR_SNS_TOPIC  = var.error_sns_topic_arn
+      DYNAMODB_TABLE  = var.dynamodb_table_name
+      ENVIRONMENT     = var.environment
+      ERROR_SNS_TOPIC = var.error_sns_topic_arn
     }
   }
 
@@ -108,9 +108,9 @@ resource "aws_lambda_function" "analyze_story_worker" {
 
   environment {
     variables = merge(local.lambda_environment_variables, {
-      DYNAMODB_TABLE    = var.dynamodb_table_name
-      ERROR_SNS_TOPIC   = var.error_sns_topic_arn
-      OPENAI_API_KEY    = var.openai_api_key
+      DYNAMODB_TABLE  = var.dynamodb_table_name
+      ERROR_SNS_TOPIC = var.error_sns_topic_arn
+      OPENAI_API_KEY  = var.openai_api_key
     })
   }
 
@@ -132,8 +132,8 @@ resource "aws_lambda_function" "technical_review" {
 
   environment {
     variables = merge(local.lambda_environment_variables, {
-      DYNAMODB_TABLE    = var.dynamodb_table_name
-      ERROR_SNS_TOPIC   = var.error_sns_topic_arn
+      DYNAMODB_TABLE  = var.dynamodb_table_name
+      ERROR_SNS_TOPIC = var.error_sns_topic_arn
     })
   }
 
@@ -155,9 +155,9 @@ resource "aws_lambda_function" "technical_review_worker" {
 
   environment {
     variables = merge(local.lambda_environment_variables, {
-      DYNAMODB_TABLE    = var.dynamodb_table_name
-      ERROR_SNS_TOPIC   = var.error_sns_topic_arn
-      OPENAI_API_KEY    = var.openai_api_key
+      DYNAMODB_TABLE  = var.dynamodb_table_name
+      ERROR_SNS_TOPIC = var.error_sns_topic_arn
+      OPENAI_API_KEY  = var.openai_api_key
     })
   }
 
@@ -179,8 +179,8 @@ resource "aws_lambda_function" "team_estimate" {
 
   environment {
     variables = merge(local.lambda_environment_variables, {
-      DYNAMODB_TABLE    = var.dynamodb_table_name
-      ERROR_SNS_TOPIC   = var.error_sns_topic_arn
+      DYNAMODB_TABLE  = var.dynamodb_table_name
+      ERROR_SNS_TOPIC = var.error_sns_topic_arn
     })
   }
 
@@ -202,9 +202,9 @@ resource "aws_lambda_function" "team_estimate_worker" {
 
   environment {
     variables = merge(local.lambda_environment_variables, {
-      DYNAMODB_TABLE    = var.dynamodb_table_name
-      ERROR_SNS_TOPIC   = var.error_sns_topic_arn
-      OPENAI_API_KEY    = var.openai_api_key
+      DYNAMODB_TABLE  = var.dynamodb_table_name
+      ERROR_SNS_TOPIC = var.error_sns_topic_arn
+      OPENAI_API_KEY  = var.openai_api_key
     })
   }
 

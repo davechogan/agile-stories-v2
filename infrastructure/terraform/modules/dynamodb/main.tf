@@ -1,9 +1,9 @@
 # Stories table
 resource "aws_dynamodb_table" "agile_stories" {
-  name           = "${var.environment}-agile-stories"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "story_id"
-  range_key      = "version"
+  name         = "${var.environment}-agile-stories"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "story_id"
+  range_key    = "version"
 
   attribute {
     name = "story_id"
@@ -45,10 +45,10 @@ resource "aws_dynamodb_table" "agile_stories" {
 
 # Estimations table
 resource "aws_dynamodb_table" "estimations" {
-  name           = "${var.environment}-agile-stories-estimations"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "estimation_id"
-  range_key      = "story_id"
+  name         = "${var.environment}-agile-stories-estimations"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "estimation_id"
+  range_key    = "story_id"
 
   attribute {
     name = "estimation_id"

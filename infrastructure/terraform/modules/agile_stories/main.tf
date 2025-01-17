@@ -48,15 +48,15 @@ module "sqs" {
 module "lambda" {
   source = "../lambda"
 
-  environment            = var.environment
-  vpc_id                = var.vpc_id
-  subnet_ids            = var.subnet_ids
-  openai_api_key        = var.openai_api_key
-  dynamodb_table_name   = var.dynamodb_table_name
-  error_sns_topic_arn   = var.error_sns_topic_arn
+  environment         = var.environment
+  vpc_id              = var.vpc_id
+  subnet_ids          = var.subnet_ids
+  openai_api_key      = var.openai_api_key
+  dynamodb_table_name = var.dynamodb_table_name
+  error_sns_topic_arn = var.error_sns_topic_arn
 
-  account_id  = var.account_id
-  aws_region  = var.aws_region
+  account_id = var.account_id
+  aws_region = var.aws_region
 
   dynamodb_table_arn        = module.dynamodb.stories_table_arn
   stories_table_arn         = module.dynamodb.stories_table_arn
@@ -78,7 +78,7 @@ module "lambda" {
   additional_policy_arns = []
   function_name          = "${var.environment}-agile-stories"
 
-  analysis_queue_url  = module.sqs.analysis_queue_url
+  analysis_queue_url = module.sqs.analysis_queue_url
 
   # Consolidated estimations table config and new variables
   estimations_table_name       = module.dynamodb.estimations_table_name
