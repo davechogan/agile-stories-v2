@@ -1,17 +1,3 @@
-# 1. Provider Configuration
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
-
-provider "aws" {
-  region = var.aws_region
-}
-
 # 2. Variables
 variable "vpc_cidr_block" {
   default = "10.0.0.0/16"
@@ -58,33 +44,50 @@ module "vpc" {
 module "agile_stories" {
   source = "../../modules/agile_stories"
 
-  subnet_ids          = module.vpc.private_subnet_ids
-  public_subnet_ids   = module.vpc.public_subnet_ids
-  vpc_id              = module.vpc.vpc_id
-  error_sns_topic_arn = aws_sns_topic.error_notifications.arn
+  providers = {
+    aws.us-east-1 = aws.us-east-1
+  }
 
-  account_id           = var.account_id
+  # Environment variables
   environment          = var.environment
-  aws_region           = var.aws_region
-  openai_api_key       = data.aws_secretsmanager_secret_version.openai_key_version.secret_string
-  cidr_block           = var.cidr_block
-  public_subnet_cidrs  = var.public_subnet_cidrs
+  aws_region          = var.aws_region
+  account_id          = var.account_id
+  
+  # Network variables
+  vpc_id              = var.vpc_id
+  cidr_block          = var.cidr_block
+  public_subnet_cidrs = var.public_subnet_cidrs
   private_subnet_cidrs = var.private_subnet_cidrs
+  public_subnet_ids   = var.public_subnet_ids
+  subnet_ids          = var.subnet_ids
 
-  analyze_story_package_path           = var.analyze_story_package_path
-  analyze_story_worker_package_path    = var.analyze_story_worker_package_path
-  team_estimate_package_path           = var.team_estimate_package_path
-  team_estimate_worker_package_path    = var.team_estimate_worker_package_path
-  technical_review_package_path        = var.technical_review_package_path
+  # DynamoDB variables
+  dynamodb_table_name = var.dynamodb_table_name
+  estimations_table_name = var.estimations_table_name
+  estimations_table_arn = var.estimations_table_arn
+  estimations_table_stream_arn = var.estimations_table_stream_arn
+  tenant_index_name = var.tenant_index_name
+
+  # Lambda package paths
+  analyze_story_package_path = var.analyze_story_package_path
+  analyze_story_worker_package_path = var.analyze_story_worker_package_path
+  team_estimate_package_path = var.team_estimate_package_path
+  team_estimate_worker_package_path = var.team_estimate_worker_package_path
+  technical_review_package_path = var.technical_review_package_path
   technical_review_worker_package_path = var.technical_review_worker_package_path
-  get_status_package_path              = var.get_status_package_path
-  error_handler_package_path           = var.error_handler_package_path
+  get_status_package_path = var.get_status_package_path
+  error_handler_package_path = var.error_handler_package_path
 
-  estimations_table_name       = "${var.environment}-agile-stories-estimations"
-  estimations_table_arn        = "arn:aws:dynamodb:${var.aws_region}:${var.account_id}:table/${var.environment}-agile-stories-estimations"
-  estimations_table_stream_arn = "arn:aws:dynamodb:${var.aws_region}:${var.account_id}:table/${var.environment}-agile-stories-estimations/stream/*"
-  tenant_index_name            = "tenant-index"
-  dynamodb_table_name          = "${var.environment}-agile-stories"
+  # API and CORS
+  openai_api_key = var.openai_api_key
+  cors_allowed_origins = var.cors_allowed_origins
+  error_sns_topic_arn = var.error_sns_topic_arn
+
+  # New domain variables
+  route53_zone_id = var.route53_zone_id
+  
+  domain_name     = var.domain_name
+  domain_aliases  = var.domain_aliases
 }
 
 module "step_functions" {
@@ -116,9 +119,31 @@ resource "aws_sns_topic" "error_notifications" {
   name = "error-notifications"
 }
 
+module "acm" {
+  source = "../../modules/acm"
+  
+  providers = {
+    aws.us-east-1 = aws.us-east-1
+  }
+
+  domain_name     = var.domain_name
+  route53_zone_id = var.route53_zone_id
+}
+
+variable "cloudfront_distribution_id" {
+  description = "ID of the CloudFront distribution"
+  type        = string
+  default     = "E2BP3G13C91WFS"  # Current distribution ID
+}
+
 module "frontend_hosting" {
   source      = "../../modules/frontend_hosting"
   environment = var.environment
+
+  route53_zone_id = var.route53_zone_id
+  domain_name     = var.domain_name
+  domain_aliases  = var.domain_aliases
+  certificate_arn = module.acm.certificate_arn
 }
 
 # Update to use CloudFront domain

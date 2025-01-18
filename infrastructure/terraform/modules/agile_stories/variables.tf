@@ -140,3 +140,18 @@ variable "dynamodb_table_name" {
   description = "Name of the DynamoDB table"
   type        = string
 }
+
+variable "route53_zone_id" {
+  description = "Route53 zone ID for the domain"
+  type        = string
+}
+
+variable "domain_aliases" {
+  description = "List of domain aliases for the API Gateway"
+  type        = list(string)
+}
+
+variable "domain_name" {
+  description = "Domain name for ACM certificate"
+  type        = string
+}

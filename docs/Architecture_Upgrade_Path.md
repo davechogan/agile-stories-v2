@@ -28,15 +28,15 @@ This document outlines the ordered sequence for implementing architectural impro
   - Replace SQS orchestration (In Progress)
   - Add error handling and retry logic ✅
   - Update Lambda functions to work with Step Functions (In Progress)
-  - Add monitoring for workflow states (TODO)
+  - Add monitoring for workflow states (In Progress)
 
-## 3. Real-time Updates
-- Add AppSync for GraphQL API
-  - Define GraphQL schema
-  - Implement resolvers
-  - Add subscriptions for real-time status updates
-  - Remove polling mechanism
-  - Update frontend to use GraphQL/subscriptions
+## 3. Real-time Updates 🔄
+- Add AppSync for GraphQL API (In Progress)
+  - Define GraphQL schema (In Progress)
+  - Implement resolvers (TODO)
+  - Add subscriptions for real-time status updates (TODO)
+  - Remove polling mechanism (TODO)
+  - Update frontend to use GraphQL/subscriptions (TODO)
 
 ## 4. Settings & Configuration
 - Add Settings functionality

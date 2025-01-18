@@ -1,136 +1,146 @@
-# Terraform Structure and Patterns
+# Terraform Structure Documentation
 
-## Module Structure
+## Module Structure Diagram
 
-### Root Module (dev/prod)
-Environment-specific configurations live here:
-- Variable definitions
-- Module invocations
-- Environment-specific resources
-- Provider configurations
+```mermaid
+graph TD
+    %% Environment Level
+    TFVARS[terraform.tfvars] -->|all variables| MAIN[dev/main.tf]
+    VARS[dev/variables.tf] -->|variable definitions| MAIN
+    PROV[dev/providers.tf] -->|aws & aws.us-east-1| MAIN
 
-### Resource Modules
-Located in `modules/` directory, each focused on specific AWS resource types:
+    %% Main Module
+    MAIN -->|vars + providers| AGILE[agile_stories module]
+    AGILE_VARS[agile_stories/variables.tf] -->|variable definitions| AGILE
+    AGILE_PROV[agile_stories/providers.tf] -->|provider requirements| AGILE
 
-#### Lambda Module
+    %% Submodules
+    AGILE -->|domain_aliases| API[api_gateway module]
+    AGILE -->|domain_name, zone_id| ACM[acm module]
+    AGILE -->|domain vars, cert_arn| FRONT[frontend_hosting module]
+    AGILE -->|vars| LAMBDA[lambda module]
+    AGILE -->|vars| DDB[dynamodb module]
+    AGILE -->|vars| SQS[sqs module]
+    AGILE -->|vars| VPC[vpc module]
+
+    %% Module Variables
+    API_VARS[api_gateway/variables.tf] -->|variable definitions| API
+    ACM_VARS[acm/variables.tf] -->|variable definitions| ACM
+    FRONT_VARS[frontend_hosting/variables.tf] -->|variable definitions| FRONT
+    LAMBDA_VARS[lambda/variables.tf] -->|variable definitions| LAMBDA
+    DDB_VARS[dynamodb/variables.tf] -->|variable definitions| DDB
+    SQS_VARS[sqs/variables.tf] -->|variable definitions| SQS
+    VPC_VARS[vpc/variables.tf] -->|variable definitions| VPC
+
+    %% Provider Requirements
+    API_PROV[api_gateway/providers.tf] -->|provider requirements| API
+    ACM_PROV[acm/providers.tf] -->|provider requirements| ACM
+    FRONT_PROV[frontend_hosting/providers.tf] -->|provider requirements| FRONT
+    LAMBDA_PROV[lambda/providers.tf] -->|provider requirements| LAMBDA
+    DDB_PROV[dynamodb/providers.tf] -->|provider requirements| DDB
+    SQS_PROV[sqs/providers.tf] -->|provider requirements| SQS
+    VPC_PROV[vpc/providers.tf] -->|provider requirements| VPC
+```
+
+## Missing Files and Required Content
+
+### Dev Environment
+- ✅ terraform.tfvars
+- ✅ variables.tf
+- ✅ providers.tf
+- ✅ main.tf
+
+### agile_stories Module
+- ✅ providers.tf
+- ✅ variables.tf (with domain variables)
+- Need to update main.tf to pass domain variables
+
+### api_gateway Module
+- Need providers.tf
+- Need to update variables.tf with domain_aliases
+- Need to update main.tf for CORS
+
+### acm Module
+- ✅ providers.tf
+- Need variables.tf with domain variables
+- Need main.tf for certificate creation
+
+### frontend_hosting Module
+- Need providers.tf
+- Need to update variables.tf with domain variables
+- Need to update main.tf for CloudFront configuration
+
+### lambda Module
+- Need providers.tf
+- ✅ variables.tf
+- ✅ main.tf
+
+### dynamodb Module
+- Need providers.tf
+- ✅ variables.tf
+- ✅ main.tf
+
+### sqs Module
+- Need providers.tf
+- ✅ variables.tf
+- ✅ main.tf
+
+### vpc Module
+- Need providers.tf
+- ✅ variables.tf
+- ✅ main.tf
+
+## Required Content for Missing Files
+
+[Previous content remains the same...]
+
+### lambda/providers.tf
 ```hcl
-# modules/lambda/outputs.tf
-output "analyze_story_invoke_arn" {
-  description = "Invoke ARN for the analyze_story Lambda function"
-  value       = aws_lambda_function.analyze_story.invoke_arn
-}
-
-output "analyze_story_function_name" {
-  description = "Function name for the analyze_story Lambda"
-  value       = aws_lambda_function.analyze_story.function_name
-}
-
-output "technical_review_invoke_arn" {
-  description = "Invoke ARN for the technical_review Lambda function"
-  value       = aws_lambda_function.technical_review.invoke_arn
-}
-
-output "technical_review_function_name" {
-  description = "Function name for the technical_review Lambda"
-  value       = aws_lambda_function.technical_review.function_name
-}
-
-output "team_estimate_invoke_arn" {
-  description = "Invoke ARN for the team_estimate Lambda function"
-  value       = aws_lambda_function.team_estimate.invoke_arn
-}
-
-output "team_estimate_function_name" {
-  description = "Function name for the team_estimate Lambda"
-  value       = aws_lambda_function.team_estimate.function_name
-}
-
-# Worker function outputs
-output "analyze_story_worker_function_name" {
-  description = "Function name for the analyze_story_worker Lambda"
-  value       = aws_lambda_function.analyze_story_worker.function_name
-}
-
-output "technical_review_worker_function_name" {
-  description = "Function name for the technical_review_worker Lambda"
-  value       = aws_lambda_function.technical_review_worker.function_name
-}
-
-output "team_estimate_worker_function_name" {
-  description = "Function name for the team_estimate_worker Lambda"
-  value       = aws_lambda_function.team_estimate_worker.function_name
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
 }
 ```
 
-#### API Gateway Module
-References Lambda outputs:
+### dynamodb/providers.tf
 ```hcl
-# modules/api_gateway/main.tf
-resource "aws_api_gateway_integration" "analyze_story" {
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  resource_id = aws_api_gateway_resource.analyze_story.id
-  http_method = aws_api_gateway_method.analyze_story.http_method
-  integration_http_method = "POST"
-  type                    = "AWS_PROXY"
-  uri                     = var.analyze_story_invoke_arn  # From Lambda module output
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
 }
 ```
 
-#### Step Functions Module
-References Lambda outputs for worker functions:
+### sqs/providers.tf
 ```hcl
-# modules/step_functions/main.tf
-resource "aws_sfn_state_machine" "story_workflow" {
-  # ... other configuration ...
-  definition = templatefile("${path.module}/workflow.json", {
-    analyze_story_worker_arn     = var.analyze_story_worker_function_name
-    technical_review_worker_arn  = var.technical_review_worker_function_name
-    team_estimate_worker_arn     = var.team_estimate_worker_function_name
-  })
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
 }
 ```
 
-## Best Practices
-
-1. **Module Outputs**
-   - Only expose necessary values
-   - Use descriptive output names
-   - Include descriptions for all outputs
-   - Consider output dependencies
-
-2. **Module References**
-   - Use module outputs instead of direct resource references
-   - Keep environment-specific configuration in root module
-   - Pass only required variables to modules
-
-3. **Resource Organization**
-   - Group similar resources in modules
-   - Keep modules focused and single-purpose
-   - Use consistent naming conventions
-   - Document module interfaces (inputs/outputs)
-
-## Example Usage in Root Module
-
+### vpc/providers.tf
 ```hcl
-# dev/main.tf
-module "lambda" {
-  source = "../modules/lambda"
-  # ... other variables ...
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
 }
+```
 
-module "api_gateway" {
-  source = "../modules/api_gateway"
-  analyze_story_invoke_arn = module.lambda.analyze_story_invoke_arn
-  technical_review_invoke_arn = module.lambda.technical_review_invoke_arn
-  team_estimate_invoke_arn = module.lambda.team_estimate_invoke_arn
-  # ... other variables ...
-}
-
-module "step_functions" {
-  source = "../modules/step_functions"
-  analyze_story_worker_function_name = module.lambda.analyze_story_worker_function_name
-  technical_review_worker_function_name = module.lambda.technical_review_worker_function_name
-  team_estimate_worker_function_name = module.lambda.team_estimate_worker_function_name
-  # ... other variables ...
-}
-``` 
+[Rest of previous content remains the same...]
+```

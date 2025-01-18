@@ -100,3 +100,66 @@ variable "error_handler_package_path" {
   type        = string
   default     = "../../../backend/src/error_handler/package.zip"
 }
+
+variable "route53_zone_id" {
+  description = "Route53 zone ID for the domain"
+  type        = string
+}
+
+variable "domain_name" {
+  description = "Primary domain name"
+  type        = string
+}
+
+variable "domain_aliases" {
+  description = "List of domain aliases for CloudFront"
+  type        = list(string)
+}
+
+# Network Configuration
+variable "public_subnet_ids" {
+  description = "List of public subnet IDs"
+  type        = list(string)
+}
+
+variable "subnet_ids" {
+  description = "List of subnet IDs for Lambda functions"
+  type        = list(string)
+}
+
+# DynamoDB Configuration
+variable "dynamodb_table_name" {
+  description = "Name of the main DynamoDB table"
+  type        = string
+}
+
+variable "estimations_table_name" {
+  description = "Name of the estimations DynamoDB table"
+  type        = string
+}
+
+variable "estimations_table_arn" {
+  description = "ARN of the estimations DynamoDB table"
+  type        = string
+}
+
+variable "estimations_table_stream_arn" {
+  description = "Stream ARN of the estimations DynamoDB table"
+  type        = string
+}
+
+variable "tenant_index_name" {
+  description = "Name of the tenant GSI index"
+  type        = string
+}
+
+# API Configuration
+variable "cors_allowed_origins" {
+  description = "List of allowed CORS origins"
+  type        = list(string)
+}
+
+variable "error_sns_topic_arn" {
+  description = "ARN of the SNS topic for error notifications"
+  type        = string
+}

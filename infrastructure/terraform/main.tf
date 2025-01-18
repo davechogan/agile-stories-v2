@@ -74,4 +74,11 @@ module "lambda" {
   technical_review_package_path = var.technical_review_package_path
   estimate_story_package_path   = var.estimate_story_package_path
   get_status_package_path       = var.get_status_package_path
+}
+
+module "frontend_hosting" {
+  source = "./modules/frontend_hosting"
+  
+  # ... existing variables ...
+  certificate_arn = "arn:aws:acm:us-east-1:784902437693:certificate/bb3dc266-1a3c-4a10-83c6-73e919be3844"
 } 

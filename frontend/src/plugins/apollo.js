@@ -1,7 +1,9 @@
 import { ApolloClient, InMemoryCache, HttpLink } from '@apollo/client/core'
 import { createApolloProvider } from '@vue/apollo-option'
 
-const APPSYNC_ENDPOINT = 'https://3ofh5tyjezgfnpqipouj4y5bfi.appsync-api.us-east-1.amazonaws.com/graphql'
+// const APPSYNC_ENDPOINT = 'https://2rfr1fecv5.execute-api.us-east-1.amazonaws.com/dev/graphql'
+ 
+const APPSYNC_ENDPOINT = 'https://3ofh5tyjezgfnpqipouj4y5bfi.app sync-api.us-east-1.amazonaws.com/graphql'
 const APPSYNC_API_KEY = 'da2-52givygifzedvj575mknrvmuyu'
 
 // HTTP link for queries

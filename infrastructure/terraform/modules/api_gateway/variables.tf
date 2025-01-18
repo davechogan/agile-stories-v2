@@ -53,4 +53,9 @@ variable "team_estimate_lambda_name" {
 variable "get_status_lambda_name" {
   description = "Name of the get estimation status Lambda function"
   type        = string
+}
+
+variable "domain_aliases" {
+  description = "List of domain aliases for CORS configuration"
+  type        = list(string)
 } 

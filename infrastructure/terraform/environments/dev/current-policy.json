@@ -1,0 +1,32 @@
+{
+    "PolicyVersion": {
+        "Document": {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": [
+                        "ec2:*",
+                        "iam:*",
+                        "dynamodb:*",
+                        "secretsmanager:*",
+                        "lambda:*",
+                        "apigateway:*",
+                        "logs:*",
+                        "cloudwatch:*",
+                        "sqs:*",
+                        "states:*",
+                        "s3:*",
+                        "vpc:*",
+                        "cloudfront:*",
+                        "appsync:*"
+                    ],
+                    "Resource": "*"
+                }
+            ]
+        },
+        "VersionId": "v5",
+        "IsDefaultVersion": true,
+        "CreateDate": "2025-01-17T04:02:00+00:00"
+    }
+}
