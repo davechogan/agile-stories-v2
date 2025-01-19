@@ -77,6 +77,10 @@ module "agile_stories" {
   technical_review_worker_package_path = var.technical_review_worker_package_path
   get_status_package_path              = var.get_status_package_path
   error_handler_package_path           = var.error_handler_package_path
+  story_state_handler_package_path    = var.story_state_handler_package_path
+  workflow_signal_handler_package_path  = var.workflow_signal_handler_package_path
+  
+
 
   # API and CORS
   openai_api_key       = var.openai_api_key

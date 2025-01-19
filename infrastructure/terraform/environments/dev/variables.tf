@@ -93,6 +93,11 @@ variable "story_state_handler_package_path" {
   type        = string
 }
 
+variable "workflow_signal_handler_package_path" {
+  description = "Path to the workflow signal handler Lambda package"
+  type        = string
+}
+
 # 5. API Configuration
 variable "openai_api_key" {
   description = "OpenAI API Key (stored in AWS Secrets Manager)"

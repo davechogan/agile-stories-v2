@@ -71,6 +71,7 @@ module "lambda" {
   technical_review_package_path        = var.technical_review_package_path
   technical_review_worker_package_path = var.technical_review_worker_package_path
   get_status_package_path              = var.get_status_package_path
+  story_state_handler_package_path    = var.story_state_handler_package_path
 
   log_retention_days     = 30
   lambda_memory_size     = 256
@@ -87,6 +88,7 @@ module "lambda" {
   tenant_index_name            = module.dynamodb.tenant_index_name
 
   error_handler_package_path = var.error_handler_package_path
+  workflow_signal_handler_package_path = var.workflow_signal_handler_package_path
 }
 
 # API Gateway

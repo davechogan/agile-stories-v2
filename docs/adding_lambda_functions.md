@@ -1,19 +1,53 @@
 # Adding New Lambda Functions to Terraform
 
+## Quick Checklist
+1. [ ] Backend
+   - Add code to backend/src/{function_name}/
+   - Add to build.sh case statement
+   - Run build script, verify package.zip
+
+2. [ ] Variables
+   - Add to terraform.tfvars
+   - Add to dev/variables.tf
+   - Add to agile_stories/variables.tf
+   - Add to lambda/variables.tf
+
+3. [ ] Pass Variables
+   - Pass in dev/main.tf
+   - Pass in agile_stories/main.tf
+
+4. [ ] Lambda Resource
+   - Add Lambda function to lambda/main.tf
+   - Add CloudWatch log group
+
+5. [ ] Test
+   - terraform fmt
+   - terraform validate
+   - terraform plan
+
 ## File Changes Required
 
 ### 1. Backend Setup
 - [ ] Add Lambda function code to `backend/src/{function_name}/`
-- [ ] Update `backend/build.sh` to include new function
+- [ ] Add function directory name to `backend/build.sh` case statement:
+```bash
+case $dirname in
+    # ... existing cases ...
+    "{function_name}") output="{function_name}" ;;
+    *) output=$dirname ;;
+esac
+```
+- [ ] Run build script to verify `package.zip` creation
 - [ ] Test build script creates `package.zip` in function directory
 
-### 2. Terraform Variables
-- [ ] Add package path to `environments/dev/terraform.tfvars`:
+### 2. Terraform Variables Chain
+1. Set value in `environments/dev/terraform.tfvars`:
 ```hcl
 {function_name}_package_path = "../../../../backend/src/{function_name}/package.zip"
 ```
 
-- [ ] Declare variable in `environments/dev/variables.tf`:
+2. Declare in each module:
+- [ ] `environments/dev/variables.tf`:
 ```hcl
 variable "{function_name}_package_path" {
   description = "Path to the {function_name} Lambda package"
@@ -21,13 +55,44 @@ variable "{function_name}_package_path" {
 }
 ```
 
-- [ ] Add variable to `modules/agile_stories/variables.tf`:
+- [ ] `modules/agile_stories/variables.tf`:
 ```hcl
 variable "{function_name}_package_path" {
   description = "Path to the {function_name} Lambda package"
   type        = string
 }
 ```
+
+- [ ] `modules/lambda/variables.tf`:
+```hcl
+variable "{function_name}_package_path" {
+  description = "Path to the {function_name} Lambda package"
+  type        = string
+}
+```
+
+3. Pass through each module:
+- [ ] `environments/dev/main.tf`:
+```hcl
+module "agile_stories" {
+  {function_name}_package_path = var.{function_name}_package_path
+  # ... other variables
+}
+```
+
+- [ ] `modules/agile_stories/main.tf`:
+```hcl
+module "lambda" {
+  {function_name}_package_path = var.{function_name}_package_path
+  # ... other variables
+}
+```
+
+Note: Variables must be:
+1. Set in tfvars
+2. Declared in EACH module's variables.tf
+3. Passed through EACH module's main.tf
+4. Finally used in the Lambda resource
 
 ### 3. Module Configuration
 - [ ] Add Lambda resource to `modules/lambda/main.tf`:
@@ -67,8 +132,8 @@ resource "aws_cloudwatch_log_group" "{function_name}" {
 }
 ```
 
-### 4. Variable Passing
-- [ ] Pass variable in `environments/dev/main.tf`:
+### 4. Variable Passing Chain
+- [ ] Add to `environments/dev/main.tf` (passes to agile_stories):
 ```hcl
 module "agile_stories" {
   {function_name}_package_path = var.{function_name}_package_path
@@ -76,13 +141,15 @@ module "agile_stories" {
 }
 ```
 
-- [ ] Pass variable in `modules/agile_stories/main.tf`:
+- [ ] Add to `modules/agile_stories/main.tf` (passes to lambda):
 ```hcl
 module "lambda" {
   {function_name}_package_path = var.{function_name}_package_path
   # ... other variables
 }
 ```
+
+Note: Variables must be passed through BOTH files to reach the Lambda module
 
 ### 5. Testing
 - [ ] Run `terraform fmt` to format files

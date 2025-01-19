@@ -160,3 +160,8 @@ variable "story_state_handler_package_path" {
   description = "Path to the story state handler Lambda package"
   type        = string
 }
+
+variable "workflow_signal_handler_package_path" {
+  description = "Path to the workflow signal handler Lambda package"
+  type        = string
+}

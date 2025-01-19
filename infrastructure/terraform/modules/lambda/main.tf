@@ -270,6 +270,35 @@ resource "aws_lambda_function" "story_state_handler" {
   }
 }
 
+# Workflow Signal Handler Lambda
+resource "aws_lambda_function" "workflow_signal_handler" {
+  filename         = var.workflow_signal_handler_package_path
+  function_name    = "${var.environment}-agile-stories-workflow-signal-handler"
+  role            = aws_iam_role.lambda_role.arn
+  handler         = "app.lambda_handler"
+  source_code_hash = filebase64sha256(var.workflow_signal_handler_package_path)
+  runtime         = "python3.11"
+  timeout         = 30
+  memory_size     = 128
+
+  environment {
+    variables = {
+      DYNAMODB_TABLE = "${var.environment}-agile-stories"
+      ENVIRONMENT    = var.environment
+    }
+  }
+
+  vpc_config {
+    subnet_ids         = var.subnet_ids
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
+  tags = {
+    Environment = var.environment
+    Project     = "agile-stories"
+  }
+}
+
 # CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "analyze_story" {
   name              = "/aws/lambda/${aws_lambda_function.analyze_story.function_name}"
@@ -288,6 +317,11 @@ resource "aws_cloudwatch_log_group" "get_status" {
 
 resource "aws_cloudwatch_log_group" "story_state_handler" {
   name              = "/aws/lambda/${aws_lambda_function.story_state_handler.function_name}"
+  retention_in_days = var.log_retention_days
+}
+
+resource "aws_cloudwatch_log_group" "workflow_signal_handler" {
+  name              = "/aws/lambda/${aws_lambda_function.workflow_signal_handler.function_name}"
   retention_in_days = var.log_retention_days
 }
 
