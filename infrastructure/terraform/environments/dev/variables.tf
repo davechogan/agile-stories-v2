@@ -88,6 +88,11 @@ variable "get_status_package_path" {
   type        = string
 }
 
+variable "story_state_handler_package_path" {
+  description = "Path to the story state handler Lambda package"
+  type        = string
+}
+
 # 5. API Configuration
 variable "openai_api_key" {
   description = "OpenAI API Key (stored in AWS Secrets Manager)"

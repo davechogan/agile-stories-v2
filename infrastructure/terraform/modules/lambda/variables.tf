@@ -158,3 +158,8 @@ variable "error_handler_package_path" {
   description = "Path to the deployment package for the error handler Lambda function"
   type        = string
 }
+
+variable "story_state_handler_package_path" {
+  description = "Path to the story state handler Lambda package"
+  type        = string
+}

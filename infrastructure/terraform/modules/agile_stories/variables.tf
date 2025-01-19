@@ -155,3 +155,8 @@ variable "domain_name" {
   description = "Domain name for ACM certificate"
   type        = string
 }
+
+variable "story_state_handler_package_path" {
+  description = "Path to the story state handler Lambda package"
+  type        = string
+}
