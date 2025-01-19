@@ -49,51 +49,52 @@ module "agile_stories" {
   }
 
   # Environment variables
-  environment          = var.environment
-  aws_region          = var.aws_region
-  account_id          = var.account_id
-  
+  environment = var.environment
+  aws_region  = var.aws_region
+  account_id  = var.account_id
+
   # Network variables
-  vpc_id              = var.vpc_id
-  cidr_block          = var.cidr_block
-  public_subnet_cidrs = var.public_subnet_cidrs
+  vpc_id               = var.vpc_id
+  cidr_block           = var.cidr_block
+  public_subnet_cidrs  = var.public_subnet_cidrs
   private_subnet_cidrs = var.private_subnet_cidrs
-  public_subnet_ids   = var.public_subnet_ids
-  subnet_ids          = var.subnet_ids
+  public_subnet_ids    = var.public_subnet_ids
+  subnet_ids           = var.subnet_ids
 
   # DynamoDB variables
-  dynamodb_table_name = var.dynamodb_table_name
-  estimations_table_name = var.estimations_table_name
-  estimations_table_arn = var.estimations_table_arn
+  dynamodb_table_name          = var.dynamodb_table_name
+  estimations_table_name       = var.estimations_table_name
+  estimations_table_arn        = var.estimations_table_arn
   estimations_table_stream_arn = var.estimations_table_stream_arn
-  tenant_index_name = var.tenant_index_name
+  tenant_index_name            = var.tenant_index_name
 
   # Lambda package paths
-  analyze_story_package_path = var.analyze_story_package_path
-  analyze_story_worker_package_path = var.analyze_story_worker_package_path
-  team_estimate_package_path = var.team_estimate_package_path
-  team_estimate_worker_package_path = var.team_estimate_worker_package_path
-  technical_review_package_path = var.technical_review_package_path
+  analyze_story_package_path           = var.analyze_story_package_path
+  analyze_story_worker_package_path    = var.analyze_story_worker_package_path
+  team_estimate_package_path           = var.team_estimate_package_path
+  team_estimate_worker_package_path    = var.team_estimate_worker_package_path
+  technical_review_package_path        = var.technical_review_package_path
   technical_review_worker_package_path = var.technical_review_worker_package_path
-  get_status_package_path = var.get_status_package_path
-  error_handler_package_path = var.error_handler_package_path
+  get_status_package_path              = var.get_status_package_path
+  error_handler_package_path           = var.error_handler_package_path
 
   # API and CORS
-  openai_api_key = var.openai_api_key
+  openai_api_key       = var.openai_api_key
   cors_allowed_origins = var.cors_allowed_origins
-  error_sns_topic_arn = var.error_sns_topic_arn
+  error_sns_topic_arn  = var.error_sns_topic_arn
 
   # New domain variables
   route53_zone_id = var.route53_zone_id
-  
-  domain_name     = var.domain_name
-  domain_aliases  = var.domain_aliases
+
+  domain_name    = var.domain_name
+  domain_aliases = var.domain_aliases
 }
 
 module "step_functions" {
   source      = "../../modules/step_functions"
   name_prefix = "dev"
   environment = var.environment
+  account_id  = var.account_id
   lambda_arns = [
     module.agile_stories.analyze_story_lambda_arn,
     module.agile_stories.analyze_story_worker_lambda_arn,
@@ -121,7 +122,7 @@ resource "aws_sns_topic" "error_notifications" {
 
 module "acm" {
   source = "../../modules/acm"
-  
+
   providers = {
     aws.us-east-1 = aws.us-east-1
   }
@@ -133,12 +134,16 @@ module "acm" {
 variable "cloudfront_distribution_id" {
   description = "ID of the CloudFront distribution"
   type        = string
-  default     = "E2BP3G13C91WFS"  # Current distribution ID
+  default     = "E2BP3G13C91WFS" # Current distribution ID
 }
 
 module "frontend_hosting" {
   source      = "../../modules/frontend_hosting"
   environment = var.environment
+
+  providers = {
+    aws.us-east-1 = aws.us-east-1
+  }
 
   route53_zone_id = var.route53_zone_id
   domain_name     = var.domain_name

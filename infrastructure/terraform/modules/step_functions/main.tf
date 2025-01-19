@@ -3,36 +3,37 @@ resource "aws_iam_role" "step_function_role" {
   name = "${var.name_prefix}-StepFunctionsRole"
 
   assume_role_policy = jsonencode({
-    Version : "2012-10-17",
-    Statement : [
+    Version = "2012-10-17"
+    Statement = [
       {
-        Effect : "Allow",
-        Principal : {
-          Service : "states.amazonaws.com"
-        },
-        Action : "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "states.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
       }
     ]
   })
 }
 
-# IAM Policy for Step Functions to invoke Lambdas
+# IAM Policy
 resource "aws_iam_policy" "step_function_policy" {
   name = "${var.name_prefix}-StepFunctionsPolicy"
   policy = jsonencode({
-    Version : "2012-10-17",
-    Statement : [
+    Version = "2012-10-17"
+    Statement = [
       {
-        Effect : "Allow",
-        Action : [
+        Effect = "Allow"
+        Action = [
           "lambda:InvokeFunction"
-        ],
+        ]
         Resource = var.lambda_arns
       }
     ]
   })
 }
 
+# Policy Attachment
 resource "aws_iam_role_policy_attachment" "policy_attachment" {
   role       = aws_iam_role.step_function_role.name
   policy_arn = aws_iam_policy.step_function_policy.arn
@@ -74,6 +75,49 @@ resource "aws_iam_role_policy" "step_functions_ssm" {
           "ssm:DeleteParameter"
         ]
         Resource = "arn:aws:ssm:*:*:parameter/${var.environment}/step-functions/*"
+      }
+    ]
+  })
+}
+
+# Add DynamoDB policy
+resource "aws_iam_role_policy" "step_functions_dynamodb" {
+  name = "${var.name_prefix}-StepFunctionsDynamoDBPolicy"
+  role = aws_iam_role.step_function_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:Query"
+        ]
+        Resource = [
+          "arn:aws:dynamodb:us-east-1:${var.account_id}:table/${var.environment}-agile-stories"
+        ]
+      }
+    ]
+  })
+}
+
+# Add Lambda policy
+resource "aws_iam_role_policy" "step_functions_lambda" {
+  name = "${var.name_prefix}-StepFunctionsLambdaPolicy"
+  role = aws_iam_role.step_function_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:InvokeFunction"
+        ]
+        Resource = ["*"]
       }
     ]
   })

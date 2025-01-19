@@ -98,7 +98,7 @@ module "api_gateway" {
   subnet_ids           = var.subnet_ids
   cors_allowed_origins = var.cors_allowed_origins
   log_retention_days   = 30
-  domain_aliases       = var.domain_aliases 
+  domain_aliases       = var.domain_aliases
 
   analyze_story_lambda_arn  = module.lambda.analyze_story_lambda_arn
   analyze_story_lambda_name = module.lambda.analyze_story_lambda_name

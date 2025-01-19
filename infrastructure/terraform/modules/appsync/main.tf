@@ -2,7 +2,7 @@
 resource "aws_appsync_graphql_api" "story_api" {
   name                = "${var.environment}-story-api"
   authentication_type = "API_KEY"
-  schema             = file("${path.module}/schema.graphql")
+  schema              = file("${path.module}/schema.graphql")
 }
 
 # IAM Role for AppSync to access DynamoDB

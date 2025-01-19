@@ -1,7 +1,7 @@
 # ACM Certificate (in us-east-1 for CloudFront)
 resource "aws_acm_certificate" "cert" {
   provider = aws.us-east-1
-  
+
   domain_name       = var.domain_name
   validation_method = "DNS"
 
@@ -15,7 +15,7 @@ resource "aws_acm_certificate" "cert" {
 # DNS Validation records
 resource "aws_route53_record" "cert_validation" {
   provider = aws.us-east-1
-  
+
   allow_overwrite = true
   name            = tolist(aws_acm_certificate.cert.domain_validation_options)[0].resource_record_name
   records         = [tolist(aws_acm_certificate.cert.domain_validation_options)[0].resource_record_value]
@@ -27,7 +27,7 @@ resource "aws_route53_record" "cert_validation" {
 # Certificate validation
 resource "aws_acm_certificate_validation" "cert" {
   provider = aws.us-east-1
-  
+
   certificate_arn         = aws_acm_certificate.cert.arn
   validation_record_fqdns = [aws_route53_record.cert_validation.fqdn]
 }

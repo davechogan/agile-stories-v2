@@ -78,7 +78,7 @@ module "lambda" {
 
 module "frontend_hosting" {
   source = "./modules/frontend_hosting"
-  
+
   # ... existing variables ...
   certificate_arn = "arn:aws:acm:us-east-1:784902437693:certificate/bb3dc266-1a3c-4a10-83c6-73e919be3844"
 } 

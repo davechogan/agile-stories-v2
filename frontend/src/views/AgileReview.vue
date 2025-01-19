@@ -91,10 +91,12 @@
         <div class="sticky-footer">
           <div class="footer-content">
             <v-btn 
-              color="primary" 
-              @click="router.push('/agile')"
+              color="primary"
+              :loading="loading"
+              @click="handleSendForTechReview"
+              size="large"
             >
-              Continue to Agile Review
+              Send for Tech Review
             </v-btn>
             <div class="footer-hint" v-if="editingStory || editingAC">
               Save your changes to enable sending for review
@@ -141,10 +143,12 @@ import { ref, computed, onMounted } from 'vue'
 import { mockAnalysisResult } from '@/mocks/mockAnalysisData'
 import { useStoryStore } from '@/stores/storyStore'
 import { useRouter } from 'vue-router'
+import { sendForTechReview } from '../api/storyApi'
 
 const router = useRouter()
 const storyStore = useStoryStore()
 const analysis = ref(null)
+const loading = ref(false)
 
 onMounted(() => {
   // Use mock data instead of redirecting
@@ -236,6 +240,23 @@ const investAnalysis = [
 const isNegative = (content: string): boolean => {
   const negativeTerms = ['not', 'too vague', 'unclear', 'missing'];
   return negativeTerms.some(term => content.toLowerCase().includes(term));
+}
+
+const handleSendForTechReview = async () => {
+  try {
+    loading.value = true
+    const storyId = storyStore.currentStoryId
+    
+    // Update state machine
+    await sendForTechReview(storyId)
+    
+    // Navigate to tech review page
+    router.push('/tech')
+  } catch (error) {
+    console.error('Error sending for tech review:', error)
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 

@@ -4,9 +4,10 @@
       <!-- Left Column: Primary Content -->
       <div class="primary-content-wrapper">
         <div class="primary-content">
-          <div class="story-section">
-            <h3>Title</h3>
-            <div class="editable-content">
+          <h2 class="page-title">Story Input</h2>
+          <div class="story-form">
+            <div class="form-group">
+              <label class="input-label">Title</label>
               <v-text-field
                 v-model="story.title"
                 label="Enter a descriptive title"
@@ -14,8 +15,8 @@
               />
             </div>
 
-            <h3>User Story</h3>
-            <div class="editable-content">
+            <div class="form-group">
+              <label class="input-label">User Story</label>
               <v-textarea
                 v-model="story.text"
                 label="As a [user type], I want [goal], so that [benefit]"
@@ -25,32 +26,34 @@
               />
             </div>
 
-            <h3>Acceptance Criteria</h3>
-            <div class="editable-content">
-              <div v-for="(criteria, index) in story.acceptance_criteria" 
-                   :key="index"
-                   class="criteria-item">
-                <v-textarea
-                  v-model="story.acceptance_criteria[index]"
-                  variant="outlined"
-                  auto-grow
-                  rows="1"
-                />
+            <div class="form-group">
+              <label class="input-label">Acceptance Criteria</label>
+              <div class="criteria-list">
+                <div v-for="(criteria, index) in story.acceptance_criteria" 
+                     :key="index"
+                     class="criteria-item">
+                  <v-textarea
+                    v-model="story.acceptance_criteria[index]"
+                    variant="outlined"
+                    auto-grow
+                    rows="1"
+                  />
+                  <v-btn 
+                    icon="mdi-delete" 
+                    size="small"
+                    color="error" 
+                    variant="text"
+                    @click="removeCriteria(index)"
+                  />
+                </div>
                 <v-btn 
-                  icon="mdi-delete" 
-                  size="small"
-                  color="error" 
+                  prepend-icon="mdi-plus"
                   variant="text"
-                  @click="removeCriteria(index)"
-                />
+                  @click="addCriteria"
+                >
+                  Add Criteria
+                </v-btn>
               </div>
-              <v-btn 
-                prepend-icon="mdi-plus"
-                variant="text"
-                @click="addCriteria"
-              >
-                Add Criteria
-              </v-btn>
             </div>
           </div>
         </div>
@@ -72,18 +75,16 @@
 
       <!-- Right Column: Help Panel -->
       <div class="analysis-panel">
-        <div class="analysis">
-          <h3>Writing Tips</h3>
-          <div class="invest-grid">
-            <div v-for="(tip, index) in writingTips" 
-                 :key="index" 
-                 class="invest-item">
-              <div class="invest-header">
-                <span class="invest-letter">{{ tip.letter }}</span>
-                <span class="invest-title">{{ tip.title }}</span>
-              </div>
-              <div class="invest-content">{{ tip.content }}</div>
+        <h3 class="panel-title">Writing Tips</h3>
+        <div class="invest-grid">
+          <div v-for="(tip, index) in writingTips" 
+               :key="index" 
+               class="invest-item">
+            <div class="invest-header">
+              <span class="invest-letter">{{ tip.letter }}</span>
+              <span class="invest-title">{{ tip.title }}</span>
             </div>
+            <div class="invest-content">{{ tip.content }}</div>
           </div>
         </div>
       </div>
@@ -94,19 +95,8 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useStoryStore } from '@/stores/storyStore'
-import { submitStoryForAgileReview } from '@/api/storyApi'
-import { apolloClient } from '@/plugins/apollo'
-import gql from 'graphql-tag'
-
-const GET_STORY_STATUS = gql`
-  query GetStoryStatus($storyId: ID!) {
-    getStoryStatus(storyId: $storyId) {
-      story_id
-      version
-    }
-  }
-`
+import { useStoryStore } from '../stores/storyStore'
+import { submitStoryForAgileReview } from '../api/storyApi'
 
 const router = useRouter()
 const storyStore = useStoryStore()
@@ -120,42 +110,37 @@ const story = ref({
   acceptance_criteria: ['']
 })
 
-// Form validation
+// Modified validation to only require title
 const isValid = computed(() => {
-  return story.value.title.trim() !== '' &&
-         story.value.text.trim() !== '' &&
-         story.value.acceptance_criteria.some(c => c.trim() !== '')
+  return story.value.title.trim() !== ''  // Only require a title
 })
 
-// Submit handler
+// Submit handler with error handling for the message channel error
 const submitStory = async () => {
   try {
     loading.value = true
-    console.log('Starting story submission...')
     
     const storyData = {
       tenant_id: 'test-tenant-001',
       content: {
         title: story.value.title,
-        description: story.value.description,
-        story: story.value.text,
-        acceptance_criteria: story.value.acceptance_criteria.filter(c => c.trim() !== '')
+        description: story.value.description || '',  // Optional
+        story: story.value.text || '',              // Optional
+        acceptance_criteria: story.value.acceptance_criteria.filter(c => c.trim() !== '') || []  // Optional
       }
     }
 
-    console.log('Submitting to API Gateway:', storyData)
     const response = await submitStoryForAgileReview(storyData)
-    console.log('API Response:', response)
     
-    // Make sure storyStore is initialized
-    if (storyStore && typeof storyStore.setCurrentStoryId === 'function') {
+    if (response.story_id) {
       storyStore.setCurrentStoryId(response.story_id)
+      // Add small delay before navigation to ensure store is updated
+      await new Promise(resolve => setTimeout(resolve, 100))
       router.push('/agile')
-    } else {
-      console.error('Story store not properly initialized')
     }
   } catch (error) {
     console.error('Error submitting story:', error)
+  } finally {
     loading.value = false
   }
 }
@@ -221,45 +206,6 @@ const guidelines = {
     ]
   }
 }
-
-// After story submission success:
-const handleSubmitSuccess = async (response) => {
-  const storyId = response.story_id
-  storyStore.setCurrentStoryId(storyId)
-  
-  // Start polling for AGILE_COACH version
-  let pollAttempts = 0
-  const MAX_POLL_ATTEMPTS = 10
-  
-  const pollInterval = setInterval(async () => {
-    try {
-      pollAttempts++
-      console.log(`Polling attempt ${pollAttempts}/${MAX_POLL_ATTEMPTS} for story: ${storyId}`)
-      
-      const { data } = await apolloClient.query({
-        query: GET_STORY_STATUS,
-        variables: { storyId },
-        fetchPolicy: 'network-only'
-      })
-      
-      console.log('Poll response:', data?.getStoryStatus)
-      
-      if (data?.getStoryStatus?.version === 'AGILE_COACH') {
-        console.log('✅ Found AGILE_COACH version - navigating to results')
-        clearInterval(pollInterval)
-        router.push('/agile')
-      } else if (pollAttempts >= MAX_POLL_ATTEMPTS) {
-        console.log('🛑 Max polling attempts reached')
-        clearInterval(pollInterval)
-      }
-    } catch (error) {
-      console.error('❌ Polling error:', error)
-      if (pollAttempts >= MAX_POLL_ATTEMPTS) {
-        clearInterval(pollInterval)
-      }
-    }
-  }, 2000)
-}
 </script>
 
 <style scoped>
@@ -274,28 +220,31 @@ const handleSubmitSuccess = async (response) => {
 }
 
 .primary-content-wrapper {
-  width: 100%;
-  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;  /* Take full height */
 }
 
 .primary-content {
-  flex-grow: 1;
-  margin-bottom: 2rem;
+  flex: 1;          /* Take remaining space */
+  padding-bottom: 5rem;
 }
 
 .sticky-footer {
-  position: sticky;
+  position: fixed;
   bottom: 0;
+  left: 0;
+  right: 0;
   background: rgb(18, 18, 18);
-  padding: 1rem 0;
-  width: 100%;
-  z-index: 1;
+  z-index: 100;
 }
 
 .footer-content {
+  max-width: 1800px;  /* Match main content width */
+  margin: 0 auto;
+  padding: 1rem 2rem;  /* Match main content padding */
   display: flex;
   justify-content: flex-end;
-  padding: 0 1rem;
 }
 
 .criteria-item {
@@ -306,27 +255,49 @@ const handleSubmitSuccess = async (response) => {
 }
 
 .editable-content {
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 4px;
-  padding: 1rem;
+  margin-bottom: 1.5rem;  /* More space between sections */
 }
 
-h3 {
+/* Target Vuetify input components */
+:deep(.v-field) {
+  border-radius: 4px !important;
+  padding: 0 !important;
+}
+
+:deep(.v-text-field),
+:deep(.v-textarea) {
+  width: 100% !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.section-title,
+.panel-title {
   color: #64B5F6;
+  font-size: 1.25rem;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+}
+
+.story-section {
   margin-bottom: 1rem;
+}
+
+.story-section > * {
+  margin-bottom: 1.5rem;  /* Reduced from 3rem */
 }
 
 .invest-grid {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .invest-item {
   background: rgba(48, 38, 25, 1);
   border-radius: 8px;
-  padding: 1.5rem;
+  padding: 1rem;
   border-left: 4px solid #FFA726;
+  margin-bottom: 0.5rem;
 }
 
 .invest-header {
@@ -356,8 +327,62 @@ h3 {
 .analysis-panel {
   width: 100%;
   min-width: 0;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.writing-tips-wrapper {
+  background: #121212 !important;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.writing-tips {
+  padding: 20px;
+}
+
+.tip-card {
   background: rgba(48, 38, 25, 1);
   border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.guideline-card {
+  background: rgba(48, 38, 25, 1);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.page-title {
+  color: #64B5F6;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;  /* Reduced from 1.5rem */
+  font-weight: 500;
+}
+
+.input-label {
+  color: #fff;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;  /* Reduced from 0.5rem */
+  font-weight: 400;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.story-form {
+  background: rgba(30, 30, 30, 0.5);
+  border-radius: 8px;
   padding: 1.5rem;
+}
+
+/* Adjust acceptance criteria textarea size */
+.criteria-item :deep(.v-field__input) {
+  min-height: 48px !important;  /* Reduced height */
+  padding: 8px 12px !important;
 }
 </style> 
