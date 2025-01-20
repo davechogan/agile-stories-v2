@@ -95,12 +95,13 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useStoryStore } from '../stores/storyStore'
-import { submitStoryForAgileReview } from '../api/storyApi'
+import { useStoryStore } from '@/stores/storyStore'
+import { submitStoryForAgileReview } from '@/api/storyApi'
 
 const router = useRouter()
-const storyStore = useStoryStore()
+const store = useStoryStore()
 const loading = ref(false)
+const error = ref(null)
 
 // Story data structure
 const story = ref({
@@ -115,31 +116,29 @@ const isValid = computed(() => {
   return story.value.title.trim() !== ''  // Only require a title
 })
 
-// Submit handler with error handling for the message channel error
 const submitStory = async () => {
+  isLoading.value = true
+  error.value = null
+  
   try {
-    loading.value = true
-    
     const storyData = {
-      tenant_id: 'test-tenant-001',
-      content: {
-        title: story.value.title,
-        description: story.value.description || '',  // Optional
-        story: story.value.text || '',              // Optional
-        acceptance_criteria: story.value.acceptance_criteria.filter(c => c.trim() !== '') || []  // Optional
-      }
+      story: story.value.text,
+      acceptanceCriteria: story.value.acceptance_criteria.filter(c => c.trim() !== '').join('\n'),
+      context: '', // Optional context
+      version: 1
     }
 
     const response = await submitStoryForAgileReview(storyData)
+    console.log('Story submitted successfully:', response)
     
-    if (response.story_id) {
-      storyStore.setCurrentStoryId(response.story_id)
-      // Add small delay before navigation to ensure store is updated
-      await new Promise(resolve => setTimeout(resolve, 100))
-      router.push('/agile')
-    }
-  } catch (error) {
-    console.error('Error submitting story:', error)
+    // Store the story data
+    await store.setCurrentStory(response)
+    
+    // Navigate to agile review page
+    router.push('/agile-review')
+  } catch (err) {
+    console.error('Error submitting story:', err)
+    error.value = 'Failed to submit story. Please try again.'
   } finally {
     loading.value = false
   }

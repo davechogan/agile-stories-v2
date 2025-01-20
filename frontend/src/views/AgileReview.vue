@@ -92,8 +92,9 @@
           <div class="footer-content">
             <v-btn 
               color="primary"
-              :loading="loading"
-              @click="handleSendForTechReview"
+              :loading="isLoading"
+              :disabled="!store.analysisToken"
+              @click="sendForTechReview"
               size="large"
             >
               Send for Tech Review
@@ -143,16 +144,15 @@ import { ref, computed, onMounted } from 'vue'
 import { mockAnalysisResult } from '@/mocks/mockAnalysisData'
 import { useStoryStore } from '@/stores/storyStore'
 import { useRouter } from 'vue-router'
-import { sendForTechReview } from '../api/storyApi'
 
+const store = useStoryStore()
 const router = useRouter()
-const storyStore = useStoryStore()
-const analysis = ref(null)
-const loading = ref(false)
+const isLoading = ref(false)
+const analysis = ref(mockAnalysisResult)
 
 onMounted(() => {
   // Use mock data instead of redirecting
-  analysis.value = mockAnalysisResult
+  store.analysis = mockAnalysisResult
 })
 
 // Comment out or remove the redirect logic
@@ -242,21 +242,21 @@ const isNegative = (content: string): boolean => {
   return negativeTerms.some(term => content.toLowerCase().includes(term));
 }
 
-const handleSendForTechReview = async () => {
+const sendForTechReview = async () => {
+  isLoading.value = true
   try {
-    loading.value = true
-    const storyId = storyStore.currentStoryId
-    
-    // Update state machine
-    await sendForTechReview(storyId)
-    
-    // Navigate to tech review page
-    router.push('/tech')
+    await store.completeAnalysis({
+      improvedTitle: analysis.value.ImprovedTitle,
+      improvedStory: analysis.value.ImprovedStory,
+      improvedAcceptanceCriteria: analysis.value.ImprovedAcceptanceCriteria,
+      investAnalysis: analysis.value.INVESTAnalysis,
+      suggestions: analysis.value.Suggestions
+    })
+    router.push('/tech-review')
   } catch (error) {
-    console.error('Error sending for tech review:', error)
-  } finally {
-    loading.value = false
+    console.error('Error completing analysis:', error)
   }
+  isLoading.value = false
 }
 </script>
 

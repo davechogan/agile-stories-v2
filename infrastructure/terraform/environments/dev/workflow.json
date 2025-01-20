@@ -1,97 +1,81 @@
 {
-    "Comment": "Story Refinement Workflow",
+    "Comment": "Agile Story Analysis Workflow",
     "StartAt": "AnalyzeStory",
     "States": {
       "AnalyzeStory": {
         "Type": "Task",
-        "Resource": "${module.lambda.analyze_story_arn}",
-        "Next": "AnalyzeStoryWorker"
+        "Resource": "${analyze_story_lambda_arn}",
+        "Next": "WaitForAnalysis",
+        "ResultPath": "$.analysis"
       },
-      "AnalyzeStoryWorker": {
+      "WaitForAnalysis": {
+        "Type": "Wait",
+        "Next": "UpdateAnalysisState",
+        "WaitForTaskToken": true,
+        "ResultPath": "$.analysisResult"
+      },
+      "UpdateAnalysisState": {
         "Type": "Task",
-        "Resource": "${module.lambda.analyze_story_worker_arn}",
-        "Next": "CheckAnalysisResult"
-      },
-      "CheckAnalysisResult": {
-        "Type": "Choice",
-        "Choices": [
-          {
-            "Variable": "$.status",
-            "StringEquals": "AGILE_COACH",
-            "Next": "DisplayAnalysisResult"
-          }
-        ],
-        "Default": "ErrorState"
-      },
-      "DisplayAnalysisResult": {
-        "Type": "Pass",
-        "Result": "Analysis ready for user review.",
-        "Next": "UserDecision"
-      },
-      "UserDecision": {
-        "Type": "Choice",
-        "Choices": [
-          {
-            "Variable": "$.userDecision",
-            "StringEquals": "SendToTechReview",
-            "Next": "TechnicalReview"
-          },
-          {
-            "Variable": "$.userDecision",
-            "StringEquals": "Skip",
-            "Next": "CompleteState"
-          }
-        ],
-        "Default": "ErrorState"
+        "Resource": "${story_state_handler_arn}",
+        "Next": "TechnicalReview",
+        "Parameters": {
+          "status": "ANALYSIS_COMPLETE",
+          "token.$": "$.token",
+          "result.$": "$.analysisResult"
+        }
       },
       "TechnicalReview": {
         "Type": "Task",
-        "Resource": "${module.lambda.technical_review_arn}",
-        "Next": "TechnicalReviewWorker"
+        "Resource": "${technical_review_lambda_arn}",
+        "Next": "WaitForTechnicalReview",
+        "ResultPath": "$.technicalReview"
       },
-      "TechnicalReviewWorker": {
+      "WaitForTechnicalReview": {
+        "Type": "Wait",
+        "Next": "UpdateTechnicalReviewState",
+        "WaitForTaskToken": true,
+        "ResultPath": "$.technicalReviewResult"
+      },
+      "UpdateTechnicalReviewState": {
         "Type": "Task",
-        "Resource": "${module.lambda.technical_review_worker_arn}",
-        "Next": "UserTeamEstimateDecision"
+        "Resource": "${story_state_handler_arn}",
+        "Next": "TeamEstimate",
+        "Parameters": {
+          "status": "TECHNICAL_REVIEW_COMPLETE",
+          "token.$": "$.token",
+          "result.$": "$.technicalReviewResult"
+        }
       },
-      "UserTeamEstimateDecision": {
-        "Type": "Choice",
-        "Choices": [
-          {
-            "Variable": "$.userDecision",
-            "StringEquals": "RequestTeamEstimate",
-            "Next": "TeamEstimation"
-          },
-          {
-            "Variable": "$.userDecision",
-            "StringEquals": "Accept",
-            "Next": "CompleteState"
-          }
-        ],
-        "Default": "ErrorState"
-      },
-      "TeamEstimation": {
+      "TeamEstimate": {
         "Type": "Task",
-        "Resource": "${module.lambda.team_estimate_arn}",
-        "Next": "TeamEstimationWorker"
+        "Resource": "${team_estimate_lambda_arn}",
+        "Next": "WaitForTeamEstimate",
+        "ResultPath": "$.teamEstimate"
       },
-      "TeamEstimationWorker": {
+      "WaitForTeamEstimate": {
+        "Type": "Wait",
+        "Next": "UpdateTeamEstimateState",
+        "WaitForTaskToken": true,
+        "ResultPath": "$.teamEstimateResult"
+      },
+      "UpdateTeamEstimateState": {
         "Type": "Task",
-        "Resource": "${module.lambda.team_estimate_worker_arn}",
-        "Next": "FinalizeEstimates"
+        "Resource": "${story_state_handler_arn}",
+        "Next": "Complete",
+        "Parameters": {
+          "status": "TEAM_ESTIMATE_COMPLETE",
+          "token.$": "$.token",
+          "result.$": "$.teamEstimateResult"
+        }
       },
-      "FinalizeEstimates": {
-        "Type": "Pass",
-        "Result": "Estimates finalized and saved.",
-        "Next": "CompleteState"
-      },
-      "CompleteState": {
-        "Type": "Succeed"
-      },
-      "ErrorState": {
-        "Type": "Fail",
-        "Error": "WorkflowError",
-        "Cause": "An error occurred in the workflow."
+      "Complete": {
+        "Type": "Task",
+        "Resource": "${workflow_signal_handler_arn}",
+        "End": true,
+        "Parameters": {
+          "status": "COMPLETE",
+          "result.$": "$"
+        }
       }
     }
   }

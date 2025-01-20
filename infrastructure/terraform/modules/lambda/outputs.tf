@@ -70,6 +70,10 @@ output "get_status_lambda_arn" {
   value       = aws_lambda_function.get_status.arn
 }
 
+output "story_state_handler_lambda_arn" {
+  value = aws_lambda_function.story_state_handler.arn
+}
+
 # Combined list of function names
 output "lambda_function_names" {
   description = "List of all Lambda function names"

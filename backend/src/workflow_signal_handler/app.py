@@ -2,19 +2,32 @@ import json
 import boto3
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, UTC
 
 # Set up logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+# Initialize AWS clients
 sfn = boto3.client('stepfunctions')
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
 
 def lambda_handler(event, context):
-    """Generic handler for workflow signals from UI actions."""
+    """
+    Handles workflow signals from UI actions.
+    
+    Expected event format:
+    {
+        "pathParameters": {
+            "storyId": "uuid",
+            "action": "action-name"
+        }
+    }
+    """
     try:
+        logger.info(f"Processing workflow signal: {json.dumps(event)}")
+        
         story_id = event['pathParameters']['storyId']
         action = event['pathParameters']['action']
         
@@ -54,7 +67,7 @@ def lambda_handler(event, context):
             ExpressionAttributeNames={'#status': 'status'},
             ExpressionAttributeValues={
                 ':status': next_state,
-                ':time': datetime.utcnow().isoformat()
+                ':time': datetime.now(UTC).isoformat()
             }
         )
         
@@ -66,6 +79,7 @@ def lambda_handler(event, context):
                 'status': next_state
             })
         }
+        
     except Exception as e:
         logger.error(f"Error processing request: {str(e)}", exc_info=True)
         return {

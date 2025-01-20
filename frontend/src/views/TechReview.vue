@@ -9,81 +9,20 @@
             <h3>Technical Review Modifications</h3>
             
             <!-- Story Section -->
-            <h4 class="mt-4">User Story</h4>
+            <h4 class="mt-4">{{ techReview.ImprovedTitle }}</h4>
             <div class="editable-content">
-              <template v-if="!editingStory">
-                <pre>{{ mockTechReviewResult.improved_story.text }}</pre>
-                <v-btn 
-                  size="small" 
-                  color="primary" 
-                  class="edit-btn"
-                  icon="mdi-pencil"
-                  @click="startEditingStory"
-                ></v-btn>
-              </template>
-              <template v-else>
-                <v-textarea
-                  v-model="editedStory"
-                  auto-grow
-                  variant="outlined"
-                  class="edit-textarea"
-                ></v-textarea>
-                <div class="edit-actions">
-                  <v-btn 
-                    size="small" 
-                    color="success" 
-                    @click="saveStory"
-                    class="mr-2"
-                  >Save</v-btn>
-                  <v-btn 
-                    size="small" 
-                    color="error" 
-                    @click="cancelEditStory"
-                  >Cancel</v-btn>
-                </div>
-              </template>
+              <pre>{{ techReview.ImprovedStory }}</pre>
             </div>
             
             <!-- AC Section -->
             <h4 class="mt-4">Acceptance Criteria</h4>
             <div class="editable-content">
-              <template v-if="!editingAC">
-                <ul>
-                  <li v-for="(criterion, index) in mockTechReviewResult.improved_story.acceptance_criteria" 
-                      :key="index">
-                    {{ criterion }}
-                  </li>
-                </ul>
-                <v-btn 
-                  size="small" 
-                  color="primary" 
-                  class="edit-btn"
-                  icon="mdi-pencil"
-                  @click="startEditingAC"
-                ></v-btn>
-              </template>
-              <template v-else>
-                <v-textarea
-                  v-model="editedAC"
-                  auto-grow
-                  variant="outlined"
-                  placeholder="One acceptance criterion per line"
-                  class="edit-textarea"
-                ></v-textarea>
-                <div class="edit-actions">
-                  <v-btn 
-                    size="small" 
-                    color="success" 
-                    @click="saveAC"
-                    class="mr-2"
-                  >Save</v-btn>
-                  <v-btn 
-                    size="small" 
-                    color="error" 
-                    @click="cancelEditAC"
-                  >Cancel</v-btn>
-                </div>
-              </template>
+              <ul>
+                <li v-for="(criterion, index) in techReview.ImprovedAcceptanceCriteria" 
+                    :key="index">
+                  {{ criterion }}
+                </li>
+              </ul>
             </div>
 
             <!-- After AC section and before Implementation Details -->
@@ -118,7 +57,7 @@
             <div class="tech-section">
               <h4>Frontend</h4>
               <div class="task-list">
-                <div v-for="(task, index) in availableDetails.frontend" 
+                <div v-for="(task, index) in techReview.ImplementationDetails.Frontend" 
                      :key="'fe-'+index"
                      class="task-item"
                      @click="toggleDetail('frontend', task)">
@@ -129,7 +68,7 @@
 
               <h4>Backend</h4>
               <div class="task-list">
-                <div v-for="(task, index) in availableDetails.backend" 
+                <div v-for="(task, index) in techReview.ImplementationDetails.Backend" 
                      :key="'be-'+index"
                      class="task-item"
                      @click="toggleDetail('backend', task)">
@@ -140,7 +79,7 @@
 
               <h4>Database</h4>
               <div class="task-list">
-                <div v-for="(task, index) in availableDetails.database" 
+                <div v-for="(task, index) in techReview.ImplementationDetails.Database" 
                      :key="'db-'+index"
                      class="task-item"
                      @click="toggleDetail('database', task)">
@@ -152,7 +91,7 @@
 
             <h3 class="mt-6">Tech Lead Estimate</h3>
             <div class="effort-grid">
-              <div v-for="(effort, key) in mockTechReviewResult.estimated_effort" 
+              <div v-for="(effort, key) in techReview.EstimatedEffort" 
                    :key="key"
                    class="effort-item"
                    :class="{ 'effort-total': key === 'total' }">
@@ -197,16 +136,16 @@
         <div class="technical-analysis">
           <h3>Technical Analysis</h3>
           <div class="analysis-grid">
-            <div v-for="(analysis, key) in mockTechReviewResult.technical_analysis" 
+            <div v-for="(analysis, key) in techReview.TechnicalAnalysis" 
                  :key="key"
                  class="analysis-item">
               <div class="analysis-header">
                 <span class="analysis-title">{{ key }}</span>
-                <div class="score-badge" :class="getScoreClass(analysis.score)">
-                  {{ analysis.score }}/10
+                <div class="score-badge" :class="getScoreClass(analysis.Score)">
+                  {{ analysis.Score }}/10
                 </div>
               </div>
-              <div class="analysis-content">{{ analysis.explanation }}</div>
+              <div class="analysis-content">{{ analysis.Description }}</div>
             </div>
           </div>
         </div>
@@ -214,17 +153,17 @@
         <div class="risks mt-6">
           <h3>Risks & Considerations</h3>
           <div class="risks-grid">
-            <div v-for="(risk, index) in mockTechReviewResult.risks_and_considerations" 
+            <div v-for="(risk, index) in techReview.RisksAndConsiderations" 
                  :key="index"
                  class="risk-item">
               <div class="risk-header">
                 <v-icon color="warning" class="mr-2">mdi-alert</v-icon>
-                {{ risk.category }}
+                {{ risk.Classification }} ({{ risk.Severity }})
               </div>
-              <div class="risk-description">{{ risk.description }}</div>
+              <div class="risk-description">{{ risk.Description }}</div>
               <div class="risk-mitigation">
                 <v-icon color="success" size="small" class="mr-2">mdi-shield</v-icon>
-                {{ risk.mitigation }}
+                {{ risk.PotentialSolution }}
               </div>
             </div>
           </div>
@@ -233,7 +172,7 @@
         <div class="recommendations mt-6">
           <h3>Recommendations</h3>
           <div class="recommendations-list">
-            <div v-for="(rec, index) in mockTechReviewResult.recommendations" 
+            <div v-for="(rec, index) in techReview.Recommendations" 
                  :key="index"
                  class="recommendation-item">
               <v-icon color="info" size="small" class="mr-2">mdi-lightbulb</v-icon>
@@ -247,11 +186,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { mockTechReviewResult } from '@/mocks/mockTechReviewData'
+import { useStoryStore } from '@/stores/storyStore'
 
 const router = useRouter()
+const store = useStoryStore()
 const loading = ref(false)
 
 // Story editing
@@ -385,6 +326,23 @@ const submitForEstimation = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const completeTechReview = async () => {
+  loading.value = true
+  try {
+    await store.completeTechReview({
+      // Tech review results to pass back
+      technicalComplexity: store.technicalComplexity,
+      architectureImpact: store.architectureImpact,
+      securityConsiderations: store.securityConsiderations,
+      technicalNotes: store.technicalNotes
+    })
+    router.push('/estimates')
+  } catch (error) {
+    console.error('Error completing technical review:', error)
+  }
+  loading.value = false
 }
 </script>
 
