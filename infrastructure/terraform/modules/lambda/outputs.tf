@@ -108,4 +108,13 @@ output "lambda_environment_variables" {
 output "lambda_role_arn" {
   description = "ARN of the IAM role used by Lambda functions"
   value       = aws_iam_role.lambda_role.arn
+}
+
+output "analyze_story_worker_arn" {
+  value = aws_lambda_function.analyze_story_worker.arn
+}
+
+output "analyze_story_worker_name" {
+  description = "Name of the analyze story worker Lambda function"
+  value       = aws_lambda_function.analyze_story_worker.function_name
 } 

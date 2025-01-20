@@ -14,6 +14,7 @@ import json
 import boto3
 import logging
 from datetime import datetime, UTC
+from decimal import Decimal
 
 # Set up logging
 logger = logging.getLogger()
@@ -22,6 +23,12 @@ logger.setLevel(logging.INFO)
 # Initialize AWS clients
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
+
+# Add this helper function
+def decimal_default(obj):
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError
 
 def analyze_story(content):
     """
@@ -59,12 +66,14 @@ def handler(event, context):
     try:
         logger.info(f"Received event: {json.dumps(event, indent=2)}")
         
-        # Check if this is a GET request
         if event.get('requestContext', {}).get('http', {}).get('method') == 'GET':
+            logger.info("Handling GET request")
+            
             story_id = event.get('pathParameters', {}).get('story_id')
             version = event.get('queryStringParameters', {}).get('version', 'AGILE_COACH')
             
-            # Get the story from DynamoDB
+            logger.info(f"Getting story: {story_id} version: {version}")
+            
             response = table.get_item(
                 Key={
                     'story_id': story_id,
@@ -72,15 +81,23 @@ def handler(event, context):
                 }
             )
             
+            # Use default handler for Decimal
+            logger.info(f"DynamoDB response: {json.dumps(response, indent=2, default=decimal_default)}")
+            
             if 'Item' not in response:
+                logger.error(f"Story not found: {story_id}")
                 return {
                     'statusCode': 404,
                     'body': json.dumps({'error': f"Story not found: {story_id}"})
                 }
-                
+            
             return {
                 'statusCode': 200,
-                'body': json.dumps(response['Item'])
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps(response['Item'], default=decimal_default)
             }
         
         # Original processing logic

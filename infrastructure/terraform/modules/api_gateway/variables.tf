@@ -59,3 +59,13 @@ variable "domain_aliases" {
   description = "List of domain aliases for CORS configuration"
   type        = list(string)
 } 
+
+variable "analyze_story_worker_name" {
+  description = "Name of the analyze story worker Lambda function"
+  type        = string
+}
+
+variable "analyze_story_worker_arn" {
+  description = "ARN of the analyze story worker Lambda function"
+  type        = string
+}

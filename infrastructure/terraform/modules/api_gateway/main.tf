@@ -64,11 +64,28 @@ resource "aws_apigatewayv2_route" "get_estimation_status" {
   target    = "integrations/${aws_apigatewayv2_integration.get_estimation_status.id}"
 }
 
-# Get Story Route (use analyze_story_worker Lambda)
+# Worker Integration
+resource "aws_apigatewayv2_integration" "analyze_story_worker" {
+  api_id           = aws_apigatewayv2_api.main.id
+  integration_type = "AWS_PROXY"
+  integration_method = "POST"
+  integration_uri    = var.analyze_story_worker_arn
+  payload_format_version = "2.0"
+}
+
+# Fix the route_key format
 resource "aws_apigatewayv2_route" "get_story" {
   api_id    = aws_apigatewayv2_api.main.id
-  route_key = "GET /stories/{story_id}"
+  route_key = "GET /stories/{story_id}"  # Remove ?version=AGILE_COACH
   target    = "integrations/${aws_apigatewayv2_integration.analyze_story_worker.id}"
+}
+
+resource "aws_lambda_permission" "get_story" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = var.analyze_story_worker_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
 
 # Lambda Permissions

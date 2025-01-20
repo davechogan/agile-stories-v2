@@ -8,7 +8,6 @@
     </div>
     
     <div v-else-if="results">
-      <h2>Story Review</h2>
       <pre>{{ JSON.stringify(results, null, 2) }}</pre>
     </div>
     

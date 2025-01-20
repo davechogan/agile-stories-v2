@@ -111,6 +111,10 @@ module "api_gateway" {
   get_status_lambda_arn  = module.lambda.get_status_lambda_arn
   get_status_lambda_name = module.lambda.get_status_lambda_name
 
+  analyze_story_worker_name = module.lambda.analyze_story_worker_name
+  analyze_story_worker_arn  = module.lambda.analyze_story_worker_arn
+
+
 }
 
 
