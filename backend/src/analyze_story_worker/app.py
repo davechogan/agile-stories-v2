@@ -5,6 +5,8 @@ This Lambda:
 1. Gets AGILE_COACH_PENDING version from DynamoDB
 2. Will send to OpenAI for analysis (currently mocked)
 3. Stores results as AGILE_COACH version
+4. Navigates to /agile
+5. Handles GET requests for story results
 """
 
 import os
@@ -52,11 +54,36 @@ def analyze_story(content):
 def handler(event, context):
     """
     Handler for analyze_story_worker Lambda
-    Creates mock analysis and signals when ready for navigation
+    Handles both analysis processing and GET requests for results
     """
     try:
         logger.info(f"Received event: {json.dumps(event, indent=2)}")
         
+        # Check if this is a GET request
+        if event.get('requestContext', {}).get('http', {}).get('method') == 'GET':
+            story_id = event.get('pathParameters', {}).get('story_id')
+            version = event.get('queryStringParameters', {}).get('version', 'AGILE_COACH')
+            
+            # Get the story from DynamoDB
+            response = table.get_item(
+                Key={
+                    'story_id': story_id,
+                    'version': version
+                }
+            )
+            
+            if 'Item' not in response:
+                return {
+                    'statusCode': 404,
+                    'body': json.dumps({'error': f"Story not found: {story_id}"})
+                }
+                
+            return {
+                'statusCode': 200,
+                'body': json.dumps(response['Item'])
+            }
+        
+        # Original processing logic
         story_id = event.get('story_id')
         token = event.get('token')
         
@@ -111,12 +138,12 @@ def handler(event, context):
         # Return success with navigation signal
         return {
             'statusCode': 200,
-            'body': {
+            'body': json.dumps({
                 'story_id': story_id,
                 'token': token,
                 'action': 'NAVIGATE',
                 'path': '/agile'
-            }
+            })
         }
         
     except Exception as e:

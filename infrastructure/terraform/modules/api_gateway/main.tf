@@ -64,6 +64,13 @@ resource "aws_apigatewayv2_route" "get_estimation_status" {
   target    = "integrations/${aws_apigatewayv2_integration.get_estimation_status.id}"
 }
 
+# Get Story Route (use analyze_story_worker Lambda)
+resource "aws_apigatewayv2_route" "get_story" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "GET /stories/{story_id}"
+  target    = "integrations/${aws_apigatewayv2_integration.analyze_story_worker.id}"
+}
+
 # Lambda Permissions
 resource "aws_lambda_permission" "analyze_story" {
   statement_id  = "AllowAPIGatewayInvoke"
