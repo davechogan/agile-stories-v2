@@ -98,6 +98,11 @@ output "get_status_lambda_arn" {
   value       = module.lambda.get_status_lambda_arn
 }
 
+output "workflow_signal_handler_lambda_arn" {
+  description = "ARN of the workflow signal handler Lambda function"
+  value       = module.lambda.workflow_signal_handler_lambda_arn
+}
+
 output "stories_table_name" {
   description = "Name of the stories DynamoDB table"
   value       = module.dynamodb.stories_table_name

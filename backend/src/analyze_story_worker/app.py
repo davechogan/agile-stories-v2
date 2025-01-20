@@ -71,16 +71,18 @@ def handler(event, context):
         item = response['Item']
         content = item['content']
         tenant_id = item['tenant_id']
+        token = item.get('token')  # Get token if it exists
         
         # Analyze the story and create new content
         analysis_results = analyze_story(content)
         
-        # Store analyzed version - just like analyze_story/app.py does
+        # Store analyzed version
         timestamp = datetime.utcnow().isoformat()
         analyzed_item = {
             'story_id': story_id,
             'version': 'AGILE_COACH',
             'tenant_id': tenant_id,
+            'token': token,  # Include token in analyzed version
             'content': analysis_results,
             'created_at': timestamp,
             'updated_at': timestamp
@@ -90,7 +92,8 @@ def handler(event, context):
         table.put_item(Item=analyzed_item)
         
         return {
-            'story_id': story_id
+            'story_id': story_id,
+            'token': token  # Return token for workflow
         }
         
     except Exception as e:

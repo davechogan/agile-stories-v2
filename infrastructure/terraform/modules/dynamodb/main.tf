@@ -20,10 +20,21 @@ resource "aws_dynamodb_table" "agile_stories" {
     type = "S"
   }
 
+  attribute {
+    name = "token"
+    type = "S"
+  }
+
   global_secondary_index {
     name            = "tenant-index"
     hash_key        = "tenant_id"
     range_key       = "story_id"
+    projection_type = "ALL"
+  }
+
+  global_secondary_index {
+    name            = "token-index"
+    hash_key        = "token"
     projection_type = "ALL"
   }
 

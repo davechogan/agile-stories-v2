@@ -115,7 +115,8 @@ module "step_functions" {
       technical_review_arn        = module.agile_stories.technical_review_lambda_arn,
       technical_review_worker_arn = module.agile_stories.technical_review_worker_lambda_arn,
       team_estimate_arn           = module.agile_stories.team_estimate_lambda_arn,
-      team_estimate_worker_arn    = module.agile_stories.team_estimate_worker_lambda_arn
+      team_estimate_worker_arn    = module.agile_stories.team_estimate_worker_lambda_arn,
+      workflow_signal_handler_arn = module.agile_stories.workflow_signal_handler_lambda_arn
     }
   )
 }

@@ -20,6 +20,7 @@
     "graphql-ws": "^5.16.2",
     "pinia": "^2.3.0",
     "subscriptions-transport-ws": "^0.11.0",
+    "uuid": "^11.0.5",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0",
     "vuetify": "^3.7.6"

@@ -58,62 +58,83 @@ def get_step_function_arn():
 def handler(event, context):
     """Lambda handler for analyzing stories."""
     try:
-        logger.info(f"Event received: {json.dumps(event)}")
-        
-        # Parse the API Gateway event body
+        # Parse the request body
         body = json.loads(event['body'])
-        logger.info(f"Parsed body: {json.dumps(body)}")
+        logger.info(f"Parsed body: \n{json.dumps(body, indent=4)}")
         
-        # Extract data from the body
-        content = body['content']
-        tenant_id = body['tenant_id']
-
-        # Generate story ID and timestamp
+        tenant_id = body.get('tenant_id')
+        token = body.get('token')
+        
+        # Add debug logging
+        logger.info(f"Extracted token: {token}")
+        logger.info(f"Extracted tenant_id: {tenant_id}")
+        
+        content = body.get('content')
+        
+        # Generate story ID
         story_id = str(uuid.uuid4())
         timestamp = datetime.utcnow().isoformat()
         
-        # Store story directly as AGILE_COACH_PENDING
+        # Debug print before creating item
+        logger.info("Creating item with these values:")
+        logger.info(f"- token: {token}")
+        logger.info(f"- tenant_id: {tenant_id}")
+        logger.info(f"- content: {json.dumps(content, indent=2)}")
+        
+        # Create initial story item
         item = {
             'story_id': story_id,
             'version': 'AGILE_COACH_PENDING',
             'tenant_id': tenant_id,
+            'token': token,  # Verify this is being set
             'content': content,
             'created_at': timestamp,
             'updated_at': timestamp
         }
         
-        logger.info(f"Storing story in DynamoDB: {json.dumps(item)}")
+        # Debug print the item
+        logger.info(f"Created item dictionary: \n{json.dumps(item, indent=4)}")
+        
+        logger.info(f"Storing story in DynamoDB: \n{json.dumps(item, indent=4)}")
+        
+        # Store in DynamoDB
         table.put_item(Item=item)
         
-        # Start Step Functions workflow
-        workflow_input = {
-            'story_id': story_id
+        # Verify what was stored
+        response = table.get_item(
+            Key={
+                'story_id': story_id,
+                'version': 'AGILE_COACH_PENDING'
+            }
+        )
+        logger.info(f"Verified stored item: \n{json.dumps(response.get('Item'), indent=4)}")
+        
+        # Start Step Functions execution
+        state_machine_arn = get_step_function_arn()
+        execution_input = {
+            'story_id': story_id,
+            'token': token
         }
         
-        # Get Step Functions ARN and start execution
-        step_function_arn = get_step_function_arn()
-        logger.info(f"Retrieved Step Functions ARN: {step_function_arn}")
+        logger.info(f"Starting Step Functions execution with input: {json.dumps(execution_input)}")
         
-        logger.info(f"Starting Step Functions execution with input: {json.dumps(workflow_input)}")
         sfn.start_execution(
-            stateMachineArn=step_function_arn,
-            input=json.dumps(workflow_input)
+            stateMachineArn=state_machine_arn,
+            input=json.dumps(execution_input)
         )
         
+        # Return API Gateway response
         return {
             'statusCode': 200,
             'body': json.dumps({
                 'story_id': story_id,
-                'message': 'Story submitted for analysis',
-                'status': 'SUBMITTED'
+                'token': token
             })
         }
         
     except Exception as e:
-        logger.error(f"Error in handler: {str(e)}", exc_info=True)
+        logger.error(f"Error: {str(e)}", exc_info=True)
         return {
             'statusCode': 500,
-            'body': json.dumps({
-                'error': str(e)
-            })
+            'body': json.dumps({'error': str(e)})
         } 

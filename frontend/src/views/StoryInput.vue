@@ -61,13 +61,13 @@
         <div class="sticky-footer">
           <div class="footer-content">
             <v-btn 
-              color="primary" 
+              color="primary"
               :loading="loading"
               :disabled="!isValid"
               @click="submitStory"
               size="large"
             >
-              Analyze Story
+              Submit Story
             </v-btn>
           </div>
         </div>
@@ -93,52 +93,74 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStoryStore } from '@/stores/storyStore'
-import { submitStoryForAgileReview } from '@/api/storyApi'
+import { submitStoryForAgileReview } from '../api/storyApi'
+import { useAnalysisStore } from '@/stores/analysisStore'
+import { v4 as uuidv4 } from 'uuid'
 
 const router = useRouter()
-const store = useStoryStore()
+const storyStore = useStoryStore()
+const analysisStore = useAnalysisStore()
 const loading = ref(false)
 const error = ref(null)
+
+// Generate token on component mount
+onMounted(() => {
+  if (!analysisStore.analysisToken) {
+    analysisStore.setAnalysisToken(uuidv4())
+  }
+})
 
 // Story data structure
 const story = ref({
   title: '',
   text: '',
-  description: '',
   acceptance_criteria: ['']
 })
 
 // Modified validation to only require title
 const isValid = computed(() => {
-  return story.value.title.trim() !== ''  // Only require a title
+  return story.value.title.trim() !== '' && story.value.text.trim() !== ''
 })
 
 const submitStory = async () => {
-  isLoading.value = true
+  loading.value = true
   error.value = null
   
   try {
-    const storyData = {
-      story: story.value.text,
-      acceptanceCriteria: story.value.acceptance_criteria.filter(c => c.trim() !== '').join('\n'),
-      context: '', // Optional context
-      version: 1
+    // Verify token exists
+    if (!analysisStore.analysisToken) {
+      throw new Error('Missing analysis token')
     }
 
+    const storyData = {
+      tenant_id: "test-tenant-001",
+      token: analysisStore.analysisToken,
+      content: {
+        title: story.value.title,
+        description: "",
+        story: story.value.text,
+        acceptance_criteria: story.value.acceptance_criteria
+          .filter(c => c.trim() !== '')
+      }
+    }
+
+    console.log('Submitting story with token:', JSON.stringify(storyData, null, 2))
+    
     const response = await submitStoryForAgileReview(storyData)
     console.log('Story submitted successfully:', response)
     
-    // Store the story data
-    await store.setCurrentStory(response)
-    
-    // Navigate to agile review page
-    router.push('/agile-review')
+    if (response && response.data) {
+      await storyStore.setCurrentStory(response.data)
+      await router.push('/agile-review')
+    } else {
+      throw new Error('Invalid response from server')
+    }
   } catch (err) {
     console.error('Error submitting story:', err)
-    error.value = 'Failed to submit story. Please try again.'
+    error.value = err.message || 'Failed to submit story. Please try again.'
   } finally {
     loading.value = false
   }

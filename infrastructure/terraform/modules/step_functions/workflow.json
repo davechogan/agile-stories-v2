@@ -1,22 +1,68 @@
 {
-    "Comment": "Story Refinement Workflow (Automated Testing Version)",
-    "StartAt": "AnalyzeStoryWorker",
+    "Comment": "Story Refinement Workflow",
+    "StartAt": "ValidateToken",
     "States": {
+      "ValidateToken": {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "Variable": "$.token",
+            "IsPresent": true,
+            "Next": "AnalyzeStoryWorker"
+          }
+        ],
+        "Default": "ErrorState"
+      },
       "AnalyzeStoryWorker": {
         "Type": "Task",
         "Resource": "${analyze_story_worker_arn}",
-        "Next": "TechnicalReview",
+        "Next": "WaitForAgileCoachResults",
+        "ResultPath": "$.analysis",
         "Catch": [{
           "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.error",
           "Next": "ErrorState"
         }]
+      },
+      "WaitForAgileCoachResults": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+        "Parameters": {
+          "FunctionName": "${analyze_story_worker_arn}",
+          "Payload": {
+            "story_id.$": "$.story_id",
+            "token.$": "$.token",
+            "taskToken.$": "$$.Task.Token"
+          }
+        },
+        "Next": "Wait3Seconds",
+        "ResultPath": "$.agileCoachResults"
+      },
+      "Wait3Seconds": {
+        "Type": "Wait",
+        "Seconds": 3,
+        "Next": "NavigateToAgileReview"
+      },
+      "NavigateToAgileReview": {
+        "Type": "Task",
+        "Resource": "${workflow_signal_handler_arn}",
+        "Parameters": {
+          "story_id.$": "$.story_id",
+          "token.$": "$.token",
+          "analysis.$": "$.agileCoachResults",
+          "action": "NAVIGATE_TO_AGILE_REVIEW"
+        },
+        "Next": "TechnicalReview",
+        "ResultPath": "$.navigation"
       },
       "TechnicalReview": {
         "Type": "Task",
         "Resource": "${technical_review_arn}",
         "Next": "TechnicalReviewWorker",
+        "ResultPath": "$.techReview",
         "Catch": [{
           "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.error",
           "Next": "ErrorState"
         }]
       },
@@ -24,8 +70,10 @@
         "Type": "Task",
         "Resource": "${technical_review_worker_arn}",
         "Next": "TeamEstimation",
+        "ResultPath": "$.techReviewResult",
         "Catch": [{
           "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.error",
           "Next": "ErrorState"
         }]
       },
@@ -33,8 +81,10 @@
         "Type": "Task",
         "Resource": "${team_estimate_arn}",
         "Next": "TeamEstimationWorker",
+        "ResultPath": "$.estimate",
         "Catch": [{
           "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.error",
           "Next": "ErrorState"
         }]
       },
@@ -42,8 +92,10 @@
         "Type": "Task",
         "Resource": "${team_estimate_worker_arn}",
         "Next": "CompleteState",
+        "ResultPath": "$.estimateResult",
         "Catch": [{
           "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.error",
           "Next": "ErrorState"
         }]
       },
@@ -53,7 +105,7 @@
       "ErrorState": {
         "Type": "Fail",
         "Error": "WorkflowError",
-        "Cause": "An error occurred in the workflow."
+        "Cause": "$.error"
       }
     }
 }
