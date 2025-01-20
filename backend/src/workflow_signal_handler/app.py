@@ -15,78 +15,51 @@ table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
 
 def lambda_handler(event, context):
     """
-    Handles workflow signals from UI actions.
-    
-    Expected event format:
-    {
-        "pathParameters": {
-            "storyId": "uuid",
-            "action": "action-name"
-        }
-    }
+    Handles workflow navigation and task tokens
     """
+    logger.info(f"Processing workflow signal: {json.dumps(event, indent=2)}")
+    
     try:
-        logger.info(f"Processing workflow signal: {json.dumps(event)}")
-        
-        story_id = event['pathParameters']['storyId']
-        action = event['pathParameters']['action']
-        
-        # Get story data including token from DynamoDB
-        story_data = table.get_item(
-            Key={'story_id': story_id}
-        )['Item']
-        
-        task_token = story_data.get('task_token')
-        if not task_token:
-            raise ValueError(f"No task token found for story {story_id}")
+        # Parse Step Functions input
+        if isinstance(event.get('input'), str):
+            event = json.loads(event['input'])
             
-        # Map actions to next states
-        next_states = {
-            'agile-review': 'TECH_REVIEW_PENDING',
-            'tech-review': 'ESTIMATION_PENDING',
-            'estimation': 'COMPLETE'
-        }
+        action = event.get('action')
+        story_id = event.get('story_id')
+        token = event.get('token')
         
-        next_state = next_states.get(action)
-        if not next_state:
-            raise ValueError(f"Invalid action: {action}")
-            
-        # Signal state machine to continue
-        sfn.send_task_success(
-            taskToken=task_token,
-            output=json.dumps({
-                'story_id': story_id,
-                'status': next_state
-            })
-        )
-        
-        # Update story status in DynamoDB
-        table.update_item(
-            Key={'story_id': story_id},
-            UpdateExpression='SET #status = :status, last_updated = :time',
-            ExpressionAttributeNames={'#status': 'status'},
-            ExpressionAttributeValues={
-                ':status': next_state,
-                ':time': datetime.now(UTC).isoformat()
+        if action == 'NAVIGATE_TO_AGILE':
+            # Simple navigation response
+            return {
+                'statusCode': 200,
+                'body': json.dumps({
+                    'action': 'NAVIGATE',
+                    'path': '/agile'
+                })
             }
-        )
-        
-        return {
-            'statusCode': 200,
-            'body': json.dumps({
-                'message': f'Successfully processed {action}',
-                'story_id': story_id,
-                'status': next_state
-            })
-        }
-        
+            
+        elif action == 'WAIT_FOR_TECH_REVIEW_DECISION':
+            # Store task token for tech review
+            task_token = event.get('taskToken')
+            table.update_item(
+                Key={
+                    'story_id': story_id,
+                    'version': 'AGILE_COACH'  # Store with current version
+                },
+                UpdateExpression='SET task_token = :token',
+                ExpressionAttributeValues={
+                    ':token': task_token
+                }
+            )
+            return {
+                'statusCode': 200,
+                'message': 'Waiting for tech review decision'
+            }
     except Exception as e:
-        logger.error(f"Error processing request: {str(e)}", exc_info=True)
+        logger.error(f"Error: {str(e)}", exc_info=True)
         return {
             'statusCode': 500,
-            'body': json.dumps({
-                'error': str(e)
-            })
+            'error': str(e)
         }
 
 def handler(event, context):

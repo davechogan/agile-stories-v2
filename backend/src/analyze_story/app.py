@@ -56,7 +56,31 @@ def get_step_function_arn():
         raise Exception(f"Failed to get Step Functions ARN: {str(e)}")
 
 def handler(event, context):
-    """Lambda handler for analyzing stories."""
+    logger.info(f"Received event: {json.dumps(event, indent=2)}")
+    
+    # Handle GET request
+    if event['requestContext']['http']['method'] == 'GET':
+        story_id = event['pathParameters']['story_id']
+        version = event.get('queryStringParameters', {}).get('version', 'AGILE_COACH')
+        
+        response = table.get_item(
+            Key={
+                'story_id': story_id,
+                'version': version
+            }
+        )
+        
+        if 'Item' not in response:
+            return {
+                'statusCode': 404,
+                'body': json.dumps({'error': 'Story not found'})
+            }
+            
+        return {
+            'statusCode': 200,
+            'body': json.dumps(response['Item'])
+        }
+    
     try:
         # Parse the request body
         body = json.loads(event['body'])

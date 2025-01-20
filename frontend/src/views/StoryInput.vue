@@ -152,11 +152,19 @@ const submitStory = async () => {
     const response = await submitStoryForAgileReview(storyData)
     console.log('Story submitted successfully:', response)
     
-    if (response && response.data) {
-      await storyStore.setCurrentStory(response.data)
-      await router.push('/agile-review')
+    if (response && response.story_id && response.token) {
+      const storyData = {
+        story_id: response.story_id,
+        token: response.token
+      }
+      console.log('Setting store with:', storyData)
+      
+      await storyStore.setCurrentStory(storyData)
+      console.log('Store updated. Current story:', storyStore.currentStory)
+      
+      await router.push('/agile')
     } else {
-      throw new Error('Invalid response from server')
+      throw new Error('Missing story_id or token in response')
     }
   } catch (err) {
     console.error('Error submitting story:', err)

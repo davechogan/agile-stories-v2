@@ -1,28 +1,11 @@
 {
     "Comment": "Story Refinement Workflow",
-    "StartAt": "ValidateToken",
+    "StartAt": "AnalyzeStoryWorker",
     "States": {
-      "ValidateToken": {
-        "Type": "Choice",
-        "Choices": [
-          {
-            "Variable": "$.token",
-            "IsPresent": true,
-            "Next": "AnalyzeStoryWorker"
-          }
-        ],
-        "Default": "ErrorState"
-      },
       "AnalyzeStoryWorker": {
         "Type": "Task",
         "Resource": "${analyze_story_worker_arn}",
-        "Next": "SimulateAIProcessing",
-        "ResultPath": "$.analysis",
-        "Catch": [{
-          "ErrorEquals": ["States.ALL"],
-          "ResultPath": "$.error",
-          "Next": "ErrorState"
-        }]
+        "Next": "SimulateAIProcessing"
       },
       "SimulateAIProcessing": {
         "Type": "Wait",
@@ -33,12 +16,11 @@
         "Type": "Task",
         "Resource": "${workflow_signal_handler_arn}",
         "Parameters": {
+          "action": "NAVIGATE_TO_AGILE",
           "story_id.$": "$.story_id",
-          "token.$": "$.token",
-          "action": "NAVIGATE_TO_AGILE"
+          "token.$": "$.token"
         },
-        "Next": "WaitForUserAction",
-        "ResultPath": "$.navigation"
+        "Next": "WaitForUserAction"
       },
       "WaitForUserAction": {
         "Type": "Task",
@@ -52,8 +34,7 @@
             "action": "WAIT_FOR_TECH_REVIEW_DECISION"
           }
         },
-        "Next": "TechnicalReview",
-        "ResultPath": "$.userAction"
+        "Next": "TechnicalReview"
       },
       "TechnicalReview": {
         "Type": "Task",

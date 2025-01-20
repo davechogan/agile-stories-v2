@@ -7,13 +7,86 @@ resource "aws_apigatewayv2_api" "main" {
     allow_origins = [for origin in var.domain_aliases : "https://${origin}"]
     allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     allow_headers = ["Content-Type", "Authorization"]
-    max_age       = 300
+    max_age      = 300
   }
 
   tags = {
     Environment = var.environment
     Project     = "agile-stories"
   }
+}
+
+# Story Analysis Integration
+resource "aws_apigatewayv2_integration" "analyze_story" {
+  api_id                 = aws_apigatewayv2_api.main.id
+  integration_type       = "AWS_PROXY"
+  integration_method     = "POST"
+  integration_uri        = var.analyze_story_lambda_arn
+  description           = "Integration for story analysis"
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "analyze_story" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "POST /stories/analyze"
+  target    = "integrations/${aws_apigatewayv2_integration.analyze_story.id}"
+}
+
+# Team Estimation Integration
+resource "aws_apigatewayv2_integration" "team_estimate" {
+  api_id                 = aws_apigatewayv2_api.main.id
+  integration_type       = "AWS_PROXY"
+  integration_method     = "POST"
+  integration_uri        = var.team_estimate_lambda_arn
+  description           = "Integration for story estimation"
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "team_estimate" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "POST /stories/estimate"
+  target    = "integrations/${aws_apigatewayv2_integration.team_estimate.id}"
+}
+
+# Get Estimation Status Integration
+resource "aws_apigatewayv2_integration" "get_estimation_status" {
+  api_id                 = aws_apigatewayv2_api.main.id
+  integration_type       = "AWS_PROXY"
+  integration_method     = "POST"
+  integration_uri        = var.get_status_lambda_arn
+  description           = "Integration for getting estimation status"
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "get_estimation_status" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "GET /stories/{storyId}/estimation"
+  target    = "integrations/${aws_apigatewayv2_integration.get_estimation_status.id}"
+}
+
+# Lambda Permissions
+resource "aws_lambda_permission" "analyze_story" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = var.analyze_story_lambda_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "team_estimate" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = var.team_estimate_lambda_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "get_estimation_status" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = var.get_status_lambda_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
 
 # API Stage

@@ -3,6 +3,7 @@ import StoryInput from '../views/StoryInput.vue'
 import AgileReview from '../views/AgileReview.vue'
 import TechReview from '../views/TechReview.vue'
 import Estimates from '../views/Estimates.vue'
+import { useStoryStore } from '@/stores/storyStore'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -15,7 +16,19 @@ const router = createRouter({
     {
       path: '/agile',
       name: 'agile-review',
-      component: AgileReview
+      component: AgileReview,
+      beforeEnter: (to, from, next) => {
+        const storyStore = useStoryStore()
+        console.log('Navigation guard checking story:', storyStore.currentStory)
+        
+        if (!storyStore.currentStory?.story_id) {
+          console.log('No story_id found, redirecting to /')
+          next('/')
+        } else {
+          console.log('Story found, allowing navigation to /agile')
+          next()
+        }
+      }
     },
     {
       path: '/tech',

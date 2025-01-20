@@ -52,6 +52,14 @@ export const useStoryStore = defineStore('story', {
   },
 
   actions: {
+    setCurrentStory(story) {
+      this.currentStory = story
+    },
+
+    clearCurrentStory() {
+      this.currentStory = null
+    },
+
     async completeTechReview(payload) {
       this.loading = true
       try {

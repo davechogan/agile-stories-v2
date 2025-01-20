@@ -52,10 +52,7 @@ def analyze_story(content):
 def handler(event, context):
     """
     Handler for analyze_story_worker Lambda
-    
-    Input event should contain:
-    - story_id: UUID of the story
-    - token: Token for authentication
+    Creates mock analysis and signals when ready for navigation
     """
     try:
         logger.info(f"Received event: {json.dumps(event, indent=2)}")
@@ -79,10 +76,8 @@ def handler(event, context):
             
         pending_story = response['Item']
         
-        # Mock analysis data (simulating AI agent response)
+        # Create mock analysis results
         mock_analysis = {
-            "story_id": story_id,
-            "token": token,
             "analysis_results": {
                 "acceptance_criteria": [
                     "User can submit a story through the form",
@@ -100,21 +95,29 @@ def handler(event, context):
             }
         }
         
-        # Store completed version with mock results
+        # Store completed analysis as AGILE_COACH version
         table.put_item(
             Item={
                 'story_id': story_id,
                 'version': 'AGILE_COACH',
                 'token': token,
-                'content': pending_story.get('content', {}),  # Keep original content
+                'content': pending_story.get('content', {}),
                 'analysis': mock_analysis,
-                'status': 'COMPLETE',
                 'created_at': datetime.now(UTC).isoformat(),
                 'updated_at': datetime.now(UTC).isoformat()
             }
         )
         
-        return mock_analysis
+        # Return success with navigation signal
+        return {
+            'statusCode': 200,
+            'body': {
+                'story_id': story_id,
+                'token': token,
+                'action': 'NAVIGATE',
+                'path': '/agile'
+            }
+        }
         
     except Exception as e:
         logger.error(f"Error: {str(e)}", exc_info=True)
