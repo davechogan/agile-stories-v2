@@ -123,9 +123,13 @@ def handler(event, context):
             input=json.dumps(execution_input)
         )
         
-        # Return API Gateway response
+        # Return API Gateway formatted response
         return {
             'statusCode': 200,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'  # Add CORS header
+            },
             'body': json.dumps({
                 'story_id': story_id,
                 'token': token
@@ -136,5 +140,11 @@ def handler(event, context):
         logger.error(f"Error: {str(e)}", exc_info=True)
         return {
             'statusCode': 500,
-            'body': json.dumps({'error': str(e)})
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'  # Add CORS header
+            },
+            'body': json.dumps({
+                'error': str(e)
+            })
         } 

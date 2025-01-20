@@ -1,4 +1,3 @@
-
 # Story Analysis Workflow Documentation
 
 ## Quick Reference for AI Integration
@@ -12,7 +11,8 @@
 
 2. Backend (AWS)
    - analyze_story Lambda: Initial processing
-   - AnalyzeStoryWorker Lambda: AI analysis
+   - analyze_story_worker Lambda: AI analysis
+   - workflow_signal_handler Lambda: Handles state transitions and navigation
    - TechnicalReviewWorker Lambda: Senior dev review
    - TeamEstimationWorker Lambda: Parallel estimation
 
@@ -57,25 +57,84 @@
       created_at: string;
     }
 
-### Component Relationships
-    StoryInput.vue -> analyze_story Lambda -> DynamoDB -> State Machine -> AgileReview.vue
-                                                                       -> TechReview.vue
-                                                                       -> Estimates.vue
+### Component Relationships and Task Token Flow
+    StoryInput.vue -> analyze_story Lambda -> DynamoDB (AGILE_COACH_PENDING)
+                                         -> Step Functions
+                                            -> analyze_story_worker (AGILE_COACH)
+                                            -> Wait 3s (simulate AI)
+                                            -> Navigate to AgileReview.vue
+                                            -> WaitForUserAction (with task token)
 
 ### Critical State Transitions
-1. Story Submission (Synchronous)
-   - StoryInput -> AGILE_COACH_PENDING -> AGILE_COACH
-   - Blocks until AI analysis complete
+1. Story Submission
+   - StoryInput -> AGILE_COACH_PENDING
+   - analyze_story_worker creates AGILE_COACH version
+   - Step Functions handles navigation to AgileReview
+   - Frontend displays results using stored token
 
-2. Technical Review (Synchronous)
-   - AgileReview -> SENIOR_DEV_PENDING -> SENIOR_DEV
-   - Blocks until technical review complete
+2. Technical Review
+   - User clicks "Continue to Technical Review"
+   - Frontend uses task token to signal workflow
+   - Workflow moves to SENIOR_DEV_PENDING
+   - Technical review process begins
 
 3. Estimation (Asynchronous)
-   - TechReview -> ESTIMATION_PENDING -> ESTIMATION_COMPLETE
+   - Similar task token pattern for estimation flow
    - Parallel processing for team estimates
+   - Task tokens manage state transitions
 
-[Previous sections remain unchanged through "Configuration Requirements"]
+## State Management with Task Tokens
+
+### Token Flow Architecture
+1. **State Storage (DynamoDB)**
+   - Table: agile_stories
+   - Key fields:
+     - story_id (primary)
+     - version (sort key)
+     - task_token (when waiting for user action)
+     - created_at/updated_at
+
+2. **Lambda Handlers**
+   - workflow_signal_handler:
+     - Handles navigation between states
+     - Manages task tokens for user actions
+     - Signals Step Functions to continue flow
+
+### State Transitions with Task Tokens
+
+```mermaid
+sequenceDiagram
+    participant Frontend
+    participant StepFunctions as Step Functions
+    participant Worker as analyze_story_worker
+    participant Handler as workflow_signal_handler
+    participant DB as DynamoDB
+
+    Frontend->>StepFunctions: Submit story
+    StepFunctions->>Worker: Process story
+    Worker->>DB: Store AGILE_COACH version
+    StepFunctions->>Handler: Navigate to review
+    Handler-->>Frontend: Navigate to /agile
+    StepFunctions->>Handler: Store task token
+    Frontend->>DB: Fetch results
+    Frontend->>Handler: User action (with token)
+    Handler->>StepFunctions: Continue workflow
+```
+
+### Critical State Points
+1. **Story Submission**
+   - analyze_story creates PENDING version
+   - Returns story_id and token to frontend
+
+2. **Analysis Complete**
+   - analyze_story_worker creates AGILE_COACH version
+   - Step Functions triggers navigation
+   - Frontend fetches and displays results
+
+3. **User Actions**
+   - Step Functions provides task token
+   - Frontend uses token to signal next step
+   - Workflow continues based on user choice
 
 ## Workflow Summary
 
@@ -124,8 +183,6 @@
    - Manages parallel processes
 
 ---
-
-
 
 ## Initial Story Submission Flow
 
@@ -413,93 +470,5 @@ mermaid
    - Manages parallel processes
 
 ---
-
-## State Management with Task Tokens
-
-### Token Flow Architecture
-1. **State Storage (DynamoDB)**
-   - Table: agile_stories
-   - Key fields:
-     - story_id (primary)
-     - status
-     - task_token
-     - last_updated
-
-2. **Lambda Handlers**
-   - story_state_handler:
-     - Receives tokens from Step Functions
-     - Updates story state in DynamoDB
-     - Stores task tokens with stories
-   
-   - workflow_signal_handler:
-     - Handles UI action signals
-     - Retrieves tokens from DynamoDB
-     - Signals Step Functions to continue
-
-### State Transitions
-
-mermaid
-sequenceDiagram
-participant SF as Step Functions
-participant SH as story_state_handler
-participant DB as DynamoDB
-participant UI as User Interface
-participant WS as workflow_signal_handler
-SF->>SH: Enter wait state (with token)
-SH->>DB: Store token & update status
-UI->>WS: User clicks action button
-WS->>DB: Retrieve token
-WS->>SF: Signal with token
-SF->>SH: Continue to next state
-
-
-### Critical State Points
-1. **Token Generation**
-   - Generated by Step Functions
-   - Unique per wait state
-   - Stored with story record
-
-2. **Token Storage**
-   - Persisted in DynamoDB
-   - Linked to story_id
-   - Includes timestamp
-
-3. **Token Usage**
-   - Retrieved on user action
-   - Used to signal state machine
-   - Cleared after use
-
-### Recovery Scenarios
-1. **UI Failure**
-   - Token preserved in DynamoDB
-   - State recoverable from database
-   - User can resume from last state
-
-2. **System Recovery**
-   - All states tracked in DynamoDB
-   - Tokens available for pending actions
-   - Clear audit trail of actions
-
-### Implementation Notes
-1. **DynamoDB Schema**
-   ```typescript
-   interface StoryRecord {
-     story_id: string;
-     status: StoryStatus;
-     task_token?: string;
-     last_updated: string;
-     // ... other story fields
-   }
-   ```
-
-2. **Lambda Integration**
-   - story_state_handler: Updates state and stores tokens
-   - workflow_signal_handler: Processes user actions
-   - Both handlers use same DynamoDB table
-
-3. **Security Considerations**
-   - Tokens are sensitive
-   - Never exposed to frontend
-   - Time-limited validity
 
 *Note: This documentation will be updated as the workflow implementation continues.*

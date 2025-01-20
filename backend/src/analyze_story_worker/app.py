@@ -11,7 +11,7 @@ import os
 import json
 import boto3
 import logging
-from datetime import datetime
+from datetime import datetime, UTC
 
 # Set up logging
 logger = logging.getLogger()
@@ -50,14 +50,23 @@ def analyze_story(content):
     }
 
 def handler(event, context):
-    """Lambda handler for analyzing stories."""
+    """
+    Handler for analyze_story_worker Lambda
+    
+    Input event should contain:
+    - story_id: UUID of the story
+    - token: Token for authentication
+    """
     try:
-        logger.info(f"Event received: {json.dumps(event)}")
+        logger.info(f"Received event: {json.dumps(event, indent=2)}")
         
-        # Get story_id from event
-        story_id = event['story_id']
+        story_id = event.get('story_id')
+        token = event.get('token')
         
-        # Get the PENDING version from DynamoDB
+        if not story_id or not token:
+            raise ValueError("Missing required fields: story_id and token")
+            
+        # Get the PENDING version
         response = table.get_item(
             Key={
                 'story_id': story_id,
@@ -66,37 +75,48 @@ def handler(event, context):
         )
         
         if 'Item' not in response:
-            raise ValueError(f"No PENDING story found for story_id: {story_id}")
+            raise ValueError(f"No pending story found for ID: {story_id}")
             
-        item = response['Item']
-        content = item['content']
-        tenant_id = item['tenant_id']
-        token = item.get('token')  # Get token if it exists
+        pending_story = response['Item']
         
-        # Analyze the story and create new content
-        analysis_results = analyze_story(content)
-        
-        # Store analyzed version
-        timestamp = datetime.utcnow().isoformat()
-        analyzed_item = {
-            'story_id': story_id,
-            'version': 'AGILE_COACH',
-            'tenant_id': tenant_id,
-            'token': token,  # Include token in analyzed version
-            'content': analysis_results,
-            'created_at': timestamp,
-            'updated_at': timestamp
+        # Mock analysis data (simulating AI agent response)
+        mock_analysis = {
+            "story_id": story_id,
+            "token": token,
+            "analysis_results": {
+                "acceptance_criteria": [
+                    "User can submit a story through the form",
+                    "Story is stored in DynamoDB",
+                    "User is navigated to review page",
+                    "Analysis results are displayed"
+                ],
+                "recommendations": [
+                    "Consider adding input validation",
+                    "Add error handling for database operations",
+                    "Implement loading states for better UX"
+                ],
+                "story_points": 5,
+                "complexity": "medium"
+            }
         }
         
-        logger.info(f"Storing AGILE_COACH version in DynamoDB")
-        table.put_item(Item=analyzed_item)
+        # Store completed version with mock results
+        table.put_item(
+            Item={
+                'story_id': story_id,
+                'version': 'AGILE_COACH',
+                'token': token,
+                'content': pending_story.get('content', {}),  # Keep original content
+                'analysis': mock_analysis,
+                'status': 'COMPLETE',
+                'created_at': datetime.now(UTC).isoformat(),
+                'updated_at': datetime.now(UTC).isoformat()
+            }
+        )
         
-        return {
-            'story_id': story_id,
-            'token': token  # Return token for workflow
-        }
+        return mock_analysis
         
     except Exception as e:
-        logger.error(f"Error in handler: {str(e)}", exc_info=True)
+        logger.error(f"Error: {str(e)}", exc_info=True)
         raise
 

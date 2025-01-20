@@ -16,7 +16,7 @@
       "AnalyzeStoryWorker": {
         "Type": "Task",
         "Resource": "${analyze_story_worker_arn}",
-        "Next": "WaitForAgileCoachResults",
+        "Next": "SimulateAIProcessing",
         "ResultPath": "$.analysis",
         "Catch": [{
           "ErrorEquals": ["States.ALL"],
@@ -24,21 +24,7 @@
           "Next": "ErrorState"
         }]
       },
-      "WaitForAgileCoachResults": {
-        "Type": "Task",
-        "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
-        "Parameters": {
-          "FunctionName": "${analyze_story_worker_arn}",
-          "Payload": {
-            "story_id.$": "$.story_id",
-            "token.$": "$.token",
-            "taskToken.$": "$$.Task.Token"
-          }
-        },
-        "Next": "Wait3Seconds",
-        "ResultPath": "$.agileCoachResults"
-      },
-      "Wait3Seconds": {
+      "SimulateAIProcessing": {
         "Type": "Wait",
         "Seconds": 3,
         "Next": "NavigateToAgileReview"
@@ -49,11 +35,25 @@
         "Parameters": {
           "story_id.$": "$.story_id",
           "token.$": "$.token",
-          "analysis.$": "$.agileCoachResults",
-          "action": "NAVIGATE_TO_AGILE_REVIEW"
+          "action": "NAVIGATE_TO_AGILE"
+        },
+        "Next": "WaitForUserAction",
+        "ResultPath": "$.navigation"
+      },
+      "WaitForUserAction": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+        "Parameters": {
+          "FunctionName": "${workflow_signal_handler_arn}",
+          "Payload": {
+            "story_id.$": "$.story_id",
+            "token.$": "$.token",
+            "taskToken.$": "$$.Task.Token",
+            "action": "WAIT_FOR_TECH_REVIEW_DECISION"
+          }
         },
         "Next": "TechnicalReview",
-        "ResultPath": "$.navigation"
+        "ResultPath": "$.userAction"
       },
       "TechnicalReview": {
         "Type": "Task",
