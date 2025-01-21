@@ -437,3 +437,28 @@ resource "aws_iam_role_policy" "lambda_ssm" {
 }
 
 # ... rest of the Lambda configurations using local.lambda_environment_variables ... 
+
+resource "aws_iam_policy" "secrets_access" {
+  name        = "${var.environment}-secrets-access-policy"
+  description = "IAM policy for accessing secrets"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = [
+          "arn:aws:secretsmanager:us-east-1:784902437693:secret:openai_key-uPA0lN"
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "analyze_story_worker_secrets" {
+  policy_arn = aws_iam_policy.secrets_access.arn
+  role       = "dev-agile-stories-lambda-role"
+}
