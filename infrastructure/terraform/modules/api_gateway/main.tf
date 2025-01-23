@@ -125,9 +125,10 @@ resource "aws_apigatewayv2_integration" "technical_review" {
 
 resource "aws_apigatewayv2_route" "technical_review" {
   api_id    = aws_apigatewayv2_api.main.id
-  route_key = "POST /stories/{storyId}/tech-review"
+  route_key = "POST /stories/tech-review"
   target    = "integrations/${aws_apigatewayv2_integration.technical_review.id}"
 }
+
 
 # Lambda Permission for Technical Review
 resource "aws_lambda_permission" "technical_review" {

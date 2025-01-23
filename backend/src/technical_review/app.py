@@ -62,125 +62,85 @@ def get_openai_key():
             SecretId="openai_key"
         )
         secrets = json.loads(response['SecretString'])
-        return secrets['OPENAI_API_KEY']
+        api_key = secrets['OPENAI_API_KEY']
+        
+        # Set the key for the OpenAI client
+        openai.api_key = api_key
+        
+        return api_key
     except Exception as e:
         print(f"Failed to get OpenAI key: {str(e)}")
         raise
 
 def handler(event, context):
     try:
-        print("Event received:", json.dumps(event))
+        # Get and set OpenAI key first, before making any OpenAI calls
+        get_openai_key()
         
-        # Get story_id from path parameters
-        story_id = event.get('pathParameters', {}).get('storyId')
-        
-        # Get tenant_id from body
+        # Parse request
         body = json.loads(event.get('body', '{}'))
+        story_id = body.get('story_id')
         tenant_id = body.get('tenant_id')
+        improved_content = body.get('analysis', {}).get('content', {})
         
-        print(f"Processing story_id: {story_id}, tenant_id: {tenant_id}")
-        
-        if not story_id:
-            print("Error: Missing story_id in path parameters")
-            return {
-                'statusCode': 400,
-                'body': json.dumps({
-                    'error': 'Missing story_id in path parameters'
-                })
-            }
-            
-        if not tenant_id:
-            print("Error: Missing tenant_id in request body")
-            return {
-                'statusCode': 400,
-                'body': json.dumps({
-                    'error': 'Missing tenant_id in request body'
-                })
-            }
-            
         current_time = datetime.now(UTC).isoformat().replace('+00:00', 'Z')
         
         # Initialize DynamoDB
         dynamodb = boto3.resource('dynamodb')
         table = dynamodb.Table(os.environ.get('DYNAMODB_TABLE', 'dev-agile-stories'))
         
-        print(f"Processing technical review for story_id: {story_id}")
-        
-        # Get the AGILE_COACH version to get both content and analysis
-        try:
-            response = table.get_item(
-                Key={
-                    'story_id': story_id,
-                    'version': 'AGILE_COACH'
-                }
-            )
-            if 'Item' not in response:
-                raise Exception(f"Story {story_id} not found")
-                
-            agile_coach_version = response['Item']
-            content = agile_coach_version['content']
-            analysis = agile_coach_version['analysis']  # Get the analysis with improvements
-            
-            # Create enriched content with improvements
-            enriched_content = {
-                **content,  # Original content
-                'improvedTitle': analysis.get('ImprovedTitle'),
-                'improvedStory': analysis.get('ImprovedStory'),
-                'improvedAcceptanceCriteria': analysis.get('ImprovedAcceptanceCriteria'),
-                'INVESTAnalysis': analysis.get('INVESTAnalysis'),
-                'suggestions': analysis.get('Suggestions')
-            }
-            
-        except Exception as e:
-            print(f"Error getting story content and analysis: {str(e)}")
-            return {
-                'statusCode': 404,
-                'body': json.dumps({
-                    'error': f'Story not found: {str(e)}'
-                })
-            }
-        
-        # Save as SENIOR_DEV_PENDING with enriched content
+        # Save improved content from AGILE_COACH in PENDING
         pending_item = {
             'story_id': story_id,
-            'tenant_id': tenant_id,
             'version': 'SENIOR_DEV_PENDING',
-            'content': enriched_content,  # Use the enriched content
+            'tenant_id': tenant_id,
             'created_at': current_time,
-            'updated_at': current_time
+            'updated_at': current_time,
+            'content': {  # Improved content from AGILE_COACH
+                'title': improved_content.get('title', ''),
+                'story': improved_content.get('story', ''),
+                'description': '',
+                'acceptance_criteria': improved_content.get('acceptance_criteria', [])
+            },
+            'analysis': {  # Empty until agent responds
+                'content': {},
+                'analysis': {}
+            }
         }
+        
         table.put_item(Item=pending_item)
         
-        # Get OpenAI analysis using key from SSM
-        openai.api_key = get_openai_key()
-        client = openai.Client(api_key=openai.api_key)
-        response = client.chat.completions.create(
-            model="gpt-4-1106-preview",
+        # Get SENIOR_DEV analysis using improved content
+        response = openai.chat.completions.create(
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": get_technical_prompt()},
-                {"role": "user", "content": json.dumps(content)}
-            ]
+                {"role": "user", "content": json.dumps(pending_item['content'])}
+            ],
+            response_format={ "type": "json_object" }
         )
         
-        analysis = response.choices[0].message.content
+        # Parse and store final response
+        analysis = json.loads(response.choices[0].message.content)
         
-        # Save as SENIOR_DEV
-        analysis_item = {
+        final_item = {
             'story_id': story_id,
-            'tenant_id': tenant_id,
             'version': 'SENIOR_DEV',
-            'content': content,
-            'analysis': analysis,
+            'tenant_id': tenant_id,
             'created_at': current_time,
-            'updated_at': current_time
+            'updated_at': current_time,
+            'content': pending_item['content'],  # Keep improved content
+            'analysis': analysis  # Agent's response with technical details
         }
-        table.put_item(Item=analysis_item)
+        
+        table.put_item(Item=final_item)
         
         return {
             'statusCode': 200,
             'body': json.dumps({
-                'status': 'success',
-                'story_id': story_id
+                'story_id': story_id,
+                'version': 'SENIOR_DEV',
+                'analysis': analysis
             })
         }
         

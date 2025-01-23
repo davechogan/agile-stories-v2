@@ -94,6 +94,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+import { v4 as uuidv4 } from 'uuid'
 
 const router = useRouter()
 const loading = ref(false)
@@ -116,41 +117,38 @@ const isValid = computed(() => {
 
 const submitStory = async () => {
   analyzing.value = true
-  let storyId = null
+  const storyId = uuidv4()
+  console.log('Generated new story_id:', storyId)
   
   try {
     const storyData = {
+      story_id: storyId,
       tenant_id: "test-tenant-001",
-      content: {
-        title: story.value.title,
-        description: "",
-        story: story.value.text || "",
-        acceptance_criteria: story.value.acceptance_criteria
-          .filter(c => c.trim() !== '') || []
-      }
+      title: story.value.title,
+      story: story.value.text || "",
+      acceptance_criteria: story.value.acceptance_criteria
+        .filter(c => c.trim() !== '') || []
     }
     
-    console.log('Submitting story:', storyData)
+    console.log('Submitting story data:', JSON.stringify(storyData, null, 2))
     
     const response = await axios.post(
-      `${import.meta.env.VITE_API_URL}/stories/analyze?version=ORIGINAL`,
+      `${import.meta.env.VITE_API_URL}/stories/analyze`,
       storyData
     )
     
-    console.log('Response:', response)
-    storyId = response.data?.story_id
+    console.log('Response from analyze:', JSON.stringify(response.data, null, 2))
+    
+    // Navigate using the generated ID
+    await router.push(`/agile/${storyId}`)
     
   } catch (err) {
     console.error('Error submitting story:', err)
-    // Try to get story_id from error response
-    storyId = err.response?.data?.story_id
+    if (err.response) {
+      console.error('Error response:', err.response.data)
+    }
   } finally {
     analyzing.value = false
-    
-    // Navigate if we have a story_id, regardless of success/failure
-    if (storyId) {
-      await router.push(`/agile/${storyId}`)
-    }
   }
 }
 

@@ -1,56 +1,71 @@
 <template>
   <div class="test">
-    <div class="two-column-layout">
+    <div v-if="loading" class="loading">
+      <v-progress-circular indeterminate />
+    </div>
+    
+    <div v-else-if="error" class="error">
+      <p>{{ error }}</p>
+      <v-btn to="/" color="primary">Return to Story Input</v-btn>
+    </div>
+    
+    <div v-else-if="!analysis?.analysis" class="no-data">
+      <p>No analysis data available. Please submit a story first.</p>
+      <v-btn to="/" color="primary">Return to Story Input</v-btn>
+    </div>
+    
+    <div v-else class="two-column-layout">
       <!-- Left Column -->
       <div class="primary-content-wrapper">
         <div class="primary-content">
           <h2 class="page-title">Improved Title</h2>
-          <div class="story-form">
-            <div class="dark-panel mb-8">
-              <textarea
-                v-model="analysis.analysis.content.title"
-                class="edit-field"
-                rows="1"
-              ></textarea>
-            </div>
+          <div class="dark-panel mb-8">
+            <textarea
+              v-model="analysis.analysis.title"
+              class="edit-field"
+              rows="1"
+            ></textarea>
+          </div>
 
-            <h2 class="page-title">Improved Story</h2>
-            <div class="dark-panel mb-8">
-              <textarea
-                v-model="analysis.analysis.content.story"
-                class="edit-field"
-                rows="3"
-              ></textarea>
-            </div>
+          <h2 class="page-title">Improved Story</h2>
+          <div class="dark-panel mb-8">
+            <textarea
+              v-model="analysis.analysis.story"
+              class="edit-field"
+              rows="3"
+            ></textarea>
+          </div>
 
-            <div class="form-group">
-              <h2 class="page-title">Acceptance Criteria</h2>
-              <div class="criteria-list">
-                <div v-for="(criterion, index) in analysis.analysis.content.acceptance_criteria" 
-                     :key="index"
-                     class="criteria-item">
-                  <v-textarea
-                    v-model="analysis.analysis.content.acceptance_criteria[index]"
-                    variant="outlined"
-                    auto-grow
-                    rows="1"
-                  />
-                  <v-btn 
-                    icon="mdi-delete" 
-                    size="small"
-                    color="error" 
-                    variant="text"
-                    @click="removeCriterion(index)"
-                  />
-                </div>
+          <div class="form-group">
+            <h2 class="page-title">Acceptance Criteria</h2>
+            <div class="criteria-list">
+              <div v-if="analysis.analysis.acceptance_criteria"
+                   v-for="(criterion, index) in analysis.analysis.acceptance_criteria" 
+                   :key="index"
+                   class="criteria-item">
+                <v-textarea
+                  :value="criterion"
+                  @input="(e) => updateCriterion(index, e)"
+                  variant="outlined"
+                  auto-grow
+                  rows="1"
+                />
                 <v-btn 
-                  prepend-icon="mdi-plus"
+                  icon="mdi-delete" 
+                  size="small"
+                  color="error" 
                   variant="text"
-                  @click="addCriterion"
-                >
-                  Add Criteria
-                </v-btn>
+                  @click="removeCriterion(index)"
+                />
               </div>
+              <v-btn 
+                prepend-icon="mdi-plus"
+                variant="text"
+                @click="addCriterion"
+                :disabled="!analysis.analysis.acceptance_criteria"
+              >
+                Add Criteria
+              </v-btn>
             </div>
           </div>
 
@@ -61,20 +76,20 @@
               size="large"
               @click="requestTechnicalReview"
               :loading="reviewing"
-              :disabled="!canRequestReview"
+              :disabled="!canRequestReview || !analysis.analysis"
             >
               Request Technical Review
             </v-btn>
           </div>
         </div>
       </div>
-
+      
       <!-- Right Column -->
       <div class="analysis-panel">
         <h3 class="panel-title">Suggestions</h3>
         <div class="dark-panel mb-8">
           <ul class="suggestions-list">
-            <li v-for="(suggestion, index) in analysis?.analysis?.analysis?.Suggestions || []"
+            <li v-for="(suggestion, index) in analysis.analysis.Suggestions || []"
                 :key="index"
                 class="suggestion-item">
               {{ suggestion }}
@@ -84,7 +99,7 @@
 
         <h3 class="panel-title">INVEST Analysis</h3>
         <div class="invest-grid">
-          <div v-for="(item, index) in analysis?.analysis?.analysis?.INVESTAnalysis || []"
+          <div v-for="(item, index) in analysis.analysis.INVESTAnalysis || []"
                :key="index"
                class="invest-item">
             <div class="invest-header">
@@ -99,78 +114,159 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { mockAnalysisResult } from '@/mocks/mockAnalysisData'
 import { useStoryStore } from '@/stores/storyStore'
+import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 
-const route = useRoute()
 const router = useRouter()
-const store = useStoryStore()
+const storyStore = useStoryStore()
 const analysis = ref(null)
-const loading = ref(true)
+const route = useRoute()
 const error = ref(null)
+const loading = ref(false)
 const reviewing = ref(false)
-const canRequestReview = computed(() => true) // Add any validation logic here
+
+onMounted(() => {
+  fetchAnalysis()
+})
+
+// Comment out or remove the redirect logic
+/*
+watch(analysis, (newValue) => {
+  if (!newValue) {
+    router.push('/')
+  }
+})
+*/
+
+// Story editing
+const editingStory = ref(false)
+const editedStory = ref('')
+
+const startEditingStory = () => {
+  editedStory.value = mockAnalysisResult.analysis.story
+  editingStory.value = true
+}
+
+const saveStory = () => {
+  mockAnalysisResult.analysis.story = editedStory.value
+  editingStory.value = false
+}
+
+const cancelEditStory = () => {
+  editingStory.value = false
+}
+
+// Acceptance Criteria editing
+const editingAC = ref(false)
+const editedAC = ref('')
+
+const startEditingAC = () => {
+  editedAC.value = mockAnalysisResult.analysis.acceptance_criteria.join('\n')
+  editingAC.value = true
+}
+
+const saveAC = () => {
+  mockAnalysisResult.analysis.acceptance_criteria = editedAC.value
+    .split('\n')
+    .filter(line => line.trim()) // Remove empty lines
+  editingAC.value = false
+}
+
+const cancelEditAC = () => {
+  editingAC.value = false
+}
+
+// Parse INVEST analysis into structured data
+const investAnalysis = [
+  {
+    letter: 'I',
+    title: 'Independent',
+    content: 'The user story is independent, as it does not seem to depend on any other user story for its implementation.'
+  },
+  {
+    letter: 'N',
+    title: 'Negotiable',
+    content: 'The story is not very negotiable as it is not clear on what exactly the notification bell should do, or what exactly broadcasting a message entails.'
+  },
+  {
+    letter: 'V',
+    title: 'Valuable',
+    content: 'The value to the user is not clearly stated. Why should the user care about this new notification bell?'
+  },
+  {
+    letter: 'E',
+    title: 'Estimable',
+    content: 'The story is too vague to be reliably estimated. We don\'t know what "broadcasting a message" involves.'
+  },
+  {
+    letter: 'S',
+    title: 'Small',
+    content: 'The story is not small, as it seems to involve several different features or functionalities.'
+  },
+  {
+    letter: 'T',
+    title: 'Testable',
+    content: 'The acceptance criteria are too vague to be testable. What does it mean for everyone to "get it" and "read it"?'
+  }
+]
+
+// Add this function to detect negative feedback
+const isNegative = (content: string): boolean => {
+  const negativeTerms = ['not', 'too vague', 'unclear', 'missing'];
+  return negativeTerms.some(term => content.toLowerCase().includes(term));
+}
+
+const updateCriterion = (index, value) => {
+  if (analysis.value?.analysis?.acceptance_criteria) {
+    analysis.value.analysis.acceptance_criteria[index] = value
+  }
+}
 
 const fetchAnalysis = async () => {
-  const storyId = route.params.id
-  console.log('Fetching analysis for story:', storyId)
+  loading.value = true
+  error.value = null
+  analysis.value = null // Reset analysis before fetching
   
   try {
-    const response = await axios.get(
-      `${import.meta.env.VITE_API_URL}/stories/${storyId}?version=AGILE_COACH`
-    )
-    console.log('Fetched data:', response.data)
+    const storyId = route.params.id
+    console.log('Starting fetchAnalysis with storyId:', storyId)
+    
+    const url = `${import.meta.env.VITE_API_URL}/stories/${storyId}?version=AGILE_COACH`
+    console.log('Making GET request to:', url)
+    
+    const response = await axios.get(url)
+    console.log('Response:', response.data)
+    
+    if (!response.data?.analysis) {
+      throw new Error('Invalid data structure received')
+    }
+    
     analysis.value = response.data
+    console.log('Set analysis value:', analysis.value)
     
   } catch (err) {
-    console.error('Error fetching analysis:', err)
-    error.value = err.message
+    console.error('Error in fetchAnalysis:', err)
+    if (err.response) {
+      console.error('Error response:', err.response.data)
+    }
+    error.value = err.message || 'Failed to load analysis'
   } finally {
     loading.value = false
   }
 }
 
-const sendToTechReview = async () => {
-  loading.value = true
-  try {
-    // Send current state of the story for senior dev review
-    const storyData = {
-      tenant_id: "test-tenant-001",
-      content: {
-        title: analysis.value.analysis.content.title,
-        story: analysis.value.analysis.content.story,
-        acceptance_criteria: analysis.value.analysis.content.acceptance_criteria
-      },
-      version: "SENIOR_DEV_PENDING"
-    }
-
-    const response = await axios.post(
-      `${import.meta.env.VITE_API_URL}/stories/${route.params.id}/tech-review`,
-      storyData
-    )
-
-    if (response.data && response.data.story_id) {
-      await router.push(`/tech-review/${response.data.story_id}`)
-    } else {
-      throw new Error('Missing story_id in response')
-    }
-  } catch (error) {
-    console.error('Error sending for tech review:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-const addCriterion = () => {
-  analysis.value.analysis.content.acceptance_criteria.push('')
-}
-
-const removeCriterion = (index) => {
-  analysis.value.analysis.content.acceptance_criteria.splice(index, 1)
-}
+// Compute if we can request a review
+const canRequestReview = computed(() => {
+  if (!analysis.value || !analysis.value.analysis) return false
+  
+  return analysis.value.analysis.title && 
+         analysis.value.analysis.story && 
+         analysis.value.analysis.acceptance_criteria?.length > 0
+})
 
 const requestTechnicalReview = async () => {
   reviewing.value = true
@@ -178,45 +274,39 @@ const requestTechnicalReview = async () => {
     const storyId = route.params.id
     console.log('Requesting technical review for story:', storyId)
     
-    const requestData = {
+    const payload = {
+      story_id: storyId,
       tenant_id: "test-tenant-001",
-      content: {
-        title: analysis.value.content.title,
-        story: analysis.value.content.story,
-        acceptance_criteria: analysis.value.content.acceptance_criteria
-      }
+      version: 'AGILE_COACH',
+      analysis: analysis.value.analysis
     }
     
-    console.log('Sending technical review request:', requestData)
+    console.log('Sending tech review request:', payload)
     
-    // Send to technical-review lambda
     const response = await axios.post(
-      `${import.meta.env.VITE_API_URL}/stories/${storyId}/tech-review`,
-      requestData
+      `${import.meta.env.VITE_API_URL}/stories/tech-review`,
+      payload
     )
     
-    console.log('Technical review response:', response)
+    console.log('Technical review response:', response.data)
     
-    // Navigate to tech review page with story ID
-    if (response.data && response.data.story_id) {
-      await router.push(`/tech/${storyId}`)
-    }
+    // Navigate to tech review page
+    router.push(`/tech-review/${storyId}`)
+    
   } catch (err) {
     console.error('Error requesting technical review:', err)
     if (err.response) {
-      console.log('Error response:', err.response.data)
+      console.error('Error response:', err.response.data)
     }
+    error.value = 'Failed to request technical review'
   } finally {
     reviewing.value = false
   }
 }
-
-onMounted(() => {
-  fetchAnalysis()
-})
 </script>
 
 <style scoped>
+/* Copy all styles from OLD-AgileReview.vue */
 .test {
   display: block;
   width: 100%;
@@ -397,7 +487,7 @@ onMounted(() => {
   justify-content: center;
 }
 
-.debug {
+.dark-panel {
   background: #333;
   padding: 1rem;
   margin: 1rem 0;

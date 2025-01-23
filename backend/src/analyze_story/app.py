@@ -145,61 +145,72 @@ def analyze_with_openai(content):
 
 def handler(event, context):
     try:
-        # Get version from query parameters
-        version = event.get('queryStringParameters', {}).get('version', 'AGILE_COACH')
+        # Parse request
         body = json.loads(event.get('body', '{}'))
+        story_id = body.get('story_id')
+        tenant_id = body.get('tenant_id')
+        
+        current_time = datetime.now(UTC).isoformat().replace('+00:00', 'Z')
         
         # Initialize DynamoDB
         dynamodb = boto3.resource('dynamodb')
         table = dynamodb.Table(os.environ.get('DYNAMODB_TABLE', 'dev-agile-stories'))
-        current_time = datetime.now(UTC).isoformat().replace('+00:00', 'Z')
-
-        if version == 'ORIGINAL':
-            # Initial story submission
-            story_id = str(uuid.uuid4())
-            
-            # Save ORIGINAL version
-            original_item = {
-                'story_id': story_id,
-                'tenant_id': body['tenant_id'],
-                'version': 'ORIGINAL',
-                'content': body['content'],
-                'created_at': current_time,
-                'updated_at': current_time
+        
+        # Save original content in PENDING
+        pending_item = {
+            'story_id': story_id,
+            'version': 'AGILE_COACH_PENDING',
+            'tenant_id': tenant_id,
+            'created_at': current_time,
+            'updated_at': current_time,
+            'content': {  # Original story content
+                'title': body.get('title', ''),
+                'story': body.get('story', ''),
+                'description': body.get('description', ''),
+                'acceptance_criteria': body.get('acceptance_criteria', [])
+            },
+            'analysis': {  # Empty until agent responds
+                'content': {},
+                'analysis': {}
             }
-            table.put_item(Item=original_item)
-            
-            # Get OpenAI analysis
-            analysis = analyze_with_openai(body['content'])
-            
-            # Save AGILE_COACH version
-            analysis_item = {
+        }
+        
+        table.put_item(Item=pending_item)
+        
+        # Get AGILE_COACH analysis
+        response = client.chat.completions.create(
+            model=os.environ.get('GPT_MODEL', 'gpt-4-1106-preview'),
+            messages=[
+                {"role": "system", "content": get_prompt()},
+                {"role": "user", "content": json.dumps(pending_item['content'])}
+            ],
+            response_format={ "type": "json_object" }
+        )
+        
+        # Parse and store final response
+        analysis = json.loads(response.choices[0].message.content)
+        
+        final_item = {
+            'story_id': story_id,
+            'version': 'AGILE_COACH',
+            'tenant_id': tenant_id,
+            'created_at': current_time,
+            'updated_at': current_time,
+            'content': pending_item['content'],  # Keep original content
+            'analysis': analysis  # Agent's response with improved content and analysis
+        }
+        
+        table.put_item(Item=final_item)
+        
+        return {
+            'statusCode': 200,
+            'body': json.dumps({
                 'story_id': story_id,
-                'tenant_id': body['tenant_id'],
                 'version': 'AGILE_COACH',
-                'content': body['content'],
-                'analysis': analysis,
-                'created_at': current_time,
-                'updated_at': current_time
-            }
-            table.put_item(Item=analysis_item)
-            
-            return {
-                'statusCode': 200,
-                'body': json.dumps({
-                    'story_id': story_id,
-                    'message': 'Story created and analyzed successfully'
-                })
-            }
-            
-        else:
-            return {
-                'statusCode': 400,
-                'body': json.dumps({
-                    'error': f'Invalid version: {version}'
-                })
-            }
-            
+                'analysis': analysis
+            })
+        }
+        
     except Exception as e:
         print(f"Error in handler: {str(e)}")
         print(f"Traceback: {traceback.format_exc()}")
