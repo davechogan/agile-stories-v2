@@ -58,18 +58,16 @@
           </div>
         </div>
 
-        <div class="sticky-footer">
-          <div class="footer-content">
-            <v-btn 
-              color="primary"
-              :loading="loading"
-              :disabled="!isValid"
-              @click="submitStory"
-              size="large"
-            >
-              Submit Story
-            </v-btn>
-          </div>
+        <div class="fixed-button-container">
+          <v-btn
+            color="primary"
+            size="large"
+            @click="submitStory"
+            :loading="analyzing"
+            :disabled="!story.title"
+          >
+            Submit Story
+          </v-btn>
         </div>
       </div>
 
@@ -93,25 +91,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useStoryStore } from '@/stores/storyStore'
-import { submitStoryForAgileReview } from '../api/storyApi'
-import { useAnalysisStore } from '@/stores/analysisStore'
-import { v4 as uuidv4 } from 'uuid'
+import axios from 'axios'
 
 const router = useRouter()
-const storyStore = useStoryStore()
-const analysisStore = useAnalysisStore()
 const loading = ref(false)
 const error = ref(null)
-
-// Generate token on component mount
-onMounted(() => {
-  if (!analysisStore.analysisToken) {
-    analysisStore.setAnalysisToken(uuidv4())
-  }
-})
+const analyzing = ref(false)
 
 // Story data structure
 const story = ref({
@@ -122,55 +109,48 @@ const story = ref({
 
 // Modified validation to only require title
 const isValid = computed(() => {
-  return story.value.title.trim() !== '' && story.value.text.trim() !== ''
+  return story.value.title.trim() !== '' && 
+         story.value.text.trim() !== '' && 
+         story.value.acceptance_criteria.some(c => c.trim() !== '')
 })
 
 const submitStory = async () => {
-  loading.value = true
-  error.value = null
+  analyzing.value = true
+  let storyId = null
   
   try {
-    // Verify token exists
-    if (!analysisStore.analysisToken) {
-      throw new Error('Missing analysis token')
-    }
-
     const storyData = {
       tenant_id: "test-tenant-001",
-      token: analysisStore.analysisToken,
       content: {
         title: story.value.title,
         description: "",
-        story: story.value.text,
+        story: story.value.text || "",
         acceptance_criteria: story.value.acceptance_criteria
-          .filter(c => c.trim() !== '')
+          .filter(c => c.trim() !== '') || []
       }
     }
-
-    console.log('Submitting story with token:', JSON.stringify(storyData, null, 2))
     
-    const response = await submitStoryForAgileReview(storyData)
-    console.log('Story submitted successfully:', response)
+    console.log('Submitting story:', storyData)
     
-    if (response && response.story_id && response.token) {
-      const storyData = {
-        story_id: response.story_id,
-        token: response.token
-      }
-      console.log('Setting store with:', storyData)
-      
-      await storyStore.setCurrentStory(storyData)
-      console.log('Store updated. Current story:', storyStore.currentStory)
-      
-      await router.push('/agile')
-    } else {
-      throw new Error('Missing story_id or token in response')
-    }
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_URL}/stories/analyze?version=ORIGINAL`,
+      storyData
+    )
+    
+    console.log('Response:', response)
+    storyId = response.data?.story_id
+    
   } catch (err) {
     console.error('Error submitting story:', err)
-    error.value = err.message || 'Failed to submit story. Please try again.'
+    // Try to get story_id from error response
+    storyId = err.response?.data?.story_id
   } finally {
-    loading.value = false
+    analyzing.value = false
+    
+    // Navigate if we have a story_id, regardless of success/failure
+    if (storyId) {
+      await router.push(`/agile/${storyId}`)
+    }
   }
 }
 
@@ -259,21 +239,17 @@ const guidelines = {
   padding-bottom: 5rem;
 }
 
-.sticky-footer {
+.fixed-button-container {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgb(18, 18, 18);
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 100;
-}
-
-.footer-content {
-  max-width: 1800px;  /* Match main content width */
-  margin: 0 auto;
-  padding: 1rem 2rem;  /* Match main content padding */
+  width: auto;
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
+  background: linear-gradient(to top, rgba(18, 18, 18, 1) 50%, rgba(18, 18, 18, 0));
+  padding: 1rem;
 }
 
 .criteria-item {

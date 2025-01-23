@@ -69,3 +69,13 @@ variable "analyze_story_worker_arn" {
   description = "ARN of the analyze story worker Lambda function"
   type        = string
 }
+
+variable "technical_review_lambda_arn" {
+  description = "ARN of the technical review Lambda function"
+  type        = string
+}
+
+variable "technical_review_lambda_name" {
+  description = "Name of the technical review Lambda function"
+  type        = string
+}

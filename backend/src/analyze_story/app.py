@@ -18,156 +18,193 @@ Returns:
 """
 
 import os
+import sys
 import json
 import uuid
 import boto3
 import logging
-from datetime import datetime
+import traceback
+from datetime import datetime, UTC
+from openai import OpenAI
+from pathlib import Path
+import requests
+
+# Debug: Print Python path and current directory
+print("Python Path:", sys.path)
+print("Current Directory:", os.getcwd())
+print("Directory Contents:", os.listdir('.'))
 
 # Set up logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 # Initialize AWS clients
+secrets_client = boto3.client('secretsmanager')
 dynamodb = boto3.resource('dynamodb')
-sfn = boto3.client('stepfunctions')
-ssm = boto3.client('ssm')
-
-# Get DynamoDB table
 table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
 
-def get_step_function_arn():
-    """
-    Retrieves the Step Functions state machine ARN from SSM Parameter Store.
-    
-    Returns:
-        str: The ARN of the Step Functions state machine
-    
-    Raises:
-        Exception: If unable to retrieve the ARN from SSM
-    """
+def get_openai_key():
+    """Retrieve OpenAI API key from AWS Secrets Manager."""
     try:
-        response = ssm.get_parameter(
-            Name=f"/{os.environ['ENVIRONMENT']}/step-functions/workflow-arn"
+        response = secrets_client.get_secret_value(
+            SecretId="openai_key"
         )
-        return response['Parameter']['Value']
+        secrets = json.loads(response['SecretString'])
+        return secrets['OPENAI_API_KEY']
     except Exception as e:
-        logger.error(f"Error getting Step Functions ARN: {str(e)}")
-        raise Exception(f"Failed to get Step Functions ARN: {str(e)}")
+        logger.error(f"Failed to get OpenAI key: {str(e)}")
+        raise
+
+# Initialize OpenAI client
+client = OpenAI(api_key=get_openai_key())
+
+def get_prompt():
+    """Load agile coach prompt template."""
+    try:
+        # First try to read from file
+        prompt_path = Path(__file__).parent / "AgileExpertPrompt.md"
+        
+        with open(prompt_path, 'r') as f:
+            return f.read()
+            
+    except Exception as e:
+        print(f"Failed to read agile coach prompt: {str(e)}")
+        # Fallback to hardcoded prompt
+        return """
+You are an Agile expert with the combined skills of an Agile Coach and a seasoned Scrum Master with over 15 years of experience. You have successfully guided Agile teams across diverse industries, working with a wide range of technologies, frameworks, and processes. Your primary assignment is to assist Product Owners in creating the best possible stories, ensuring they meet the needs of SAFe Scrum teams and adhere to Agile principles.
+
+Your expertise enables you to:
+1. Identify areas where stories can be improved for clarity and effectiveness.
+2. Transform vague or incomplete stories into actionable, high-quality deliverables.
+3. Apply the INVEST criteria to ensure the story is Independent, Negotiable, Valuable, Estimable, Small, and Testable.
+4. Provide suggestions for further improvement based on best practices.
+
+Please analyze the provided user story and provide feedback in the following JSON format:
+{
+    "score": "1-10 rating of the story quality",
+    "strengths": ["List of story strengths"],
+    "weaknesses": ["List of story weaknesses"],
+    "suggestions": ["Specific suggestions for improvement"]
+}
+"""
+
+def analyze_with_openai(content):
+    try:
+        # Log the prompt and content being sent
+        prompt = get_prompt()
+        messages = [
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": json.dumps(content)}
+        ]
+        
+        print("=== OpenAI Request Details ===")
+        print(f"Model: gpt-3.5-turbo")
+        print(f"System Prompt: {prompt}")
+        print(f"User Content: {json.dumps(content, indent=2)}")
+        print(f"Full Messages Array: {json.dumps(messages, indent=2)}")
+        print("============================")
+        
+        # Get OpenAI response
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            response_format={ "type": "json_object" }
+        )
+        
+        print(f"OpenAI raw response: {response}")
+        
+        # Parse OpenAI response
+        analysis_response = json.loads(response.choices[0].message.content)
+        print(f"Parsed OpenAI response: {json.dumps(analysis_response, indent=2)}")
+        
+        # Create the cleaned up structures
+        content = {
+            'title': analysis_response.get('title', content.get('title', '')),
+            'story': analysis_response.get('story', content.get('story', '')),
+            'acceptance_criteria': analysis_response.get('acceptance_criteria', [])
+        }
+        
+        analysis = {
+            'INVESTAnalysis': analysis_response.get('INVESTAnalysis', []),
+            'Suggestions': analysis_response.get('Suggestions', [])
+        }
+        
+        return {
+            'content': content,
+            'analysis': analysis
+        }
+        
+    except Exception as e:
+        print(f"=== Error in analyze_with_openai ===")
+        print(f"Error type: {type(e)}")
+        print(f"Error message: {str(e)}")
+        print(f"Content received: {json.dumps(content, indent=2)}")
+        print(f"Full traceback: {traceback.format_exc()}")
+        print("===============================")
+        raise
 
 def handler(event, context):
-    logger.info(f"Received event: {json.dumps(event, indent=2)}")
-    
-    # Handle GET request
-    if event['requestContext']['http']['method'] == 'GET':
-        story_id = event['pathParameters']['story_id']
+    try:
+        # Get version from query parameters
         version = event.get('queryStringParameters', {}).get('version', 'AGILE_COACH')
+        body = json.loads(event.get('body', '{}'))
         
-        response = table.get_item(
-            Key={
+        # Initialize DynamoDB
+        dynamodb = boto3.resource('dynamodb')
+        table = dynamodb.Table(os.environ.get('DYNAMODB_TABLE', 'dev-agile-stories'))
+        current_time = datetime.now(UTC).isoformat().replace('+00:00', 'Z')
+
+        if version == 'ORIGINAL':
+            # Initial story submission
+            story_id = str(uuid.uuid4())
+            
+            # Save ORIGINAL version
+            original_item = {
                 'story_id': story_id,
-                'version': version
+                'tenant_id': body['tenant_id'],
+                'version': 'ORIGINAL',
+                'content': body['content'],
+                'created_at': current_time,
+                'updated_at': current_time
             }
-        )
-        
-        if 'Item' not in response:
+            table.put_item(Item=original_item)
+            
+            # Get OpenAI analysis
+            analysis = analyze_with_openai(body['content'])
+            
+            # Save AGILE_COACH version
+            analysis_item = {
+                'story_id': story_id,
+                'tenant_id': body['tenant_id'],
+                'version': 'AGILE_COACH',
+                'content': body['content'],
+                'analysis': analysis,
+                'created_at': current_time,
+                'updated_at': current_time
+            }
+            table.put_item(Item=analysis_item)
+            
             return {
-                'statusCode': 404,
-                'body': json.dumps({'error': 'Story not found'})
+                'statusCode': 200,
+                'body': json.dumps({
+                    'story_id': story_id,
+                    'message': 'Story created and analyzed successfully'
+                })
             }
             
-        return {
-            'statusCode': 200,
-            'body': json.dumps(response['Item'])
-        }
-    
-    try:
-        # Parse the request body
-        body = json.loads(event['body'])
-        logger.info(f"Parsed body: \n{json.dumps(body, indent=4)}")
-        
-        tenant_id = body.get('tenant_id')
-        token = body.get('token')
-        
-        # Add debug logging
-        logger.info(f"Extracted token: {token}")
-        logger.info(f"Extracted tenant_id: {tenant_id}")
-        
-        content = body.get('content')
-        
-        # Generate story ID
-        story_id = str(uuid.uuid4())
-        timestamp = datetime.utcnow().isoformat()
-        
-        # Debug print before creating item
-        logger.info("Creating item with these values:")
-        logger.info(f"- token: {token}")
-        logger.info(f"- tenant_id: {tenant_id}")
-        logger.info(f"- content: {json.dumps(content, indent=2)}")
-        
-        # Create initial story item
-        item = {
-            'story_id': story_id,
-            'version': 'AGILE_COACH_PENDING',
-            'tenant_id': tenant_id,
-            'token': token,  # Verify this is being set
-            'content': content,
-            'created_at': timestamp,
-            'updated_at': timestamp
-        }
-        
-        # Debug print the item
-        logger.info(f"Created item dictionary: \n{json.dumps(item, indent=4)}")
-        
-        logger.info(f"Storing story in DynamoDB: \n{json.dumps(item, indent=4)}")
-        
-        # Store in DynamoDB
-        table.put_item(Item=item)
-        
-        # Verify what was stored
-        response = table.get_item(
-            Key={
-                'story_id': story_id,
-                'version': 'AGILE_COACH_PENDING'
+        else:
+            return {
+                'statusCode': 400,
+                'body': json.dumps({
+                    'error': f'Invalid version: {version}'
+                })
             }
-        )
-        logger.info(f"Verified stored item: \n{json.dumps(response.get('Item'), indent=4)}")
-        
-        # Start Step Functions execution
-        state_machine_arn = get_step_function_arn()
-        execution_input = {
-            'story_id': story_id,
-            'token': token
-        }
-        
-        logger.info(f"Starting Step Functions execution with input: {json.dumps(execution_input)}")
-        
-        sfn.start_execution(
-            stateMachineArn=state_machine_arn,
-            input=json.dumps(execution_input)
-        )
-        
-        # Return API Gateway formatted response
-        return {
-            'statusCode': 200,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'  # Add CORS header
-            },
-            'body': json.dumps({
-                'story_id': story_id,
-                'token': token
-            })
-        }
-        
+            
     except Exception as e:
-        logger.error(f"Error: {str(e)}", exc_info=True)
+        print(f"Error in handler: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
         return {
             'statusCode': 500,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'  # Add CORS header
-            },
             'body': json.dumps({
                 'error': str(e)
             })

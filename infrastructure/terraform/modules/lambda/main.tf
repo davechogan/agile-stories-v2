@@ -78,11 +78,12 @@ resource "aws_lambda_function" "analyze_story" {
   memory_size   = 256
 
   environment {
-    variables = {
+    variables = merge(local.lambda_environment_variables, {
       DYNAMODB_TABLE  = var.dynamodb_table_name
       ENVIRONMENT     = var.environment
       ERROR_SNS_TOPIC = var.error_sns_topic_arn
-    }
+      TECHNICAL_REVIEW_LAMBDA_NAME = "${var.environment}-agile-stories-review"
+    })
   }
 
   vpc_config {
@@ -431,6 +432,27 @@ resource "aws_iam_role_policy" "lambda_ssm" {
           "ssm:GetParameter"
         ]
         Resource = "arn:aws:ssm:*:*:parameter/${var.environment}/step-functions/*"
+      }
+    ]
+  })
+}
+
+# Add Lambda invoke permissions
+resource "aws_iam_role_policy" "lambda_invoke" {
+  name = "${var.environment}-lambda-invoke"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:InvokeFunction"
+        ]
+        Resource = [
+          "arn:aws:lambda:${var.aws_region}:${var.account_id}:function:${var.environment}-agile-stories-review"
+        ]
       }
     ]
   })

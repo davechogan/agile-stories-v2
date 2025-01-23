@@ -22,13 +22,10 @@ const vuetify = createVuetify({
     defaultTheme: 'dark',
     themes: {
       dark: {
-        dark: true,
         colors: {
           primary: '#64B5F6',
-          secondary: '#FFA726',
-          accent: '#42b883',
-          background: '#121212',
-          surface: '#1E1E1E',
+          secondary: '#1E1E1E',
+          background: '#121212'
         }
       }
     }
@@ -49,9 +46,8 @@ const vuetify = createVuetify({
 })
 
 const app = createApp(App)
-const pinia = createPinia()
 
-app.use(pinia)
+app.use(createPinia())
 app.use(router)
 app.use(vuetify)
 app.use(apolloProvider)

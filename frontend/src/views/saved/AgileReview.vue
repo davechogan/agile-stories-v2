@@ -1,106 +1,24 @@
 <template>
-  <div v-if="!analysis">
-    <p>No analysis data available. Please submit a story first.</p>
-    <v-btn to="/" color="primary">Return to Story Input</v-btn>
-  </div>
-  <div v-else class="test">
+  <div class="test">
     <div class="two-column-layout">
       <!-- Left Column: Primary Content -->
       <div class="primary-content-wrapper">
         <div class="primary-content">
-          <div class="story-section">
-            <h3>Improved Story</h3>
-            <div class="editable-content">
-              <template v-if="!editingStory">
-                <pre>{{ mockAnalysisResult.improved_story.text }}</pre>
-                <v-btn 
-                  size="small" 
-                  color="primary" 
-                  class="edit-btn"
-                  icon="mdi-pencil"
-                  @click="startEditingStory"
-                ></v-btn>
-              </template>
-              <template v-else>
-                <v-textarea
-                  v-model="editedStory"
-                  auto-grow
-                  variant="outlined"
-                  class="edit-textarea"
-                ></v-textarea>
-                <div class="edit-actions">
-                  <v-btn 
-                    size="small" 
-                    color="success" 
-                    @click="saveStory"
-                    class="mr-2"
-                  >Save</v-btn>
-                  <v-btn 
-                    size="small" 
-                    color="error" 
-                    @click="cancelEditStory"
-                  >Cancel</v-btn>
-                </div>
-              </template>
+          <h2 class="page-title" style="color: yellow">TEST - Improved Story</h2>
+          <div class="story-form">
+            <div class="dark-panel mb-8">
+              {{ analysis?.content?.improved_story?.text }}
             </div>
-            
-            <h3>Enhanced Acceptance Criteria</h3>
-            <div class="editable-content">
-              <template v-if="!editingAC">
-                <ul>
-                  <li v-for="(criterion, index) in mockAnalysisResult.improved_story.acceptance_criteria" 
-                      :key="index">
-                    {{ criterion }}
-                  </li>
-                </ul>
-                <v-btn 
-                  size="small" 
-                  color="primary" 
-                  class="edit-btn"
-                  icon="mdi-pencil"
-                  @click="startEditingAC"
-                ></v-btn>
-              </template>
-              <template v-else>
-                <v-textarea
-                  v-model="editedAC"
-                  auto-grow
-                  variant="outlined"
-                  placeholder="One acceptance criterion per line"
-                  class="edit-textarea"
-                ></v-textarea>
-                <div class="edit-actions">
-                  <v-btn 
-                    size="small" 
-                    color="success" 
-                    @click="saveAC"
-                    class="mr-2"
-                  >Save</v-btn>
-                  <v-btn 
-                    size="small" 
-                    color="error" 
-                    @click="cancelEditAC"
-                  >Cancel</v-btn>
-                </div>
-              </template>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Sticky footer inside primary-content-wrapper -->
-        <div class="sticky-footer">
-          <div class="footer-content">
-            <v-btn 
-              color="primary"
-              :loading="isLoading"
-              :disabled="!store.analysisToken"
-              @click="sendForTechReview"
-              size="large"
-            >
-              Send for Tech Review
-            </v-btn>
-            <div class="footer-hint" v-if="editingStory || editingAC">
-              Save your changes to enable sending for review
+
+            <h2 class="page-title">Acceptance Criteria</h2>
+            <div class="dark-panel">
+              <ul class="criteria-list">
+                <li v-for="(criterion, index) in analysis?.content?.improved_story?.acceptance_criteria"
+                    :key="index"
+                    class="criterion-item">
+                  {{ criterion }}
+                </li>
+              </ul>
             </div>
           </div>
         </div>
@@ -108,30 +26,16 @@
 
       <!-- Right Column: Analysis Panel -->
       <div class="analysis-panel">
-        <div class="analysis">
-          <h3>Analysis</h3>
-          <div class="invest-grid">
-            <div v-for="(item, index) in investAnalysis" :key="index" 
-                 class="invest-item"
-                 :class="{ 'warning': isNegative(item.content) }">
-              <div class="invest-header">
-                <span class="invest-letter">{{ item.letter }}</span>
-                <span class="invest-title">{{ item.title }}</span>
-              </div>
-              <div class="invest-content">{{ item.content }}</div>
+        <h3 class="panel-title">INVEST Analysis</h3>
+        <div class="invest-grid">
+          <div v-for="(item, key) in analysis?.content?.invest_analysis"
+               :key="key"
+               class="invest-item">
+            <div class="invest-header">
+              <span class="invest-letter">{{ key }}</span>
+              <span class="invest-title">{{ item.title }}</span>
             </div>
-          </div>
-        </div>
-
-        <div class="suggestions mt-6">
-          <h3>Suggestions</h3>
-          <div class="suggestions-list">
-            <div v-for="(suggestion, key) in mockAnalysisResult.suggestions" 
-                 :key="key"
-                 class="suggestion-item">
-              <div class="suggestion-header">{{ key }}</div>
-              <div class="suggestion-content">{{ suggestion }}</div>
-            </div>
+            <div class="invest-content">{{ item.content }}</div>
           </div>
         </div>
       </div>
@@ -260,289 +164,121 @@ const sendForTechReview = async () => {
 }
 </script>
 
-<style>
-.two-column-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+<style scoped>
+.test .two-column-layout {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
   gap: 2rem;
   padding: 2rem;
   max-width: 1800px;
   margin: 0 auto;
-  min-height: 100vh;
-  position: relative;
+  min-height: calc(100vh - 64px);
 }
 
 .primary-content-wrapper {
-  position: relative;
-  height: 100%;
   display: flex;
   flex-direction: column;
+  min-height: 100%;
 }
 
 .primary-content {
-  position: sticky;
-  top: 2rem;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 2rem;
-  max-height: calc(100vh - 8rem);
-  overflow-y: auto;
-  flex-grow: 1;
+  flex: 1;
+  padding-bottom: 5rem;
+}
+
+.story-form {
+  background: rgba(30, 30, 30, 0.5);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.page-title {
+  color: #64B5F6;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+.panel-title {
+  color: #64B5F6;
+  font-size: 1.25rem;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
 }
 
 .analysis-panel {
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 2rem;
-}
-
-.editable-content {
-  position: relative;
-  background: rgba(0, 0, 0, 0.2);
   border-radius: 8px;
-  padding: 1.5rem;
-  margin: 1rem 0;
-  transition: all 0.3s ease;
+  padding: 1rem;
 }
 
-.edit-btn {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  opacity: 0;
-  transition: opacity 0.2s ease;
+.invest-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.editable-content:hover .edit-btn {
-  opacity: 1;
+.invest-item {
+  background: rgba(48, 38, 25, 1);
+  border-radius: 8px;
+  padding: 1rem;
+  border-left: 4px solid #FFA726;
+  margin-bottom: 0.5rem;
 }
 
-.story-section h3 {
-  color: #64B5F6;
-  margin-top: 2rem;
+.invest-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
 }
 
-.story-section h3:first-child {
-  margin-top: 0;
+.invest-letter {
+  background: #FFA726;
+  color: black;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
 }
 
-.editable-content pre {
-  white-space: pre-wrap;
-  word-wrap: break-word;
+.invest-title {
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+.invest-content {
   color: rgba(255, 255, 255, 0.87);
-  font-family: inherit;
-  margin: 0;
   line-height: 1.6;
 }
 
-.editable-content ul {
-  list-style-type: none;
-  padding-left: 0;
+.criteria-list {
+  list-style: none;
+  padding: 0;
   margin: 0;
 }
 
-.editable-content li {
-  color: rgba(255, 255, 255, 0.87);
-  margin-bottom: 0.5rem;
+.criterion-item {
+  margin-bottom: 1rem;
   padding-left: 1.5rem;
   position: relative;
+  font-size: 1rem;
+  line-height: 1.6;
 }
 
-.editable-content li:before {
+.criterion-item::before {
   content: "•";
   color: #64B5F6;
   position: absolute;
   left: 0;
 }
 
-/* Keep existing invest-grid styles */
-.invest-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-/* Responsive Design */
 @media (max-width: 1024px) {
-  .two-column-layout {
-    grid-template-columns: 1fr;
-  }
-  
-  .primary-content {
-    position: relative;
-    top: 0;
-    max-height: none;
-  }
-  
-  .analysis-panel {
-    margin-top: 2rem;
-  }
-}
-
-/* Updated Analysis Panel Styles */
-.analysis-panel {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 2rem;
-}
-
-.analysis-panel h3 {
-  color: #64B5F6;
-  font-size: 1.2rem;
-  margin-bottom: 1.5rem;
-  font-weight: 500;
-}
-
-/* INVEST Grid Refinements */
-.invest-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-}
-
-.invest-item {
-  background: rgba(33, 150, 243, 0.1);
-  border-radius: 8px;
-  padding: 1.25rem;
-  border-left: 3px solid #64B5F6;
-  transition: transform 0.2s ease;
-}
-
-.invest-item.warning {
-  border-left-color: #FFA726;
-  background: rgba(255, 167, 38, 0.1);
-}
-
-.invest-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 0.75rem;
-}
-
-.invest-letter {
-  background: #64B5F6;
-  color: #1E1E1E;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  margin-right: 0.75rem;
-}
-
-.warning .invest-letter {
-  background: #FFA726;
-}
-
-/* Suggestions Refinements */
-.suggestions-list {
-  display: grid;
-  gap: 1rem;
-}
-
-.suggestion-item {
-  background: rgba(33, 150, 243, 0.1);
-  border-radius: 8px;
-  padding: 1.25rem;
-  border-left: 3px solid #64B5F6;
-}
-
-.suggestion-header {
-  color: #64B5F6;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-  font-size: 1.1rem;
-}
-
-.suggestion-content {
-  color: rgba(255, 255, 255, 0.87);
-  line-height: 1.6;
-}
-
-/* Hover effects */
-.invest-item:hover, 
-.suggestion-item:hover {
-  transform: translateY(-2px);
-}
-
-/* Responsive adjustments */
-@media (max-width: 1400px) {
-  .invest-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.edit-textarea {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-}
-
-.edit-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-/* Style the textarea */
-:deep(.v-field__input) {
-  color: rgba(255, 255, 255, 0.87) !important;
-  font-family: inherit !important;
-  line-height: 1.6 !important;
-}
-
-:deep(.v-field) {
-  border-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-.sticky-footer {
-  position: fixed;
-  bottom: 0;
-  width: calc(50% - 2rem);
-  background: linear-gradient(
-    to top,
-    rgba(30, 30, 30, 1) 0%,
-    rgba(30, 30, 30, 0.9) 70%,
-    rgba(30, 30, 30, 0) 100%
-  );
-  padding: 1rem 0;
-  margin-top: -4rem;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.footer-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  pointer-events: auto;
-  padding: 0 2rem;
-}
-
-.footer-hint {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
-  font-style: italic;
-}
-
-/* Update responsive styles */
-@media (max-width: 1024px) {
-  .primary-content {
-    position: relative;
-    top: 0;
-    max-height: none;
-  }
-  
-  .sticky-footer {
-    position: fixed;
-    width: 100%;
-    left: 0;
-    right: 0;
-    margin-top: 0;
+  .test .two-column-layout {
+    grid-template-columns: 1fr !important;
   }
 }
 </style> 

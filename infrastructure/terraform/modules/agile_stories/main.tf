@@ -3,6 +3,13 @@ provider "aws" {
   region = var.aws_region
 }
 
+locals {
+  tags = {
+    Environment = var.environment
+    Project     = "agile-stories"
+  }
+}
+
 # DynamoDB Tables
 module "dynamodb" {
   source = "../dynamodb"
@@ -89,6 +96,34 @@ module "lambda" {
 
   error_handler_package_path = var.error_handler_package_path
   workflow_signal_handler_package_path = var.workflow_signal_handler_package_path
+
+  environment_variables = {
+    STORIES_TABLE = module.dynamodb.stories_table_name
+    OPENAI_API_KEY = var.openai_api_key
+    TECHNICAL_REVIEW_LAMBDA_NAME = "${var.environment}-agile-stories-review"
+  }
+
+  attach_policy_statements = true
+  policy_statements = {
+    dynamodb = {
+      effect = "Allow"
+      actions = [
+        "dynamodb:PutItem",
+        "dynamodb:GetItem",
+        "dynamodb:Query"
+      ]
+      resources = [module.dynamodb.stories_table_arn]
+    },
+    lambda = {
+      effect = "Allow"
+      actions = [
+        "lambda:InvokeFunction"
+      ]
+      resources = ["arn:aws:lambda:${var.aws_region}:${var.account_id}:function:${var.environment}-agile-stories-review"]
+    }
+  }
+
+  tags = local.tags
 }
 
 # API Gateway
@@ -114,9 +149,10 @@ module "api_gateway" {
   analyze_story_worker_name = module.lambda.analyze_story_worker_name
   analyze_story_worker_arn  = module.lambda.analyze_story_worker_arn
 
-
+  technical_review_lambda_arn  = module.lambda.technical_review_lambda_arn
+  technical_review_lambda_name = module.lambda.technical_review_lambda_name
+  
 }
-
 
 module "acm" {
   source = "../acm"
@@ -127,5 +163,3 @@ module "acm" {
   route53_zone_id = var.route53_zone_id
   domain_name     = var.domain_name
 }
-
-

@@ -113,6 +113,31 @@ resource "aws_lambda_permission" "get_estimation_status" {
   source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
 
+# Technical Review Integration
+resource "aws_apigatewayv2_integration" "technical_review" {
+  api_id                 = aws_apigatewayv2_api.main.id
+  integration_type       = "AWS_PROXY"
+  integration_method     = "POST"
+  integration_uri        = var.technical_review_lambda_arn
+  description           = "Integration for technical review"
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "technical_review" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "POST /stories/{storyId}/tech-review"
+  target    = "integrations/${aws_apigatewayv2_integration.technical_review.id}"
+}
+
+# Lambda Permission for Technical Review
+resource "aws_lambda_permission" "technical_review" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = var.technical_review_lambda_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
+}
+
 # API Stage
 resource "aws_apigatewayv2_stage" "main" {
   api_id      = aws_apigatewayv2_api.main.id

@@ -4,323 +4,178 @@
       <!-- Left Column -->
       <div class="primary-content-wrapper">
         <div class="primary-content">
-          <!-- Add Story and AC sections -->
-          <div class="story-section">
-            <h3>Technical Review Modifications</h3>
-            
-            <!-- Story Section -->
-            <h4 class="mt-4">{{ techReview.ImprovedTitle }}</h4>
-            <div class="editable-content">
-              <pre>{{ techReview.ImprovedStory }}</pre>
+          <h2 class="page-title">Technical Review</h2>
+          
+          <!-- Story Overview -->
+          <div class="story-form">
+            <div class="dark-panel mb-8">
+              <h3>{{ analysis?.ImprovedTitle }}</h3>
+              <p class="mt-4">{{ analysis?.ImprovedStory }}</p>
             </div>
-            
-            <!-- AC Section -->
-            <h4 class="mt-4">Acceptance Criteria</h4>
-            <div class="editable-content">
-              <ul>
-                <li v-for="(criterion, index) in techReview.ImprovedAcceptanceCriteria" 
-                    :key="index">
+
+            <!-- Acceptance Criteria -->
+            <h3 class="section-title">Acceptance Criteria</h3>
+            <div class="dark-panel mb-8">
+              <ul class="criteria-list">
+                <li v-for="(criterion, index) in analysis?.ImprovedAcceptanceCriteria"
+                    :key="index"
+                    class="criterion-item">
                   {{ criterion }}
                 </li>
               </ul>
             </div>
 
-            <!-- After AC section and before Implementation Details -->
-            <h4 class="mt-4">Selected Implementation Details</h4>
-            <div class="editable-content">
-              <div v-if="selectedDetails.length === 0" class="no-details">
-                No implementation details added yet. Select from the sections below.
-              </div>
-              <div v-else class="selected-details">
-                <div v-for="(detail, index) in selectedDetails" 
+            <!-- Selected Implementation Details -->
+            <div v-if="selectedTasks.length > 0" class="dark-panel mb-8">
+              <h3 class="section-title">Selected Implementation Details</h3>
+              <div class="selected-task-list">
+                <div v-for="(task, index) in selectedTasks" 
                      :key="index"
-                     class="selected-detail">
-                  <div class="detail-content">
-                    <v-icon size="small" :color="getDetailColor(detail.type)" class="mr-2">
-                      {{ getDetailIcon(detail.type) }}
-                    </v-icon>
-                    {{ detail.text }}
-                  </div>
-                  <v-btn 
-                    size="x-small" 
-                    color="error" 
-                    variant="text"
+                     class="selected-task-item">
+                  <span class="task-category">{{ task.category }}:</span>
+                  {{ task.description }}
+                  <v-btn
                     icon="mdi-close"
-                    @click="removeDetail(index)"
-                  ></v-btn>
+                    size="small"
+                    color="error"
+                    variant="text"
+                    @click="removeSelectedTask(index)"
+                    class="remove-btn"
+                  />
                 </div>
               </div>
             </div>
 
-            <!-- Implementation Details Section -->
-            <h3 class="mt-6">Implementation Details</h3>
-            <div class="tech-section">
-              <h4>Frontend</h4>
-              <div class="task-list">
-                <div v-for="(task, index) in techReview.ImplementationDetails.Frontend" 
-                     :key="'fe-'+index"
-                     class="task-item"
-                     @click="toggleDetail('frontend', task)">
-                  <v-icon size="small" color="primary" class="mr-2">mdi-code-tags</v-icon>
-                  {{ task }}
+            <!-- Implementation Details -->
+            <h3 class="section-title">Implementation Details</h3>
+            <div class="implementation-sections">
+              <!-- Frontend -->
+              <div class="detail-section">
+                <h4 class="detail-title">
+                  <v-icon color="primary" class="mr-2">mdi-code-tags</v-icon>
+                  Frontend
+                </h4>
+                <div class="task-list">
+                  <div v-for="(task, index) in unselectedTasks.Frontend"
+                       :key="index"
+                       class="task-item"
+                       @click="toggleTask('Frontend', index, task)">
+                    {{ task }}
+                  </div>
                 </div>
               </div>
 
-              <h4>Backend</h4>
-              <div class="task-list">
-                <div v-for="(task, index) in techReview.ImplementationDetails.Backend" 
-                     :key="'be-'+index"
-                     class="task-item"
-                     @click="toggleDetail('backend', task)">
-                  <v-icon size="small" color="success" class="mr-2">mdi-server</v-icon>
-                  {{ task }}
+              <!-- Backend -->
+              <div class="detail-section">
+                <h4 class="detail-title">
+                  <v-icon color="success" class="mr-2">mdi-server</v-icon>
+                  Backend
+                </h4>
+                <div class="task-list">
+                  <div v-for="(task, index) in unselectedTasks.Backend"
+                       :key="index"
+                       class="task-item"
+                       @click="toggleTask('Backend', index, task)">
+                    {{ task }}
+                  </div>
                 </div>
               </div>
 
-              <h4>Database</h4>
-              <div class="task-list">
-                <div v-for="(task, index) in techReview.ImplementationDetails.Database" 
-                     :key="'db-'+index"
-                     class="task-item"
-                     @click="toggleDetail('database', task)">
-                  <v-icon size="small" color="warning" class="mr-2">mdi-database</v-icon>
-                  {{ task }}
+              <!-- Database -->
+              <div class="detail-section">
+                <h4 class="detail-title">
+                  <v-icon color="warning" class="mr-2">mdi-database</v-icon>
+                  Database
+                </h4>
+                <div class="task-list">
+                  <div v-for="(task, index) in unselectedTasks.Database"
+                       :key="index"
+                       class="task-item"
+                       @click="toggleTask('Database', index, task)">
+                    {{ task }}
+                  </div>
                 </div>
               </div>
-            </div>
-
-            <h3 class="mt-6">Tech Lead Estimate</h3>
-            <div class="effort-grid">
-              <div v-for="(effort, key) in techReview.EstimatedEffort" 
-                   :key="key"
-                   class="effort-item"
-                   :class="{ 'effort-total': key === 'total' }">
-                <div class="effort-label">{{ key }}</div>
-                <div class="effort-value">{{ effort }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sticky footer -->
-        <div class="sticky-footer">
-          <div class="footer-content">
-            <div class="footer-buttons">
-              <v-btn 
-                color="success" 
-                prepend-icon="mdi-check-circle"
-                class="mr-4"
-                :disabled="editingStory || editingAC"
-                @click="acceptTechReview"
-              >
-                ACCEPT TECH REVIEW
-              </v-btn>
-              <v-btn 
-                color="primary" 
-                prepend-icon="mdi-account-group"
-                :disabled="editingStory || editingAC"
-                @click="submitForEstimation"
-              >
-                GET TEAM ESTIMATE
-              </v-btn>
-            </div>
-            <div class="footer-hint" v-if="editingStory || editingAC">
-              Save your changes to enable actions
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Right Column: Analysis -->
+      <!-- Right Column -->
       <div class="analysis-panel">
-        <div class="technical-analysis">
-          <h3>Technical Analysis</h3>
-          <div class="analysis-grid">
-            <div v-for="(analysis, key) in techReview.TechnicalAnalysis" 
-                 :key="key"
-                 class="analysis-item">
-              <div class="analysis-header">
-                <span class="analysis-title">{{ key }}</span>
-                <div class="score-badge" :class="getScoreClass(analysis.Score)">
-                  {{ analysis.Score }}/10
-                </div>
+        <!-- Technical Analysis -->
+        <h3 class="panel-title">Technical Analysis</h3>
+        <div class="analysis-grid">
+          <div v-for="(analysis, key) in analysis?.TechnicalAnalysis"
+               :key="key"
+               class="analysis-item">
+            <div class="analysis-header">
+              <span class="analysis-title">{{ key }}</span>
+              <div class="score-badge" :class="getScoreClass(analysis.Score)">
+                {{ analysis.Score }}/10
               </div>
-              <div class="analysis-content">{{ analysis.Description }}</div>
             </div>
+            <div class="analysis-content">{{ analysis.Description }}</div>
           </div>
         </div>
 
-        <div class="risks mt-6">
-          <h3>Risks & Considerations</h3>
-          <div class="risks-grid">
-            <div v-for="(risk, index) in techReview.RisksAndConsiderations" 
-                 :key="index"
-                 class="risk-item">
-              <div class="risk-header">
-                <v-icon color="warning" class="mr-2">mdi-alert</v-icon>
-                {{ risk.Classification }} ({{ risk.Severity }})
-              </div>
-              <div class="risk-description">{{ risk.Description }}</div>
-              <div class="risk-mitigation">
-                <v-icon color="success" size="small" class="mr-2">mdi-shield</v-icon>
-                {{ risk.PotentialSolution }}
-              </div>
+        <!-- Risks & Considerations -->
+        <h3 class="panel-title mt-8">Risks & Considerations</h3>
+        <div class="risks-grid">
+          <div v-for="(risk, index) in analysis?.RisksAndConsiderations"
+               :key="index"
+               class="risk-item">
+            <div class="risk-header">
+              <v-icon color="warning" class="mr-2">mdi-alert</v-icon>
+              {{ risk.Classification }}
+              <span class="risk-severity">({{ risk.Severity }})</span>
             </div>
-          </div>
-        </div>
-
-        <div class="recommendations mt-6">
-          <h3>Recommendations</h3>
-          <div class="recommendations-list">
-            <div v-for="(rec, index) in techReview.Recommendations" 
-                 :key="index"
-                 class="recommendation-item">
-              <v-icon color="info" size="small" class="mr-2">mdi-lightbulb</v-icon>
-              {{ rec }}
+            <div class="risk-description">{{ risk.Description }}</div>
+            <div class="risk-solution">
+              <v-icon color="success" size="small" class="mr-2">mdi-shield</v-icon>
+              {{ risk.PotentialSolution }}
             </div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Fixed Position Footer -->
+    <div class="fixed-button-container">
+      <v-btn
+        color="primary"
+        size="large"
+        @click="submitForEstimation"
+        :loading="loading"
+      >
+        Submit for Team Estimation
+      </v-btn>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { mockTechReviewResult } from '@/mocks/mockTechReviewData'
+import { ref, onMounted, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useStoryStore } from '@/stores/storyStore'
 
-const router = useRouter()
+const route = useRoute()
 const store = useStoryStore()
-const loading = ref(false)
+const analysis = ref(null)
+const loading = ref(true)
+const selectedTasks = ref([])
 
-// Story editing
-const editingStory = ref(false)
-const editedStory = ref('')
-
-const startEditingStory = () => {
-  editedStory.value = mockTechReviewResult.improved_story.text
-  editingStory.value = true
-}
-
-const saveStory = () => {
-  mockTechReviewResult.improved_story.text = editedStory.value
-  editingStory.value = false
-}
-
-const cancelEditStory = () => {
-  editingStory.value = false
-}
-
-// Acceptance Criteria editing
-const editingAC = ref(false)
-const editedAC = ref('')
-
-const startEditingAC = () => {
-  editedAC.value = mockTechReviewResult.improved_story.acceptance_criteria.join('\n')
-  editingAC.value = true
-}
-
-const saveAC = () => {
-  mockTechReviewResult.improved_story.acceptance_criteria = editedAC.value
-    .split('\n')
-    .filter(line => line.trim())
-  editingAC.value = false
-}
-
-const cancelEditAC = () => {
-  editingAC.value = false
-}
-
-// Keep existing getScoreClass function
-const getScoreClass = (score: number): string => {
+const getScoreClass = (score) => {
   if (score >= 8) return 'score-high'
   if (score >= 5) return 'score-medium'
   return 'score-low'
 }
 
-interface ImplementationDetail {
-  type: 'frontend' | 'backend' | 'database'
-  text: string
-}
-
-// Store original details and selected details
-const originalDetails = ref({
-  frontend: [...mockTechReviewResult.implementation_details.frontend],
-  backend: [...mockTechReviewResult.implementation_details.backend],
-  database: [...mockTechReviewResult.implementation_details.database]
-})
-
-const availableDetails = ref({
-  frontend: [...mockTechReviewResult.implementation_details.frontend],
-  backend: [...mockTechReviewResult.implementation_details.backend],
-  database: [...mockTechReviewResult.implementation_details.database]
-})
-
-const selectedDetails = ref<ImplementationDetail[]>([])
-
-const toggleDetail = (type: 'frontend' | 'backend' | 'database', text: string) => {
-  // Remove from available list and add to selected
-  const typeList = availableDetails.value[type]
-  const index = typeList.indexOf(text)
-  if (index >= 0) {
-    typeList.splice(index, 1)
-    selectedDetails.value.push({ type, text })
-  }
-}
-
-const removeDetail = (index: number) => {
-  const detail = selectedDetails.value[index]
-  // Add back to original section
-  availableDetails.value[detail.type].push(detail.text)
-  // Sort to maintain original order
-  availableDetails.value[detail.type].sort((a, b) => {
-    return originalDetails.value[detail.type].indexOf(a) - 
-           originalDetails.value[detail.type].indexOf(b)
-  })
-  // Remove from selected
-  selectedDetails.value.splice(index, 1)
-}
-
-const getDetailIcon = (type: string): string => {
-  switch (type) {
-    case 'frontend': return 'mdi-code-tags'
-    case 'backend': return 'mdi-server'
-    case 'database': return 'mdi-database'
-    default: return 'mdi-code-tags'
-  }
-}
-
-const getDetailColor = (type: string): string => {
-  switch (type) {
-    case 'frontend': return 'primary'
-    case 'backend': return 'success'
-    case 'database': return 'warning'
-    default: return 'primary'
-  }
-}
-
-const acceptTechReview = async () => {
-  loading.value = true
-  try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    // Just log for now since we don't have the accept endpoint
-    console.log('Tech review accepted')
-    // Don't navigate
-  } catch (error) {
-    console.error('Error accepting tech review:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
 const submitForEstimation = async () => {
   loading.value = true
   try {
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    router.push('/estimate')
+    // TODO: Implement submission logic
+    console.log('Submitting for estimation')
   } catch (error) {
     console.error('Error submitting for estimation:', error)
   } finally {
@@ -328,26 +183,65 @@ const submitForEstimation = async () => {
   }
 }
 
-const completeTechReview = async () => {
-  loading.value = true
-  try {
-    await store.completeTechReview({
-      // Tech review results to pass back
-      technicalComplexity: store.technicalComplexity,
-      architectureImpact: store.architectureImpact,
-      securityConsiderations: store.securityConsiderations,
-      technicalNotes: store.technicalNotes
-    })
-    router.push('/estimates')
-  } catch (error) {
-    console.error('Error completing technical review:', error)
+// Computed property to get unselected tasks
+const unselectedTasks = computed(() => {
+  if (!analysis.value?.ImplementationDetails) return { Frontend: [], Backend: [], Database: [] }
+  
+  const selected = selectedTasks.value.reduce((acc, task) => {
+    if (!acc[task.category]) acc[task.category] = new Set()
+    acc[task.category].add(task.description)
+    return acc
+  }, {})
+
+  return {
+    Frontend: (analysis.value.ImplementationDetails.Frontend || [])
+      .filter(task => !selected.Frontend?.has(task)),
+    Backend: (analysis.value.ImplementationDetails.Backend || [])
+      .filter(task => !selected.Backend?.has(task)),
+    Database: (analysis.value.ImplementationDetails.Database || [])
+      .filter(task => !selected.Database?.has(task))
   }
-  loading.value = false
+})
+
+const toggleTask = (category, index, description) => {
+  selectedTasks.value.push({ category, index, description })
 }
+
+const removeSelectedTask = (index) => {
+  selectedTasks.value.splice(index, 1)
+}
+
+const pollForAnalysis = async () => {
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/stories/${route.params.id}?version=SENIOR_DEV`
+    )
+    
+    if (response.ok) {
+      const data = await response.json()
+      analysis.value = data
+      return true // Stop polling
+    }
+    return false // Continue polling
+  } catch (error) {
+    console.error('Error:', error)
+    return false
+  }
+}
+
+// Start polling when component mounts
+onMounted(() => {
+  const pollInterval = setInterval(async () => {
+    const success = await pollForAnalysis()
+    if (success) {
+      clearInterval(pollInterval)
+    }
+  }, 2000) // Poll every 2 seconds
+})
 </script>
 
-<style>
-/* Base layout styles (similar to TestFormatView) */
+<style scoped>
+/* Base Layout */
 .two-column-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -364,23 +258,50 @@ const completeTechReview = async () => {
 }
 
 .primary-content {
-  flex-grow: 1;
-  margin-bottom: 2rem;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   padding: 2rem;
-  overflow-y: auto;
+  margin-bottom: 4rem; /* Space for fixed button */
 }
 
-/* Implementation Details Styles */
-.tech-section {
-  margin-top: 1rem;
-}
-
-.tech-section h4 {
+/* Section Styles */
+.page-title {
   color: #64B5F6;
-  margin: 1.5rem 0 1rem;
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.section-title {
+  color: #64B5F6;
+  font-size: 1.25rem;
+  margin: 2rem 0 1rem;
+}
+
+.dark-panel {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+/* Implementation Details */
+.implementation-sections {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.detail-section {
+  background: rgba(33, 150, 243, 0.1);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.detail-title {
+  display: flex;
+  align-items: center;
+  color: #64B5F6;
   font-size: 1.1rem;
+  margin-bottom: 1rem;
 }
 
 .task-list {
@@ -389,70 +310,65 @@ const completeTechReview = async () => {
 }
 
 .task-item {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  transition: all 0.2s ease;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 6px;
-  background: rgba(33, 150, 243, 0.1);
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .task-item:hover {
-  background: rgba(33, 150, 243, 0.2);
+  background: rgba(255, 255, 255, 0.1);
   transform: translateY(-1px);
 }
 
-/* Effort Grid */
-.effort-grid {
+.selected-tasks {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.selected-task-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
+  gap: 0.75rem;
+}
+
+.selected-task-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
   background: rgba(255, 255, 255, 0.05);
-  padding: 1rem;
-  border-radius: 8px;
-  border-left: 3px solid #4CAF50;
+  border-radius: 6px;
 }
 
-.effort-item {
-  background: rgba(33, 150, 243, 0.1);
-  padding: 1rem;
-  border-radius: 8px;
-  text-align: center;
-}
-
-.effort-total {
-  background: rgba(33, 150, 243, 0.2);
-  font-weight: bold;
-}
-
-.effort-label {
+.task-category {
   color: #64B5F6;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  margin-bottom: 0.5rem;
-}
-
-.effort-value {
-  font-size: 1.2rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.87);
+  margin-right: 0.5rem;
 }
 
-/* Analysis Panel Styles */
+.remove-btn {
+  margin-left: auto;
+}
+
+/* Analysis Panel */
 .analysis-panel {
-  width: 100%;
-  min-width: 0;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   padding: 2rem;
+  height: 100%;
+}
+
+.panel-title {
+  color: #64B5F6;
+  font-size: 1.25rem;
+  margin-bottom: 1.5rem;
 }
 
 .analysis-grid {
   display: grid;
   gap: 1rem;
-  margin-top: 1rem;
 }
 
 .analysis-item {
@@ -471,15 +387,14 @@ const completeTechReview = async () => {
 .analysis-title {
   color: #64B5F6;
   font-weight: 500;
-  font-size: 1.1rem;
   text-transform: capitalize;
 }
 
 .score-badge {
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
-  font-weight: 500;
   font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .score-high {
@@ -497,7 +412,7 @@ const completeTechReview = async () => {
   color: #E57373;
 }
 
-/* Risks Styles */
+/* Risks Section */
 .risks-grid {
   display: grid;
   gap: 1rem;
@@ -511,65 +426,45 @@ const completeTechReview = async () => {
 }
 
 .risk-header {
-  color: #FFA726;
-  font-weight: 500;
-  font-size: 1.1rem;
-  margin-bottom: 0.75rem;
   display: flex;
   align-items: center;
+  color: #FFA726;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+}
+
+.risk-severity {
+  margin-left: 0.5rem;
+  font-size: 0.9rem;
+  opacity: 0.8;
 }
 
 .risk-description {
-  margin-bottom: 0.75rem;
+  margin-bottom: 1rem;
   line-height: 1.5;
 }
 
-.risk-mitigation {
+.risk-solution {
   color: #81C784;
   display: flex;
   align-items: center;
   font-size: 0.9rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Recommendations Styles */
-.recommendations-list {
-  display: grid;
-  gap: 0.75rem;
-  margin-top: 1rem;
-}
-
-.recommendation-item {
-  background: rgba(33, 150, 243, 0.1);
-  padding: 1rem;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-}
-
-/* Sticky Footer */
-.sticky-footer {
+/* Fixed Button Container */
+.fixed-button-container {
   position: fixed;
-  bottom: 0;
-  width: calc(50% - 2rem);
-  background: linear-gradient(
-    to top,
-    rgba(30, 30, 30, 1) 0%,
-    rgba(30, 30, 30, 0.9) 70%,
-    rgba(30, 30, 30, 0) 100%
-  );
-  padding: 1rem 0;
-  margin-top: -4rem;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.footer-content {
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  width: auto;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  pointer-events: auto;
-  padding: 0 2rem;
+  justify-content: center;
+  background: linear-gradient(to top, rgba(18, 18, 18, 1) 50%, rgba(18, 18, 18, 0));
+  padding: 1rem;
 }
 
 /* Responsive Design */
@@ -577,147 +472,27 @@ const completeTechReview = async () => {
   .two-column-layout {
     grid-template-columns: 1fr;
   }
-  
-  .primary-content {
-    position: relative;
-    top: 0;
-    max-height: none;
-  }
-  
-  .sticky-footer {
-    position: fixed;
-    width: 100%;
-    left: 0;
-    right: 0;
-    margin-top: 0;
-  }
-  
+
   .analysis-panel {
     margin-top: 2rem;
   }
+
+  .fixed-button-container {
+    width: 100%;
+    background: rgba(18, 18, 18, 0.9);
+  }
 }
 
-/* Add these new styles */
-.editable-content {
-  position: relative;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin: 1rem 0;
-  transition: all 0.3s ease;
+/* Utility Classes */
+.mb-8 {
+  margin-bottom: 2rem;
 }
 
-.edit-btn {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  opacity: 0;
-  transition: opacity 0.2s ease;
+.mt-8 {
+  margin-top: 2rem;
 }
 
-.editable-content:hover .edit-btn {
-  opacity: 1;
-}
-
-.edit-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.edit-textarea {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-}
-
-.footer-hint {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
-  font-style: italic;
-}
-
-/* Style the textarea */
-:deep(.v-field__input) {
-  color: rgba(255, 255, 255, 0.87) !important;
-  font-family: inherit !important;
-  line-height: 1.6 !important;
-}
-
-:deep(.v-field) {
-  border-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-.selected-details {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.selected-detail {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 1rem;
-  background: rgba(33, 150, 243, 0.1);
-  border-radius: 6px;
-  transition: all 0.2s ease;
-}
-
-.selected-detail:hover {
-  background: rgba(33, 150, 243, 0.15);
-}
-
-.detail-content {
-  display: flex;
-  align-items: center;
-}
-
-.no-details {
-  color: rgba(255, 255, 255, 0.6);
-  font-style: italic;
-}
-
-.task-item {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  transition: all 0.2s ease;
-}
-
-.task-item:hover {
-  background: rgba(33, 150, 243, 0.2);
-}
-
-.task-item.selected {
-  background: rgba(33, 150, 243, 0.3);
-}
-
-/* Checkbox styling */
-:deep(.v-checkbox) {
-  margin: 0;
-  padding: 0;
-}
-
-:deep(.v-checkbox .v-selection-control) {
-  margin: 0;
-  padding: 0;
-}
-
-.footer-buttons {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-}
-
-/* Add animation classes */
-.task-list-enter-active,
-.task-list-leave-active {
-  transition: all 0.3s ease;
-}
-
-.task-list-enter-from,
-.task-list-leave-to {
-  opacity: 0;
-  transform: translateX(30px);
+.mr-2 {
+  margin-right: 0.5rem;
 }
 </style> 

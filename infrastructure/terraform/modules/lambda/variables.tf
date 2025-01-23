@@ -168,3 +168,27 @@ variable "workflow_signal_handler_package_path" {
   description = "Path to the workflow signal handler Lambda package"
   type        = string
 }
+
+variable "environment_variables" {
+  description = "Environment variables for the Lambda function"
+  type        = map(string)
+  default     = {}
+}
+
+variable "attach_policy_statements" {
+  description = "Whether to attach additional policy statements"
+  type        = bool
+  default     = false
+}
+
+variable "policy_statements" {
+  description = "Map of policy statements to attach to the Lambda role"
+  type        = map(any)
+  default     = {}
+}
+
+variable "tags" {
+  description = "Tags to apply to resources"
+  type        = map(string)
+  default     = {}
+}
