@@ -24,168 +24,97 @@
       <!-- Left Column -->
       <div class="primary-content-wrapper">
         <div class="primary-content">
-          <h2 class="page-title">Technical Review Modifications</h2>
+          <h3>Technical Review Modifications</h3>
           
-          <section class="story-section">
-            <h3 class="section-header">User Story</h3>
-            <div class="editable-content">
-              <template v-if="!editingStory">
-                <pre>{{ storyData?.content?.story }}</pre>
-                <v-btn 
-                  size="small" 
-                  color="primary" 
-                  class="edit-btn"
-                  icon="mdi-pencil"
-                  @click="startEditingStory"
-                ></v-btn>
-              </template>
-              <template v-else>
-                <v-textarea
-                  v-model="editedStory"
-                  auto-grow
-                  variant="outlined"
-                  class="edit-textarea"
-                ></v-textarea>
-                <div class="edit-actions">
-                  <v-btn 
-                    size="small" 
-                    color="success" 
-                    @click="saveStory"
-                    class="mr-2"
-                  >Save</v-btn>
-                  <v-btn 
-                    size="small" 
-                    color="error" 
-                    @click="cancelEditStory"
-                  >Cancel</v-btn>
-                </div>
-              </template>
+          <section class="criteria-section">
+            <h4>User Story</h4>
+            <div class="dark-panel">
+              {{ storyData?.content?.story_text }}
             </div>
           </section>
 
           <section class="criteria-section">
-            <h3 class="section-header">Acceptance Criteria</h3>
-            <div class="editable-content">
-              <template v-if="!editingCriteria">
-                <div class="criteria-list">
-                  <div v-for="(criterion, index) in storyData?.content?.acceptance_criteria" 
-                       :key="index"
-                       class="criteria-item">
-                    <span class="bullet">•</span>
-                    {{ criterion }}
-                  </div>
-                </div>
-                <v-btn 
-                  size="small" 
-                  color="primary" 
-                  class="edit-btn"
-                  icon="mdi-pencil"
-                  @click="startEditingCriteria"
-                ></v-btn>
-              </template>
-              <template v-else>
-                <v-textarea
-                  v-model="editedCriteria"
-                  auto-grow
-                  variant="outlined"
-                  class="edit-textarea"
-                  placeholder="Enter each criterion on a new line"
-                ></v-textarea>
-                <div class="edit-actions">
-                  <v-btn 
-                    size="small" 
-                    color="success" 
-                    @click="saveCriteria"
-                    class="mr-2"
-                  >Save</v-btn>
-                  <v-btn 
-                    size="small" 
-                    color="error" 
-                    @click="cancelEditCriteria"
-                  >Cancel</v-btn>
-                </div>
-              </template>
-            </div>
-          </section>
-
-          <!-- Selected Details Section -->
-          <section>
-            <h3 class="section-header">Selected Implementation Details</h3>
-            <div class="dark-panel" v-if="!selectedDetails?.length">
-              <p class="empty-state">No implementation details added yet. Select from the sections below.</p>
-            </div>
-            <div v-else class="selected-details">
-              <div v-for="(detail, index) in selectedDetails" 
-                   :key="index"
-                   class="task-item"
-                   @click="deselectDetail(detail)">
-                <v-icon size="small" :color="detail.section === 'Frontend' ? 'primary' : detail.section === 'Backend' ? 'success' : 'warning'" class="mr-2">
-                  {{ detail.section === 'Frontend' ? 'mdi-code-tags' : detail.section === 'Backend' ? 'mdi-server' : 'mdi-database' }}
-                </v-icon>
-                {{ detail.task }}
+            <h4>Acceptance Criteria</h4>
+            <div class="criteria-list">
+              <div v-for="(criterion, index) in storyData?.content?.acceptance_criteria" 
+                  :key="index"
+                  class="criteria-item">
+                <span class="bullet">•</span>
+                {{ criterion }}
               </div>
             </div>
           </section>
 
-          <!-- Available Details Section -->
-          <section>
-            <h3 class="implementation-title">Implementation Details</h3>
-            
+          <section class="implementation-section">
+            <h4>Selected Implementation Details</h4>
+            <div v-if="!selectedTasks?.length" class="dark-panel">
+              <em>No implementation details added yet. Select from the sections below.</em>
+            </div>
+            <div v-else class="task-list">
+              <div v-for="task in selectedTasks" 
+                  :key="task.id" 
+                  class="task-item"
+                  @click="toggleTask(task)">
+                <v-icon :icon="task.icon" color="primary" class="mr-2" />
+                {{ task.text }}
+              </div>
+            </div>
+          </section>
+
+          <section class="implementation-section">
             <h4>Frontend</h4>
             <div class="task-list">
-              <div v-for="(task, index) in availableDetails.Frontend" 
-                   :key="'fe-'+index"
-                   class="task-item"
-                   @click="selectDetail('Frontend', task)">
-                <v-icon size="small" color="primary" class="mr-2">mdi-code-tags</v-icon>
-                {{ task }}
-              </div>
-            </div>
-
-            <h4>Backend</h4>
-            <div class="task-list">
-              <div v-for="(task, index) in availableDetails.Backend" 
-                   :key="'be-'+index"
-                   class="task-item"
-                   @click="selectDetail('Backend', task)">
-                <v-icon size="small" color="success" class="mr-2">mdi-server</v-icon>
-                {{ task }}
-              </div>
-            </div>
-
-            <h4>Database</h4>
-            <div class="task-list">
-              <div v-for="(task, index) in availableDetails.Database" 
-                   :key="'db-'+index"
-                   class="task-item"
-                   @click="selectDetail('Database', task)">
-                <v-icon size="small" color="warning" class="mr-2">mdi-database</v-icon>
-                {{ task }}
+              <div v-for="task in frontendTasks" 
+                  :key="task.id" 
+                  class="task-item selectable"
+                  @click="toggleTask(task)">
+                <v-icon icon="mdi-code-tags" color="primary" class="mr-2" />
+                {{ task.text }}
               </div>
             </div>
           </section>
 
-          <!-- Footer buttons -->
-          <div class="footer-buttons">
-            <v-btn 
-              color="success" 
-              class="mr-4"
-              @click="acceptTechReview"
-              :disabled="editingStory || editingCriteria"
-            >
-              ACCEPT TECH REVIEW
-            </v-btn>
-            <v-btn 
-              color="primary"
-              @click="submitForEstimation"
-              :disabled="editingStory || editingCriteria"
-            >
-              SEND FOR ESTIMATION
-            </v-btn>
-            <div class="footer-hint" v-if="editingStory || editingCriteria">
-              Save your changes to enable actions
+          <section class="implementation-section">
+            <h4>Backend</h4>
+            <div class="task-list">
+              <div v-for="task in backendTasks" 
+                  :key="task.id" 
+                  class="task-item selectable"
+                  @click="toggleTask(task)">
+                <v-icon icon="mdi-server" color="primary" class="mr-2" />
+                {{ task.text }}
+              </div>
             </div>
-          </div>
+          </section>
+
+          <section class="implementation-section">
+            <h4>Database</h4>
+            <div class="task-list">
+              <div v-for="task in databaseTasks" 
+                  :key="task.id" 
+                  class="task-item selectable"
+                  @click="toggleTask(task)">
+                <v-icon icon="mdi-database" color="primary" class="mr-2" />
+                {{ task.text }}
+              </div>
+            </div>
+          </section>
+        </div>
+        
+        <div class="footer-buttons">
+          <v-btn 
+            color="success" 
+            class="mr-4"
+            @click="acceptTechReview"
+          >
+            ACCEPT TECH REVIEW
+          </v-btn>
+          <v-btn 
+            color="primary"
+            @click="submitForEstimation"
+          >
+            SEND FOR ESTIMATION
+          </v-btn>
         </div>
       </div>
 
@@ -399,53 +328,58 @@ onMounted(() => {
   padding: 1rem;
   max-width: 2000px;
   margin: 0 auto;
+  min-height: 100vh;
 }
 
-.page-title,
-.implementation-title,
-.panel-title {
+/* Headers */
+h3 {
   color: #64B5F6;
-  font-size: 1.25rem;
-  margin-bottom: 1rem;
-  font-weight: normal;
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
-.section-header {
+h4 {
   color: #fff;
-  font-size: 1rem;
-  margin-bottom: 0.75rem;
-  font-weight: normal;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
 }
 
-.task-item,
-.criteria-item,
-pre {
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
+/* Content panels */
 .dark-panel {
   background: rgba(30, 41, 59, 0.8);
   border-radius: 8px;
   padding: 1rem;
-  margin-bottom: 0.75rem;
 }
 
-section {
-  margin-bottom: 1rem;
-}
-
-.task-list {
-  gap: 0.5rem;
-}
-
+/* Task items */
 .task-item {
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 8px;
+}
+
+.primary-content-wrapper {
+  position: relative;
+  height: calc(100vh - 2rem);
+  overflow-y: auto;
+  padding-bottom: 7rem;
+}
+
+.analysis-panel {
+  height: calc(100vh - 2rem);
+  overflow-y: auto;
 }
 
 .footer-buttons {
+  position: fixed;
   bottom: 1rem;
-  left: 1rem;
+  left: 25%;
+  transform: translateX(-50%);
+  width: fit-content;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  z-index: 10;
 }
 
 .tech-analysis-grid,
@@ -644,15 +578,35 @@ section {
 @media (max-width: 1024px) {
   .two-column-layout {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .primary-content-wrapper,
+  .analysis-panel {
+    height: auto;
+    min-height: calc(100vh - 2rem);
+  }
+
+  .footer-buttons {
+    left: 50%;
+    padding: 0 1rem;
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 600px) {
+  .footer-buttons {
+    flex-direction: column;
+    gap: 0.75rem;
   }
 }
 
 /* Section headers (Frontend, Backend, Database) */
 h4 {
-  color: #fff;
-  font-size: 1.1rem;
-  margin: 1.5rem 0 1rem;
-  font-weight: normal;
+  color: #64B5F6;
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
 }
 
 /* Task items in the implementation details */
@@ -668,7 +622,8 @@ h4 {
 }
 
 .task-list {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.75rem;
 }
 
@@ -686,5 +641,52 @@ h4:first-of-type {
 .task-item.selectable:hover {
   background: rgba(40, 51, 69, 0.8);
   cursor: pointer;
+}
+
+.primary-content {
+  flex: 1;
+}
+
+.page-title {
+  color: #64B5F6;
+  font-size: 1.75rem;
+  margin-bottom: 1.5rem;
+  font-weight: normal;
+}
+
+.form-group {
+  margin-bottom: 2rem;
+}
+
+.input-label {
+  color: #64B5F6;
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.criteria-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.criteria-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 8px;
+}
+
+.bullet {
+  color: #64B5F6;
+  font-size: 1rem;
+}
+
+.criteria-section,
+.implementation-section {
+  margin-bottom: 2rem;
 }
 </style> 
