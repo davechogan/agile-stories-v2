@@ -1,5 +1,5 @@
 <template>
-  <div class="test">
+  <div class="test" :class="{ 'fade-in': mounted }">
     <div v-if="loading" class="loading">
       <v-progress-circular indeterminate />
     </div>
@@ -127,9 +127,13 @@ const route = useRoute()
 const error = ref(null)
 const loading = ref(false)
 const reviewing = ref(false)
+const mounted = ref(false)
 
 onMounted(() => {
   fetchAnalysis()
+  setTimeout(() => {
+    mounted.value = true
+  }, 100)
 })
 
 // Comment out or remove the redirect logic
@@ -309,6 +313,12 @@ const requestTechnicalReview = async () => {
 .test {
   display: block;
   width: 100%;
+  opacity: 0;
+  transition: opacity 1s ease-in-out;
+}
+
+.fade-in {
+  opacity: 1;
 }
 
 .test > .two-column-layout {

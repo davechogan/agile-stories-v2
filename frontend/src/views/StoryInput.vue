@@ -1,5 +1,5 @@
 <template>
-  <div class="test">
+  <div class="test" :class="{ 'fade-out': isExiting }">
     <div class="two-column-layout">
       <!-- Left Column: Primary Content -->
       <div class="primary-content-wrapper">
@@ -97,10 +97,7 @@
           loop 
           muted 
           playsinline
-          @error="handleVideoError"
-          @loadeddata="handleVideoLoaded"
         >
-          <!-- Try MP4 first, then WebM as fallback -->
           <source src="/videos/AdobeStock_910543395.mp4" type="video/mp4">
           <source src="/videos/AdobeStock_910543395.webm" type="video/webm">
         </video>
@@ -123,6 +120,7 @@ const analyzing = ref(false)
 const showTransition = ref(false)
 const animationFrame = ref(null)
 const videoPlayer = ref(null)
+const isExiting = ref(false)
 
 // Story data structure
 const story = ref({
@@ -141,9 +139,7 @@ const isValid = computed(() => {
 const submitStory = async () => {
   analyzing.value = true
   const storyId = uuidv4()
-  console.log('Generated new story_id:', storyId)
   
-  // Start animation after 1 second
   setTimeout(() => {
     showTransition.value = true
   }, 1000)
@@ -158,17 +154,19 @@ const submitStory = async () => {
         .filter(c => c.trim() !== '') || []
     }
     
-    console.log('Submitting story data:', JSON.stringify(storyData, null, 2))
-    
     const response = await axios.post(
       `${import.meta.env.VITE_API_URL}/stories/analyze`,
       storyData
     )
+    console.log('Response from analyze:', response.data)
     
-    console.log('Response from analyze:', JSON.stringify(response.data, null, 2))
+    // Start the exit transition after successful API call
+    isExiting.value = true
     
-    // Animation will automatically stop when navigation occurs
-    await router.push(`/agile/${storyId}`)
+    // Wait for fade out before navigation
+    setTimeout(async () => {
+      await router.push(`/agile/${storyId}`)
+    }, 1000)
     
   } catch (err) {
     console.error('Error submitting story:', err)
@@ -176,7 +174,7 @@ const submitStory = async () => {
       console.error('Error response:', err.response.data)
     }
     showTransition.value = false
-  } finally {
+    isExiting.value = false
     analyzing.value = false
   }
 }
@@ -426,6 +424,7 @@ const getNoteColor = (index) => {
   };
 }
 
+// Simplified back to basic video handling
 const handleVideoError = (e) => {
   console.error('Video error:', e)
 }
@@ -436,9 +435,6 @@ const handleVideoLoaded = () => {
 
 watch(showTransition, (newVal) => {
   console.log('Transition state:', newVal)
-  if (videoPlayer.value) {
-    console.log('Video ready state:', videoPlayer.value.readyState)
-  }
   if (newVal) {
     initializeNotes();
     startAnimation();
@@ -631,7 +627,7 @@ watch(showTransition, (newVal) => {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.5); /* Added some opacity to see if container shows */
+  background: rgba(0, 0, 0, 0.9);
 }
 
 .background-video {
@@ -644,13 +640,20 @@ watch(showTransition, (newVal) => {
   z-index: 1;
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s;
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 1s ease-in-out;
 }
 
-.fade-enter-from,
-.fade-leave-to {
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+.story-input {
+  transition: opacity 1s ease-in-out;
+  opacity: 1;
+}
+
+.story-input.fade-out {
   opacity: 0;
 }
 </style> 
