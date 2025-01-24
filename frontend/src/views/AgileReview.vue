@@ -20,53 +20,32 @@
         <div class="primary-content">
           <h2 class="page-title">Improved Title</h2>
           <div class="dark-panel mb-8">
-            <textarea
+            <EditableContent
               v-model="analysis.analysis.title"
-              class="edit-field"
-              rows="1"
-            ></textarea>
+              title="Story Title"
+              type="single-line"
+              placeholder="Enter story title..."
+            />
           </div>
 
           <h2 class="page-title">Improved Story</h2>
           <div class="dark-panel mb-8">
-            <textarea
+            <EditableContent
               v-model="analysis.analysis.story"
-              class="edit-field"
-              rows="3"
-            ></textarea>
+              title="User Story"
+              type="text"
+              placeholder="Describe the user story..."
+            />
           </div>
 
-          <div class="form-group">
-            <h2 class="page-title">Acceptance Criteria</h2>
-            <div class="criteria-list">
-              <div v-if="analysis.analysis.acceptance_criteria"
-                   v-for="(criterion, index) in analysis.analysis.acceptance_criteria" 
-                   :key="index"
-                   class="criteria-item">
-                <v-textarea
-                  :value="criterion"
-                  @input="(e) => updateCriterion(index, e)"
-                  variant="outlined"
-                  auto-grow
-                  rows="1"
-                />
-                <v-btn 
-                  icon="mdi-delete" 
-                  size="small"
-                  color="error" 
-                  variant="text"
-                  @click="removeCriterion(index)"
-                />
-              </div>
-              <v-btn 
-                prepend-icon="mdi-plus"
-                variant="text"
-                @click="addCriterion"
-                :disabled="!analysis.analysis.acceptance_criteria"
-              >
-                Add Criteria
-              </v-btn>
-            </div>
+          <h2 class="page-title">Acceptance Criteria</h2>
+          <div class="dark-panel mb-8">
+            <EditableContent
+              v-model="analysis.analysis.acceptance_criteria"
+              title="Acceptance Criteria"
+              type="list"
+              placeholder="Enter each criterion on a new line..."
+            />
           </div>
 
           <!-- Single button for tech review -->
@@ -119,6 +98,7 @@ import { mockAnalysisResult } from '@/mocks/mockAnalysisData'
 import { useStoryStore } from '@/stores/storyStore'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
+import EditableContent from '@/components/EditableContent.vue'
 
 const router = useRouter()
 const storyStore = useStoryStore()

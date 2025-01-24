@@ -26,117 +26,63 @@
         <div class="primary-content">
           <h2 class="page-title">Technical Review Modifications</h2>
           
-          <section class="story-section">
-            <h3 class="section-header">User Story</h3>
-            <div class="editable-content">
-              <template v-if="!editingStory">
-                <pre>{{ storyData?.content?.story }}</pre>
-                <v-btn 
-                  size="small" 
-                  color="primary" 
-                  class="edit-btn"
-                  icon="mdi-pencil"
-                  @click="startEditingStory"
-                ></v-btn>
-              </template>
-              <template v-else>
-                <v-textarea
-                  v-model="editedStory"
-                  auto-grow
-                  variant="outlined"
-                  class="edit-textarea"
-                ></v-textarea>
-                <div class="edit-actions">
-                  <v-btn 
-                    size="small" 
-                    color="success" 
-                    @click="saveStory"
-                    class="mr-2"
-                  >Save</v-btn>
-                  <v-btn 
-                    size="small" 
-                    color="error" 
-                    @click="cancelEditStory"
-                  >Cancel</v-btn>
-                </div>
-              </template>
-            </div>
-          </section>
+          <EditableContent
+            v-model="storyData.content.title"
+            title="Story Title"
+            type="single-line"
+            placeholder="Enter story title..."
+          />
+          
+          <EditableContent
+            v-model="storyData.content.story"
+            title="User Story"
+            type="text"
+            placeholder="Describe the user story..."
+          />
+          
+          <EditableContent
+            v-model="storyData.content.acceptance_criteria"
+            title="Acceptance Criteria"
+            type="list"
+            placeholder="Enter each criterion on a new line..."
+          />
 
-          <section class="criteria-section">
-            <h3 class="section-header">Acceptance Criteria</h3>
-            <div class="editable-content">
-              <template v-if="!editingCriteria">
-                <div class="criteria-list">
-                  <div v-for="(criterion, index) in storyData?.content?.acceptance_criteria" 
-                       :key="index"
-                       class="criteria-item">
-                    <span class="bullet">•</span>
-                    {{ criterion }}
-                  </div>
-                </div>
-                <v-btn 
-                  size="small" 
-                  color="primary" 
-                  class="edit-btn"
-                  icon="mdi-pencil"
-                  @click="startEditingCriteria"
-                ></v-btn>
-              </template>
-              <template v-else>
-                <v-textarea
-                  v-model="editedCriteria"
-                  auto-grow
-                  variant="outlined"
-                  class="edit-textarea"
-                  placeholder="Enter each criterion on a new line"
-                ></v-textarea>
-                <div class="edit-actions">
-                  <v-btn 
-                    size="small" 
-                    color="success" 
-                    @click="saveCriteria"
-                    class="mr-2"
-                  >Save</v-btn>
-                  <v-btn 
-                    size="small" 
-                    color="error" 
-                    @click="cancelEditCriteria"
-                  >Cancel</v-btn>
-                </div>
-              </template>
-            </div>
-          </section>
-
-          <!-- Selected Details Section -->
-          <section>
-            <h3 class="section-header">Selected Implementation Details</h3>
-            <div class="dark-panel" v-if="!selectedDetails?.length">
-              <p class="empty-state">No implementation details added yet. Select from the sections below.</p>
+          <!-- Selected Implementation Details -->
+          <h4 class="mt-4">Selected Implementation Details</h4>
+          <div class="editable-content">
+            <div v-if="selectedDetails.length === 0" class="no-details">
+              No implementation details added yet. Select from the sections below.
             </div>
             <div v-else class="selected-details">
               <div v-for="(detail, index) in selectedDetails" 
                    :key="index"
-                   class="task-item"
-                   @click="deselectDetail(detail)">
-                <v-icon size="small" :color="detail.section === 'Frontend' ? 'primary' : detail.section === 'Backend' ? 'success' : 'warning'" class="mr-2">
-                  {{ detail.section === 'Frontend' ? 'mdi-code-tags' : detail.section === 'Backend' ? 'mdi-server' : 'mdi-database' }}
-                </v-icon>
-                {{ detail.task }}
+                   class="selected-detail">
+                <div class="detail-content">
+                  <v-icon size="small" :color="getDetailColor(detail.type)" class="mr-2">
+                    {{ getDetailIcon(detail.type) }}
+                  </v-icon>
+                  {{ detail.text }}
+                </div>
+                <v-btn 
+                  size="x-small" 
+                  color="error" 
+                  variant="text"
+                  icon="mdi-close"
+                  @click="removeDetail(index)"
+                ></v-btn>
               </div>
             </div>
-          </section>
+          </div>
 
-          <!-- Available Details Section -->
-          <section>
-            <h3 class="implementation-title">Implementation Details</h3>
-            
+          <!-- Implementation Details Section -->
+          <h3 class="mt-6">Implementation Details</h3>
+          <div class="tech-section">
             <h4>Frontend</h4>
             <div class="task-list">
               <div v-for="(task, index) in availableDetails.Frontend" 
                    :key="'fe-'+index"
                    class="task-item"
-                   @click="selectDetail('Frontend', task)">
+                   @click="toggleDetail('Frontend', task)">
                 <v-icon size="small" color="primary" class="mr-2">mdi-code-tags</v-icon>
                 {{ task }}
               </div>
@@ -147,7 +93,7 @@
               <div v-for="(task, index) in availableDetails.Backend" 
                    :key="'be-'+index"
                    class="task-item"
-                   @click="selectDetail('Backend', task)">
+                   @click="toggleDetail('Backend', task)">
                 <v-icon size="small" color="success" class="mr-2">mdi-server</v-icon>
                 {{ task }}
               </div>
@@ -158,32 +104,31 @@
               <div v-for="(task, index) in availableDetails.Database" 
                    :key="'db-'+index"
                    class="task-item"
-                   @click="selectDetail('Database', task)">
+                   @click="toggleDetail('Database', task)">
                 <v-icon size="small" color="warning" class="mr-2">mdi-database</v-icon>
                 {{ task }}
               </div>
             </div>
-          </section>
+          </div>
 
-          <!-- Footer buttons -->
-          <div class="footer-buttons">
-            <v-btn 
-              color="success" 
-              class="mr-4"
-              @click="acceptTechReview"
-              :disabled="editingStory || editingCriteria"
-            >
-              ACCEPT TECH REVIEW
-            </v-btn>
-            <v-btn 
-              color="primary"
-              @click="submitForEstimation"
-              :disabled="editingStory || editingCriteria"
-            >
-              SEND FOR ESTIMATION
-            </v-btn>
-            <div class="footer-hint" v-if="editingStory || editingCriteria">
-              Save your changes to enable actions
+          <!-- Sticky footer -->
+          <div class="sticky-footer">
+            <div class="footer-content">
+              <div class="footer-buttons">
+                <v-btn 
+                  color="success" 
+                  class="mr-4"
+                  @click="acceptTechReview"
+                >
+                  ACCEPT TECH REVIEW
+                </v-btn>
+                <v-btn 
+                  color="primary"
+                  @click="submitForEstimation"
+                >
+                  SEND FOR ESTIMATION
+                </v-btn>
+              </div>
             </div>
           </div>
         </div>
@@ -191,7 +136,7 @@
 
       <!-- Right Column -->
       <div class="analysis-panel">
-        <h3 class="panel-title">Technical Analysis</h3>
+        <h2 class="page-title">Technical Analysis</h2>
         <div class="tech-analysis-grid">
           <div v-for="(analysis, key) in storyData?.analysis?.TechnicalAnalysis || {}"
                :key="key"
@@ -245,6 +190,8 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
+import EditableContent from '@/components/EditableContent.vue'
+import { mockTechReviewResult } from '@/mocks/mockTechReviewData'
 
 const isDev = computed(() => import.meta.env.DEV)
 const route = useRoute()
@@ -257,7 +204,63 @@ const editingStory = ref(false)
 const editedStory = ref('')
 const editingCriteria = ref(false)
 const editedCriteria = ref('')
-const selectedDetails = ref([])
+
+interface ImplementationDetail {
+  type: 'Frontend' | 'Backend' | 'Database'
+  text: string
+}
+
+// Store original details and selected details
+const originalDetails = ref({
+  Frontend: [...mockTechReviewResult.implementation_details.Frontend],
+  Backend: [...mockTechReviewResult.implementation_details.Backend],
+  Database: [...mockTechReviewResult.implementation_details.Database]
+})
+
+const availableDetails = ref({
+  Frontend: [...mockTechReviewResult.implementation_details.Frontend],
+  Backend: [...mockTechReviewResult.implementation_details.Backend],
+  Database: [...mockTechReviewResult.implementation_details.Database]
+})
+
+const selectedDetails = ref<ImplementationDetail[]>([])
+
+const toggleDetail = (type: 'Frontend' | 'Backend' | 'Database', text: string) => {
+  const typeList = availableDetails.value[type]
+  const index = typeList.indexOf(text)
+  if (index >= 0) {
+    typeList.splice(index, 1)
+    selectedDetails.value.push({ type, text })
+  }
+}
+
+const removeDetail = (index: number) => {
+  const detail = selectedDetails.value[index]
+  availableDetails.value[detail.type].push(detail.text)
+  availableDetails.value[detail.type].sort((a, b) => {
+    return originalDetails.value[detail.type].indexOf(a) - 
+           originalDetails.value[detail.type].indexOf(b)
+  })
+  selectedDetails.value.splice(index, 1)
+}
+
+const getDetailIcon = (type: string): string => {
+  switch (type) {
+    case 'Frontend': return 'mdi-code-tags'
+    case 'Backend': return 'mdi-server'
+    case 'Database': return 'mdi-database'
+    default: return 'mdi-code-tags'
+  }
+}
+
+const getDetailColor = (type: string): string => {
+  switch (type) {
+    case 'Frontend': return 'primary'
+    case 'Backend': return 'success'
+    case 'Database': return 'warning'
+    default: return 'primary'
+  }
+}
 
 const getScoreClass = (score) => {
   if (score <= 3) return 'score-high'
@@ -290,20 +293,27 @@ const fetchTechReview = async () => {
 }
 
 const acceptTechReview = async () => {
+  loading.value = true
   try {
-    // TODO: Implement API call
-    console.log('Accepting tech review...')
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    console.log('Tech review accepted')
   } catch (error) {
     console.error('Error accepting tech review:', error)
+  } finally {
+    loading.value = false
   }
 }
 
 const submitForEstimation = async () => {
+  loading.value = true
   try {
-    // TODO: Implement API call
-    console.log('Submitting for estimation...')
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    router.push('/estimate')
   } catch (error) {
     console.error('Error submitting for estimation:', error)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -358,17 +368,6 @@ const deselectDetail = (detail) => {
   }
 }
 
-// Update computed property to handle the new structure
-const availableDetails = computed(() => {
-  const details = { Frontend: [], Backend: [], Database: [] }
-  Object.entries(storyData.value?.analysis?.ImplementationDetails || {}).forEach(([section, tasks]) => {
-    details[section] = tasks.filter(task => 
-      !selectedDetails.value.some(d => d.task === task && d.section === section)
-    )
-  })
-  return details
-})
-
 // Watch for route changes
 watch(
   () => route.params.id,
@@ -388,8 +387,14 @@ onMounted(() => {
 
 <style scoped>
 .tech-review {
-  padding: 2rem;
-  color: #fff;
+  padding: 1rem;
+}
+
+.page-title {
+  color: #64B5F6;
+  font-size: 1.5rem;
+  font-weight: normal;
+  margin-bottom: 2rem;
 }
 
 .two-column-layout {
@@ -399,8 +404,8 @@ onMounted(() => {
   padding: 1rem;
   max-width: 2000px;
   margin: 0 auto;
-  height: 100vh; /* Set fixed height for container */
-  overflow: hidden; /* Prevent container from scrolling */
+  height: 100vh;
+  overflow: hidden;
 }
 
 .primary-content-wrapper {
@@ -431,13 +436,8 @@ onMounted(() => {
   z-index: 10;
 }
 
-.page-title,
-.implementation-title,
-.panel-title {
-  color: #64B5F6;
+.section-title {
   font-size: 1.25rem;
-  margin-bottom: 1rem;
-  font-weight: normal;
 }
 
 .section-header {
@@ -727,5 +727,70 @@ h4:first-of-type {
 .task-item.selectable:hover {
   background: rgba(40, 51, 69, 0.8);
   cursor: pointer;
+}
+
+/* Restore original styles */
+.tech-section {
+  margin-top: 1rem;
+}
+
+.tech-section h4 {
+  color: #64B5F6;
+  margin: 1.5rem 0 1rem;
+  font-size: 1.1rem;
+}
+
+.task-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.task-item {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  background: rgba(33, 150, 243, 0.1);
+}
+
+.task-item:hover {
+  background: rgba(33, 150, 243, 0.2);
+  transform: translateY(-1px);
+}
+
+.selected-details {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.selected-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(33, 150, 243, 0.1);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.detail-content {
+  display: flex;
+  align-items: center;
+}
+
+.no-details {
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+}
+
+.editable-content {
+  position: relative;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  transition: all 0.3s ease;
 }
 </style> 
