@@ -90,42 +90,20 @@
 
     <transition name="fade">
       <div v-if="showTransition" class="animation-container">
-        <!-- Brain with Gears -->
-        <div class="brain">
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <!-- Main Brain Shape -->
-            <path class="brain-path" d="M50 10 C20 10 10 30 10 50 C10 70 20 90 50 90 C80 90 90 70 90 50 C90 30 80 10 50 10" />
-            
-            <!-- Rotating Gears -->
-            <g class="gear gear-1">
-              <circle cx="35" cy="40" r="12" class="gear-body"/>
-              <path d="M35 28 L37 25 L33 25 Z M35 52 L37 55 L33 55 Z M23 40 L20 42 L20 38 Z M47 40 L50 42 L50 38 Z" class="gear-teeth"/>
-            </g>
-            
-            <g class="gear gear-2">
-              <circle cx="65" cy="40" r="10" class="gear-body"/>
-              <path d="M65 30 L67 27 L63 27 Z M65 50 L67 53 L63 53 Z M55 40 L52 42 L52 38 Z M75 40 L78 42 L78 38 Z" class="gear-teeth"/>
-            </g>
-            
-            <g class="gear gear-3">
-              <circle cx="50" cy="65" r="15" class="gear-body"/>
-              <path d="M50 50 L52 47 L48 47 Z M50 80 L52 83 L48 83 Z M35 65 L32 67 L32 63 Z M65 65 L68 67 L68 63 Z" class="gear-teeth"/>
-            </g>
-          </svg>
-        </div>
-
-        <!-- Dynamic Sticky Notes -->
-        <div v-for="(note, index) in notes" 
-             :key="note.id" 
-             class="sticky-note"
-             :style="{
-               transform: `translate(${note.x}px, ${note.y}px) rotate(${note.rotation}deg)`,
-               ...getNoteColor(index)
-             }">
-          <div class="note-content">
-            <div class="note-text">{{ note.text }}</div>
-          </div>
-        </div>
+        <video 
+          ref="videoPlayer"
+          class="background-video" 
+          autoplay 
+          loop 
+          muted 
+          playsinline
+          @error="handleVideoError"
+          @loadeddata="handleVideoLoaded"
+        >
+          <!-- Try MP4 first, then WebM as fallback -->
+          <source src="/videos/AdobeStock_910543395.mp4" type="video/mp4">
+          <source src="/videos/AdobeStock_910543395.webm" type="video/webm">
+        </video>
       </div>
     </transition>
   </div>
@@ -143,6 +121,8 @@ const loading = ref(false)
 const error = ref(null)
 const analyzing = ref(false)
 const showTransition = ref(false)
+const animationFrame = ref(null)
+const videoPlayer = ref(null)
 
 // Story data structure
 const story = ref({
@@ -273,56 +253,83 @@ const STICKY_NOTES = [
 
 const notes = ref([])
 
+const isPositionValid = (x, y, existingNotes, margin) => {
+  // Check if position is too close to any existing note
+  for (const note of existingNotes) {
+    const dx = note.x - x;
+    const dy = note.y - y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance < margin) {
+      return false;
+    }
+  }
+  return true;
+}
+
+const getValidPosition = (quadrant, width, height, margin, existingNotes) => {
+  const halfWidth = width / 2;
+  const halfHeight = height / 2;
+  let x, y, attempts = 0;
+  const maxAttempts = 50; // Prevent infinite loops
+
+  do {
+    switch(quadrant) {
+      case 0: // Top-left
+        x = margin + Math.random() * (halfWidth - margin * 2);
+        y = margin + Math.random() * (halfHeight - margin * 2);
+        break;
+      case 1: // Top-right
+        x = halfWidth + Math.random() * (halfWidth - margin * 2);
+        y = margin + Math.random() * (halfHeight - margin * 2);
+        break;
+      case 2: // Bottom-left
+        x = margin + Math.random() * (halfWidth - margin * 2);
+        y = halfHeight + Math.random() * (halfHeight - margin * 2);
+        break;
+      case 3: // Bottom-right
+        x = halfWidth + Math.random() * (halfWidth - margin * 2);
+        y = halfHeight + Math.random() * (halfHeight - margin * 2);
+        break;
+    }
+    attempts++;
+  } while (!isPositionValid(x, y, existingNotes, margin * 1.2) && attempts < maxAttempts);
+
+  return { x, y };
+}
+
 const initializeNotes = () => {
   const margin = 160;
   const width = window.innerWidth - margin * 2;
   const height = window.innerHeight - margin * 2;
-  const halfWidth = width / 2;
-  const halfHeight = height / 2;
+  const initialNotes = [];
 
-  notes.value = STICKY_NOTES.map((text, index) => {
+  STICKY_NOTES.forEach((text, index) => {
     const quadrant = index % 4;
-    let x, y, vx, vy;
+    const position = getValidPosition(quadrant, width, height, margin, initialNotes);
+    
+    // Calculate velocity based on quadrant
+    let vx = 1.5 + Math.random();
+    let vy = 1.5 + Math.random();
+    
+    // Adjust velocity direction based on quadrant
+    if (quadrant === 1 || quadrant === 3) vx = -vx;
+    if (quadrant === 2 || quadrant === 3) vy = -vy;
 
-    // Position notes in corners
-    switch(quadrant) {
-      case 0: // Top-left
-        x = margin;
-        y = margin;
-        vx = 1 + Math.random();
-        vy = 1 + Math.random();
-        break;
-      case 1: // Top-right
-        x = width - margin;
-        y = margin;
-        vx = -(1 + Math.random());
-        vy = 1 + Math.random();
-        break;
-      case 2: // Bottom-left
-        x = margin;
-        y = height - margin;
-        vx = 1 + Math.random();
-        vy = -(1 + Math.random());
-        break;
-      case 3: // Bottom-right
-        x = width - margin;
-        y = height - margin;
-        vx = -(1 + Math.random());
-        vy = -(1 + Math.random());
-        break;
-    }
-
-    return {
+    const note = {
       id: index,
       text,
-      x,
-      y,
+      x: position.x,
+      y: position.y,
       vx,
       vy,
       rotation: Math.random() * 360,
       rotationSpeed: (Math.random() - 0.5) * 0.8
     };
+
+    initialNotes.push(note);
   });
+
+  notes.value = initialNotes;
 }
 
 const startAnimation = () => {
@@ -339,9 +346,9 @@ const updateNotes = () => {
   const containerHeight = window.innerHeight - margin;
 
   notes.value.forEach((note, i) => {
-    // Update position with slower movement
-    note.x += note.vx * 0.7;
-    note.y += note.vy * 0.7;
+    // Update position with slightly faster movement
+    note.x += note.vx * 0.85;  // Increased from 0.7
+    note.y += note.vy * 0.85;  // Increased from 0.7
     note.rotation += note.rotationSpeed;
 
     // Bounce off walls with gentler randomization
@@ -392,12 +399,12 @@ const updateNotes = () => {
       }
     }
 
-    // Maintain minimum speed
+    // Adjusted minimum speed
     const speed = Math.sqrt(note.vx * note.vx + note.vy * note.vy);
-    if (speed < 1) {
+    if (speed < 1.2) {  // Increased from 1
       const angle = Math.random() * Math.PI * 2;
-      note.vx = Math.cos(angle) * 1.5;
-      note.vy = Math.sin(angle) * 1.5;
+      note.vx = Math.cos(angle) * 1.8;  // Increased from 1.5
+      note.vy = Math.sin(angle) * 1.8;
     }
 
     // Cap maximum rotation speed
@@ -419,7 +426,19 @@ const getNoteColor = (index) => {
   };
 }
 
+const handleVideoError = (e) => {
+  console.error('Video error:', e)
+}
+
+const handleVideoLoaded = () => {
+  console.log('Video loaded successfully')
+}
+
 watch(showTransition, (newVal) => {
+  console.log('Transition state:', newVal)
+  if (videoPlayer.value) {
+    console.log('Video ready state:', videoPlayer.value.readyState)
+  }
   if (newVal) {
     initializeNotes();
     startAnimation();
@@ -612,86 +631,17 @@ watch(showTransition, (newVal) => {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.5); /* Added some opacity to see if container shows */
 }
 
-.brain {
+.background-video {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: min(35vw, 350px);
-  height: min(35vw, 350px);
-}
-
-.brain-path {
-  fill: #2c3e50;
-  stroke: #34495e;
-  stroke-width: 2;
-}
-
-.gear {
-  transform-origin: center;
-}
-
-.gear-body {
-  fill: #95a5a6;
-  stroke: #7f8c8d;
-  stroke-width: 1;
-}
-
-.gear-teeth {
-  fill: #95a5a6;
-}
-
-.gear-1 {
-  animation: rotate 8s linear infinite;
-}
-
-.gear-2 {
-  animation: rotate-reverse 6s linear infinite;
-}
-
-.gear-3 {
-  animation: rotate 10s linear infinite;
-}
-
-.sticky-note {
-  position: absolute;
-  width: min(18vw, 160px);
-  height: min(18vw, 140px);
-  transition: transform 0.1s linear;
-}
-
-.note-content {
-  position: relative;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
-  transform-style: preserve-3d;
-  box-shadow: 3px 3px 10px rgba(0,0,0,0.2),
-              -1px -1px 4px rgba(0,0,0,0.1);
-  border-radius: 4px;
-  padding: 15px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  font-size: clamp(14px, 1.8vw, 20px);
-  color: #2c3e50;
-}
-
-.note-text {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-}
-
-@keyframes rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes rotate-reverse {
-  from { transform: rotate(360deg); }
-  to { transform: rotate(0deg); }
+  object-fit: cover;
+  z-index: 1;
 }
 
 .fade-enter-active,
