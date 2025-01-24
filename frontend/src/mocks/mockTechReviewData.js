@@ -6,75 +6,77 @@ export const mockTechReviewData = {
 }
 
 export const mockTechReviewResult = {
-  ImprovedTitle: "Notification System Enhancement",
-  ImprovedStory: "As a user, I want to receive real-time notifications on my dashboard so that I can stay updated with critical system events.",
-  ImprovedAcceptanceCriteria: [
-    "Notifications are displayed as a bell icon with a badge for unread messages.",
-    "Clicking on the bell icon opens a modal showing recent notifications.",
-    "Users can mark notifications as read."
-  ],
-  ImplementationDetails: {
-    Frontend: [
-      "Add notification bell component with animation support.",
-      "Implement notification state management.",
-      "Add session tracking for the first login of the day.",
-      "Create notification overlay/modal for message display."
-    ],
-    Backend: [
-      "Extend user session API to track daily logins.",
-      "Add broadcast message endpoints.",
-      "Implement notification status tracking.",
-      "Add message relevancy filtering logic."
-    ],
-    Database: [
-      "Create a 'Notifications' table to store messages.",
-      "Add fields for user ID, message content, timestamp, and read/unread status.",
-      "Optimize indexing for fast retrieval of unread messages."
+  improved_story: {
+    text: "As a QA Engineer, I want to automate repeated test cases to ensure consistent testing with less manual effort",
+    acceptance_criteria: [
+      "Automated tests cover all specified test cases.",
+      "Automated tests can be triggered manually or on a schedule.",
+      "Test results are recorded and easy to review."
     ]
   },
-  TechnicalAnalysis: {
+  implementation_details: {
+    Frontend: [
+      "Create test configuration UI",
+      "Add test execution status dashboard",
+      "Implement real-time test results viewer",
+      "Add test scheduling interface"
+    ],
+    Backend: [
+      "Set up test runner service",
+      "Create test result storage API",
+      "Implement test scheduling system",
+      "Add test report generation"
+    ],
+    Database: [
+      "Design test results schema",
+      "Create test configuration tables",
+      "Add indexes for quick result retrieval"
+    ]
+  },
+  technical_analysis: {
     Feasibility: {
-      Description: "Implementation is straightforward with the existing notification system. Will require minor updates to the user session tracking.",
-      Score: 8
+      Score: 8,
+      Description: "Implementation is straightforward with existing test framework. Minor updates needed for scheduling."
     },
     Complexity: {
-      Description: "Moderate complexity due to real-time notification requirements and session management across multiple devices.",
-      Score: 6
+      Score: 6,
+      Description: "Moderate complexity due to scheduling and real-time result tracking requirements."
     },
     Dependencies: {
-      Description: "Main dependencies are the notification service and user session service. Both are stable and well-maintained.",
-      Score: 7
+      Score: 7,
+      Description: "Good maintainability with proper test organization and documentation."
     }
   },
-  RisksAndConsiderations: [
+  risks_and_considerations: [
     {
       Classification: "Performance",
       Severity: "High",
-      Description: "High message volume could impact message delivery speed.",
-      PotentialSolution: "Implement message queuing and batch processing."
+      Description: "Large test suites might impact execution time",
+      PotentialSolution: "Implement parallel test execution and result batching"
+    },
+    {
+      Classification: "Reliability",
+      Severity: "Medium",
+      Description: "Test environment stability could affect results",
+      PotentialSolution: "Add environment health checks and retry mechanisms"
     },
     {
       Classification: "Scalability",
-      Severity: "Medium",
-      Description: "Growing user base could strain database query performance.",
-      PotentialSolution: "Implement database indexing and sharding for scalability."
-    },
-    {
-      Classification: "Security",
-      Severity: "Critical",
-      Description: "Notifications might contain sensitive information.",
-      PotentialSolution: "Encrypt notifications and use role-based access controls."
-    },
-    {
-      Classification: "UI/UX",
-      Severity: "Informational",
-      Description: "The modal may not render correctly on smaller screens.",
-      PotentialSolution: "Ensure responsive design is tested across multiple devices."
+      Severity: "Low",
+      Description: "Growing test suite could strain storage",
+      PotentialSolution: "Implement result rotation and archiving strategy"
     }
   ],
   Recommendations: [
-    "Add a priority-based notification categorization system.",
-    "Test performance with high message loads to avoid delivery delays.",
-    "Implement audit logging for notification changes."
-  ]
+    "Start with high-priority test cases for initial automation",
+    "Implement detailed logging for debugging failures",
+    "Set up monitoring for test execution times",
+    "Create documentation for test maintenance procedures"
+  ],
+  estimated_effort: {
+    Frontend: "3 days",
+    Backend: "5 days",
+    Database: "2 days",
+    Total: "10 days"
+  }
 } 

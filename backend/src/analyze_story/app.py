@@ -219,4 +219,49 @@ def handler(event, context):
             'body': json.dumps({
                 'error': str(e)
             })
+        }
+
+def get_story(event, context):
+    """Get a story by ID and version.
+    
+    Note on DynamoDB Type Handling:
+    - boto3's Table.get_item() automatically deserializes DynamoDB types (S, N, M, L) into Python types
+    - No manual type conversion is needed for either reading or writing:
+        - put_item(): Python types -> DynamoDB types (automatic)
+        - get_item(): DynamoDB types -> Python types (automatic)
+    """
+    try:
+        # Get path parameters
+        story_id = event['pathParameters']['story_id']
+        version = event.get('queryStringParameters', {}).get('version', 'INITIAL')
+        
+        # Initialize DynamoDB
+        dynamodb = boto3.resource('dynamodb')
+        table = dynamodb.Table(os.environ.get('DYNAMODB_TABLE', 'dev-agile-stories'))
+        
+        # Get item from DynamoDB - types are automatically deserialized
+        response = table.get_item(
+            Key={
+                'story_id': story_id,
+                'version': version
+            }
+        )
+        
+        if 'Item' not in response:
+            return {
+                'statusCode': 404,
+                'body': json.dumps({'error': 'Story not found'})
+            }
+            
+        # Return the item directly - no type conversion needed
+        return {
+            'statusCode': 200,
+            'body': json.dumps(response['Item'])
+        }
+        
+    except Exception as e:
+        print(f"Error getting story: {str(e)}")
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': str(e)})
         } 

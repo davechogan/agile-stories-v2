@@ -1,101 +1,189 @@
 <template>
-  <div class="test">
-    <div class="two-column-layout">
+  <div class="tech-review">
+    <!-- Debug panel -->
+    <div v-if="isDev" style="background: #333; padding: 10px; margin: 10px;">
+      <p>Debug Info:</p>
+      <p>Loading: {{ loading }}</p>
+      <p>Has Error: {{ !!error }}</p>
+      <p>Error Message: {{ error }}</p>
+      <p>Has Data: {{ !!storyData }}</p>
+      <pre>{{ JSON.stringify(storyData, null, 2) }}</pre>
+    </div>
+
+    <div v-if="loading" class="loading-state">
+      <v-progress-circular indeterminate color="primary" />
+      <p>Loading technical review...</p>
+    </div>
+
+    <div v-else-if="error" class="error-state dark-panel">
+      <p>{{ error }}</p>
+      <v-btn to="/" color="primary" class="mt-4">Return to Story Input</v-btn>
+    </div>
+
+    <div v-else-if="storyData" class="two-column-layout">
       <!-- Left Column -->
       <div class="primary-content-wrapper">
         <div class="primary-content">
-          <h2 class="page-title">Technical Review</h2>
+          <h2 class="page-title">Technical Review Modifications</h2>
           
-          <!-- Story Overview -->
-          <div class="story-form">
-            <div class="dark-panel mb-8">
-              <h3>{{ analysis?.ImprovedTitle }}</h3>
-              <p class="mt-4">{{ analysis?.ImprovedStory }}</p>
-            </div>
-
-            <!-- Acceptance Criteria -->
-            <h3 class="section-title">Acceptance Criteria</h3>
-            <div class="dark-panel mb-8">
-              <ul class="criteria-list">
-                <li v-for="(criterion, index) in analysis?.ImprovedAcceptanceCriteria"
-                    :key="index"
-                    class="criterion-item">
-                  {{ criterion }}
-                </li>
-              </ul>
-            </div>
-
-            <!-- Selected Implementation Details -->
-            <div v-if="selectedTasks.length > 0" class="dark-panel mb-8">
-              <h3 class="section-title">Selected Implementation Details</h3>
-              <div class="selected-task-list">
-                <div v-for="(task, index) in selectedTasks" 
-                     :key="index"
-                     class="selected-task-item">
-                  <span class="task-category">{{ task.category }}:</span>
-                  {{ task.description }}
-                  <v-btn
-                    icon="mdi-close"
-                    size="small"
-                    color="error"
-                    variant="text"
-                    @click="removeSelectedTask(index)"
-                    class="remove-btn"
-                  />
+          <section class="story-section">
+            <h3 class="section-header">User Story</h3>
+            <div class="editable-content">
+              <template v-if="!editingStory">
+                <pre>{{ storyData?.content?.story }}</pre>
+                <v-btn 
+                  size="small" 
+                  color="primary" 
+                  class="edit-btn"
+                  icon="mdi-pencil"
+                  @click="startEditingStory"
+                ></v-btn>
+              </template>
+              <template v-else>
+                <v-textarea
+                  v-model="editedStory"
+                  auto-grow
+                  variant="outlined"
+                  class="edit-textarea"
+                ></v-textarea>
+                <div class="edit-actions">
+                  <v-btn 
+                    size="small" 
+                    color="success" 
+                    @click="saveStory"
+                    class="mr-2"
+                  >Save</v-btn>
+                  <v-btn 
+                    size="small" 
+                    color="error" 
+                    @click="cancelEditStory"
+                  >Cancel</v-btn>
                 </div>
-              </div>
+              </template>
             </div>
+          </section>
 
-            <!-- Implementation Details -->
-            <h3 class="section-title">Implementation Details</h3>
-            <div class="implementation-sections">
-              <!-- Frontend -->
-              <div class="detail-section">
-                <h4 class="detail-title">
-                  <v-icon color="primary" class="mr-2">mdi-code-tags</v-icon>
-                  Frontend
-                </h4>
-                <div class="task-list">
-                  <div v-for="(task, index) in unselectedTasks.Frontend"
+          <section class="criteria-section">
+            <h3 class="section-header">Acceptance Criteria</h3>
+            <div class="editable-content">
+              <template v-if="!editingCriteria">
+                <div class="criteria-list">
+                  <div v-for="(criterion, index) in storyData?.content?.acceptance_criteria" 
                        :key="index"
-                       class="task-item"
-                       @click="toggleTask('Frontend', index, task)">
-                    {{ task }}
+                       class="criteria-item">
+                    <span class="bullet">•</span>
+                    {{ criterion }}
                   </div>
                 </div>
-              </div>
-
-              <!-- Backend -->
-              <div class="detail-section">
-                <h4 class="detail-title">
-                  <v-icon color="success" class="mr-2">mdi-server</v-icon>
-                  Backend
-                </h4>
-                <div class="task-list">
-                  <div v-for="(task, index) in unselectedTasks.Backend"
-                       :key="index"
-                       class="task-item"
-                       @click="toggleTask('Backend', index, task)">
-                    {{ task }}
-                  </div>
+                <v-btn 
+                  size="small" 
+                  color="primary" 
+                  class="edit-btn"
+                  icon="mdi-pencil"
+                  @click="startEditingCriteria"
+                ></v-btn>
+              </template>
+              <template v-else>
+                <v-textarea
+                  v-model="editedCriteria"
+                  auto-grow
+                  variant="outlined"
+                  class="edit-textarea"
+                  placeholder="Enter each criterion on a new line"
+                ></v-textarea>
+                <div class="edit-actions">
+                  <v-btn 
+                    size="small" 
+                    color="success" 
+                    @click="saveCriteria"
+                    class="mr-2"
+                  >Save</v-btn>
+                  <v-btn 
+                    size="small" 
+                    color="error" 
+                    @click="cancelEditCriteria"
+                  >Cancel</v-btn>
                 </div>
-              </div>
+              </template>
+            </div>
+          </section>
 
-              <!-- Database -->
-              <div class="detail-section">
-                <h4 class="detail-title">
-                  <v-icon color="warning" class="mr-2">mdi-database</v-icon>
-                  Database
-                </h4>
-                <div class="task-list">
-                  <div v-for="(task, index) in unselectedTasks.Database"
-                       :key="index"
-                       class="task-item"
-                       @click="toggleTask('Database', index, task)">
-                    {{ task }}
-                  </div>
-                </div>
+          <!-- Selected Details Section -->
+          <section>
+            <h3 class="section-header">Selected Implementation Details</h3>
+            <div class="dark-panel" v-if="!selectedDetails?.length">
+              <p class="empty-state">No implementation details added yet. Select from the sections below.</p>
+            </div>
+            <div v-else class="selected-details">
+              <div v-for="(detail, index) in selectedDetails" 
+                   :key="index"
+                   class="task-item"
+                   @click="deselectDetail(detail)">
+                <v-icon size="small" :color="detail.section === 'Frontend' ? 'primary' : detail.section === 'Backend' ? 'success' : 'warning'" class="mr-2">
+                  {{ detail.section === 'Frontend' ? 'mdi-code-tags' : detail.section === 'Backend' ? 'mdi-server' : 'mdi-database' }}
+                </v-icon>
+                {{ detail.task }}
               </div>
+            </div>
+          </section>
+
+          <!-- Available Details Section -->
+          <section>
+            <h3 class="implementation-title">Implementation Details</h3>
+            
+            <h4>Frontend</h4>
+            <div class="task-list">
+              <div v-for="(task, index) in availableDetails.Frontend" 
+                   :key="'fe-'+index"
+                   class="task-item"
+                   @click="selectDetail('Frontend', task)">
+                <v-icon size="small" color="primary" class="mr-2">mdi-code-tags</v-icon>
+                {{ task }}
+              </div>
+            </div>
+
+            <h4>Backend</h4>
+            <div class="task-list">
+              <div v-for="(task, index) in availableDetails.Backend" 
+                   :key="'be-'+index"
+                   class="task-item"
+                   @click="selectDetail('Backend', task)">
+                <v-icon size="small" color="success" class="mr-2">mdi-server</v-icon>
+                {{ task }}
+              </div>
+            </div>
+
+            <h4>Database</h4>
+            <div class="task-list">
+              <div v-for="(task, index) in availableDetails.Database" 
+                   :key="'db-'+index"
+                   class="task-item"
+                   @click="selectDetail('Database', task)">
+                <v-icon size="small" color="warning" class="mr-2">mdi-database</v-icon>
+                {{ task }}
+              </div>
+            </div>
+          </section>
+
+          <!-- Footer buttons -->
+          <div class="footer-buttons">
+            <v-btn 
+              color="success" 
+              class="mr-4"
+              @click="acceptTechReview"
+              :disabled="editingStory || editingCriteria"
+            >
+              ACCEPT TECH REVIEW
+            </v-btn>
+            <v-btn 
+              color="primary"
+              @click="submitForEstimation"
+              :disabled="editingStory || editingCriteria"
+            >
+              SEND FOR ESTIMATION
+            </v-btn>
+            <div class="footer-hint" v-if="editingStory || editingCriteria">
+              Save your changes to enable actions
             </div>
           </div>
         </div>
@@ -103,278 +191,277 @@
 
       <!-- Right Column -->
       <div class="analysis-panel">
-        <!-- Technical Analysis -->
         <h3 class="panel-title">Technical Analysis</h3>
-        <div class="analysis-grid">
-          <div v-for="(analysis, key) in analysis?.TechnicalAnalysis"
+        <div class="tech-analysis-grid">
+          <div v-for="(analysis, key) in storyData?.analysis?.TechnicalAnalysis || {}"
                :key="key"
-               class="analysis-item">
+               class="tech-analysis-item dark-panel">
             <div class="analysis-header">
-              <span class="analysis-title">{{ key }}</span>
+              <h4>{{ key }}</h4>
               <div class="score-badge" :class="getScoreClass(analysis.Score)">
                 {{ analysis.Score }}/10
               </div>
             </div>
-            <div class="analysis-content">{{ analysis.Description }}</div>
+            <p class="analysis-content">{{ analysis.Description }}</p>
           </div>
         </div>
 
-        <!-- Risks & Considerations -->
         <h3 class="panel-title mt-8">Risks & Considerations</h3>
         <div class="risks-grid">
-          <div v-for="(risk, index) in analysis?.RisksAndConsiderations"
+          <div v-for="(risk, index) in storyData?.analysis?.RisksAndConsiderations || []"
                :key="index"
-               class="risk-item">
+               class="risk-item dark-panel"
+               :class="risk.Severity?.toLowerCase()">
             <div class="risk-header">
-              <v-icon color="warning" class="mr-2">mdi-alert</v-icon>
-              {{ risk.Classification }}
-              <span class="risk-severity">({{ risk.Severity }})</span>
+              <div class="risk-title">
+                <v-icon color="warning" class="mr-2">mdi-alert</v-icon>
+                {{ risk.Classification }}
+              </div>
+              <div class="risk-severity">{{ risk.Severity }}</div>
             </div>
             <div class="risk-description">{{ risk.Description }}</div>
-            <div class="risk-solution">
+            <div class="risk-mitigation">
               <v-icon color="success" size="small" class="mr-2">mdi-shield</v-icon>
               {{ risk.PotentialSolution }}
             </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Fixed Position Footer -->
-    <div class="fixed-button-container">
-      <v-btn
-        color="primary"
-        size="large"
-        @click="submitForEstimation"
-        :loading="loading"
-      >
-        Submit for Team Estimation
-      </v-btn>
+        <h3 class="panel-title mt-8">Recommendations</h3>
+        <div class="recommendations-list">
+          <div v-for="(rec, index) in storyData?.analysis?.Recommendations || []"
+               :key="index"
+               class="recommendation-item dark-panel">
+            <v-icon color="info" size="small" class="mr-2">mdi-lightbulb</v-icon>
+            {{ rec }}
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { useStoryStore } from '@/stores/storyStore'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import axios from 'axios'
 
+const isDev = computed(() => import.meta.env.DEV)
 const route = useRoute()
-const store = useStoryStore()
-const analysis = ref(null)
-const loading = ref(true)
-const selectedTasks = ref([])
+const router = useRouter()
+const storyData = ref(null)
+const error = ref(null)
+const loading = ref(false)
+const submitting = ref(false)
+const editingStory = ref(false)
+const editedStory = ref('')
+const editingCriteria = ref(false)
+const editedCriteria = ref('')
+const selectedDetails = ref([])
 
 const getScoreClass = (score) => {
-  if (score >= 8) return 'score-high'
-  if (score >= 5) return 'score-medium'
+  if (score <= 3) return 'score-high'
+  if (score <= 7) return 'score-medium'
   return 'score-low'
 }
 
-const submitForEstimation = async () => {
+const fetchTechReview = async () => {
   loading.value = true
+  error.value = null
+  
   try {
-    // TODO: Implement submission logic
-    console.log('Submitting for estimation')
-  } catch (error) {
-    console.error('Error submitting for estimation:', error)
+    const storyId = route.params.id
+    if (!storyId) {
+      throw new Error('No story ID provided')
+    }
+
+    const response = await axios.get(
+      `${import.meta.env.VITE_API_URL}/stories/${storyId}?version=SENIOR_DEV`
+    )
+    
+    storyData.value = response.data
+    console.log('Tech review data:', storyData.value)
+  } catch (err) {
+    console.error('Error fetching tech review:', err)
+    error.value = 'Failed to load technical review: ' + (err.message || 'Unknown error')
   } finally {
     loading.value = false
   }
 }
 
-// Computed property to get unselected tasks
-const unselectedTasks = computed(() => {
-  if (!analysis.value?.ImplementationDetails) return { Frontend: [], Backend: [], Database: [] }
-  
-  const selected = selectedTasks.value.reduce((acc, task) => {
-    if (!acc[task.category]) acc[task.category] = new Set()
-    acc[task.category].add(task.description)
-    return acc
-  }, {})
-
-  return {
-    Frontend: (analysis.value.ImplementationDetails.Frontend || [])
-      .filter(task => !selected.Frontend?.has(task)),
-    Backend: (analysis.value.ImplementationDetails.Backend || [])
-      .filter(task => !selected.Backend?.has(task)),
-    Database: (analysis.value.ImplementationDetails.Database || [])
-      .filter(task => !selected.Database?.has(task))
+const acceptTechReview = async () => {
+  try {
+    // TODO: Implement API call
+    console.log('Accepting tech review...')
+  } catch (error) {
+    console.error('Error accepting tech review:', error)
   }
+}
+
+const submitForEstimation = async () => {
+  try {
+    // TODO: Implement API call
+    console.log('Submitting for estimation...')
+  } catch (error) {
+    console.error('Error submitting for estimation:', error)
+  }
+}
+
+const editTask = (section, index, task) => {
+  console.log('Edit task:', { section, index, task })
+  // TODO: Implement edit functionality
+}
+
+const startEditingStory = () => {
+  editedStory.value = storyData.value?.content?.story || ''
+  editingStory.value = true
+}
+
+const saveStory = () => {
+  if (storyData.value?.content) {
+    storyData.value.content.story = editedStory.value
+  }
+  editingStory.value = false
+}
+
+const cancelEditStory = () => {
+  editingStory.value = false
+}
+
+const startEditingCriteria = () => {
+  editedCriteria.value = storyData.value?.content?.acceptance_criteria?.join('\n') || ''
+  editingCriteria.value = true
+}
+
+const saveCriteria = () => {
+  if (storyData.value?.content) {
+    storyData.value.content.acceptance_criteria = editedCriteria.value
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+  }
+  editingCriteria.value = false
+}
+
+const cancelEditCriteria = () => {
+  editingCriteria.value = false
+}
+
+const selectDetail = (section, task) => {
+  selectedDetails.value.push({ section, task })
+}
+
+const deselectDetail = (detail) => {
+  const index = selectedDetails.value.findIndex(d => d.task === detail.task && d.section === detail.section)
+  if (index !== -1) {
+    selectedDetails.value.splice(index, 1)
+  }
+}
+
+// Update computed property to handle the new structure
+const availableDetails = computed(() => {
+  const details = { Frontend: [], Backend: [], Database: [] }
+  Object.entries(storyData.value?.analysis?.ImplementationDetails || {}).forEach(([section, tasks]) => {
+    details[section] = tasks.filter(task => 
+      !selectedDetails.value.some(d => d.task === task && d.section === section)
+    )
+  })
+  return details
 })
 
-const toggleTask = (category, index, description) => {
-  selectedTasks.value.push({ category, index, description })
-}
-
-const removeSelectedTask = (index) => {
-  selectedTasks.value.splice(index, 1)
-}
-
-const pollForAnalysis = async () => {
-  try {
-    const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/stories/${route.params.id}?version=SENIOR_DEV`
-    )
-    
-    if (response.ok) {
-      const data = await response.json()
-      analysis.value = data
-      return true // Stop polling
+// Watch for route changes
+watch(
+  () => route.params.id,
+  (newId) => {
+    if (newId) {
+      fetchTechReview()
     }
-    return false // Continue polling
-  } catch (error) {
-    console.error('Error:', error)
-    return false
   }
-}
+)
 
-// Start polling when component mounts
 onMounted(() => {
-  const pollInterval = setInterval(async () => {
-    const success = await pollForAnalysis()
-    if (success) {
-      clearInterval(pollInterval)
-    }
-  }, 2000) // Poll every 2 seconds
+  if (route.params.id) {
+    fetchTechReview()
+  }
 })
 </script>
 
 <style scoped>
-/* Base Layout */
+.tech-review {
+  padding: 2rem;
+  color: #fff;
+}
+
 .two-column-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  padding: 2rem;
-  max-width: 1800px;
+  gap: 1.5rem;
+  padding: 1rem;
+  max-width: 2000px;
   margin: 0 auto;
-  min-height: 100vh;
 }
 
-.primary-content-wrapper {
-  width: 100%;
-  min-width: 0;
-}
-
-.primary-content {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 2rem;
-  margin-bottom: 4rem; /* Space for fixed button */
-}
-
-/* Section Styles */
-.page-title {
-  color: #64B5F6;
-  font-size: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.section-title {
+.page-title,
+.implementation-title,
+.panel-title {
   color: #64B5F6;
   font-size: 1.25rem;
-  margin: 2rem 0 1rem;
+  margin-bottom: 1rem;
+  font-weight: normal;
+}
+
+.section-header {
+  color: #fff;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  font-weight: normal;
+}
+
+.task-item,
+.criteria-item,
+pre {
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 
 .dark-panel {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(30, 41, 59, 0.8);
   border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
 }
 
-/* Implementation Details */
-.implementation-sections {
-  display: grid;
-  gap: 1.5rem;
-}
-
-.detail-section {
-  background: rgba(33, 150, 243, 0.1);
-  border-radius: 8px;
-  padding: 1.5rem;
-}
-
-.detail-title {
-  display: flex;
-  align-items: center;
-  color: #64B5F6;
-  font-size: 1.1rem;
+section {
   margin-bottom: 1rem;
 }
 
 .task-list {
-  display: grid;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .task-item {
-  padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  padding: 0.5rem 0.75rem;
 }
 
-.task-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateY(-1px);
+.footer-buttons {
+  bottom: 1rem;
+  left: 1rem;
 }
 
-.selected-tasks {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-  padding: 1.5rem;
-}
-
-.selected-task-list {
+.tech-analysis-grid,
+.risks-grid,
+.recommendations-list {
   display: grid;
   gap: 0.75rem;
 }
 
-.selected-task-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 6px;
-}
-
-.task-category {
-  color: #64B5F6;
-  font-weight: 500;
-  margin-right: 0.5rem;
-}
-
-.remove-btn {
-  margin-left: auto;
-}
-
-/* Analysis Panel */
-.analysis-panel {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 2rem;
-  height: 100%;
-}
-
-.panel-title {
-  color: #64B5F6;
-  font-size: 1.25rem;
-  margin-bottom: 1.5rem;
-}
-
-.analysis-grid {
-  display: grid;
-  gap: 1rem;
-}
-
-.analysis-item {
-  background: rgba(33, 150, 243, 0.1);
-  padding: 1.25rem;
+.tech-analysis-item,
+.risk-item,
+.recommendation-item {
+  background: rgba(30, 41, 59, 0.8);
   border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 0;
 }
 
 .analysis-header {
@@ -384,17 +471,16 @@ onMounted(() => {
   margin-bottom: 0.75rem;
 }
 
-.analysis-title {
-  color: #64B5F6;
-  font-weight: 500;
-  text-transform: capitalize;
+.analysis-content {
+  margin: 0;
+  line-height: 1.5;
 }
 
 .score-badge {
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
-  font-size: 0.9rem;
   font-weight: 500;
+  font-size: 0.9rem;
 }
 
 .score-high {
@@ -412,87 +498,193 @@ onMounted(() => {
   color: #E57373;
 }
 
-/* Risks Section */
-.risks-grid {
-  display: grid;
-  gap: 1rem;
-  margin-top: 1rem;
+.risk-item {
+  border-left: 4px solid;
+  padding: 1.25rem 1.5rem;
 }
 
-.risk-item {
-  background: rgba(33, 150, 243, 0.1);
-  padding: 1.25rem;
-  border-radius: 8px;
+.risk-item.critical { 
+  border-left-color: #FF1744;
+}
+.risk-item.high { 
+  border-left-color: #EF5350;
+}
+.risk-item.medium { 
+  border-left-color: #FFA726;
+}
+.risk-item.low { 
+  border-left-color: #66BB6A;
+}
+.risk-item.informational { 
+  border-left-color: #64B5F6;
+}
+
+.risk-severity {
+  font-size: 0.9rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  background: rgba(30, 41, 59, 0.8);
+}
+
+.risk-item.critical .risk-severity { 
+  color: #FF1744;
+}
+.risk-item.high .risk-severity { 
+  color: #EF5350;
+}
+.risk-item.medium .risk-severity { 
+  color: #FFA726;
+}
+.risk-item.low .risk-severity { 
+  color: #66BB6A;
+}
+.risk-item.informational .risk-severity { 
+  color: #64B5F6;
 }
 
 .risk-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  color: #FFA726;
-  font-weight: 500;
   margin-bottom: 0.75rem;
 }
 
-.risk-severity {
-  margin-left: 0.5rem;
-  font-size: 0.9rem;
-  opacity: 0.8;
+.risk-title {
+  display: flex;
+  align-items: center;
+  font-weight: 500;
 }
 
 .risk-description {
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
   line-height: 1.5;
 }
 
-.risk-solution {
+.risk-mitigation {
   color: #81C784;
   display: flex;
   align-items: center;
   font-size: 0.9rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Fixed Button Container */
-.fixed-button-container {
-  position: fixed;
-  bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  width: auto;
+.recommendation-item {
   display: flex;
-  justify-content: center;
-  background: linear-gradient(to top, rgba(18, 18, 18, 1) 50%, rgba(18, 18, 18, 0));
-  padding: 1rem;
+  align-items: flex-start;
+  padding: 1rem 1.5rem;
+  line-height: 1.5;
 }
 
-/* Responsive Design */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 1rem;
+}
+
+.error-state {
+  text-align: center;
+  padding: 2rem;
+  margin: 2rem;
+}
+
+.empty-state {
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+}
+
+.implementation-item {
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chevron-icons {
+  display: flex;
+  gap: 2px;
+}
+
+.selectable {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.selectable:hover {
+  background: rgba(40, 51, 69, 0.8);
+}
+
+.edit-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  opacity: 0;
+}
+
+.editable-content:hover .edit-btn {
+  opacity: 1;
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+}
+
+.edit-textarea {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
 @media (max-width: 1024px) {
   .two-column-layout {
     grid-template-columns: 1fr;
   }
-
-  .analysis-panel {
-    margin-top: 2rem;
-  }
-
-  .fixed-button-container {
-    width: 100%;
-    background: rgba(18, 18, 18, 0.9);
-  }
 }
 
-/* Utility Classes */
-.mb-8 {
-  margin-bottom: 2rem;
+/* Section headers (Frontend, Backend, Database) */
+h4 {
+  color: #fff;
+  font-size: 1.1rem;
+  margin: 1.5rem 0 1rem;
+  font-weight: normal;
 }
 
-.mt-8 {
-  margin-top: 2rem;
+/* Task items in the implementation details */
+.task-item {
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  font-size: 0.95rem;
+  line-height: 1.5;
 }
 
-.mr-2 {
-  margin-right: 0.5rem;
+.task-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+/* First section header shouldn't have top margin */
+h4:first-of-type {
+  margin-top: 0;
+}
+
+/* Icons in task items */
+.task-item .v-icon {
+  margin-right: 0.75rem;
+}
+
+/* Hover state */
+.task-item.selectable:hover {
+  background: rgba(40, 51, 69, 0.8);
+  cursor: pointer;
 }
 </style> 

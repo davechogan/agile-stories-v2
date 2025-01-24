@@ -72,9 +72,8 @@
           <!-- Single button for tech review -->
           <div class="action-buttons">
             <v-btn
-              color="primary"
-              size="large"
               @click="requestTechnicalReview"
+              color="primary"
               :loading="reviewing"
               :disabled="!canRequestReview || !analysis.analysis"
             >
@@ -290,8 +289,8 @@ const requestTechnicalReview = async () => {
     
     console.log('Technical review response:', response.data)
     
-    // Navigate to tech review page
-    router.push(`/tech-review/${storyId}`)
+    // Navigate to tech review page with correct path
+    router.push(`/tech/${storyId}`)
     
   } catch (err) {
     console.error('Error requesting technical review:', err)
