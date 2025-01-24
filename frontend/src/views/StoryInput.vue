@@ -87,19 +87,62 @@
         </div>
       </div>
     </div>
+
+    <transition name="fade">
+      <div v-if="showTransition" class="animation-container">
+        <!-- Brain with Gears -->
+        <div class="brain">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <!-- Main Brain Shape -->
+            <path class="brain-path" d="M50 10 C20 10 10 30 10 50 C10 70 20 90 50 90 C80 90 90 70 90 50 C90 30 80 10 50 10" />
+            
+            <!-- Rotating Gears -->
+            <g class="gear gear-1">
+              <circle cx="35" cy="40" r="12" class="gear-body"/>
+              <path d="M35 28 L37 25 L33 25 Z M35 52 L37 55 L33 55 Z M23 40 L20 42 L20 38 Z M47 40 L50 42 L50 38 Z" class="gear-teeth"/>
+            </g>
+            
+            <g class="gear gear-2">
+              <circle cx="65" cy="40" r="10" class="gear-body"/>
+              <path d="M65 30 L67 27 L63 27 Z M65 50 L67 53 L63 53 Z M55 40 L52 42 L52 38 Z M75 40 L78 42 L78 38 Z" class="gear-teeth"/>
+            </g>
+            
+            <g class="gear gear-3">
+              <circle cx="50" cy="65" r="15" class="gear-body"/>
+              <path d="M50 50 L52 47 L48 47 Z M50 80 L52 83 L48 83 Z M35 65 L32 67 L32 63 Z M65 65 L68 67 L68 63 Z" class="gear-teeth"/>
+            </g>
+          </svg>
+        </div>
+
+        <!-- Dynamic Sticky Notes -->
+        <div v-for="(note, index) in notes" 
+             :key="note.id" 
+             class="sticky-note"
+             :style="{
+               transform: `translate(${note.x}px, ${note.y}px) rotate(${note.rotation}deg)`,
+               ...getNoteColor(index)
+             }">
+          <div class="note-content">
+            <div class="note-text">{{ note.text }}</div>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { v4 as uuidv4 } from 'uuid'
+import AnimationTransition from '@/components/animation_transistion.vue'
 
 const router = useRouter()
 const loading = ref(false)
 const error = ref(null)
 const analyzing = ref(false)
+const showTransition = ref(false)
 
 // Story data structure
 const story = ref({
@@ -120,6 +163,11 @@ const submitStory = async () => {
   const storyId = uuidv4()
   console.log('Generated new story_id:', storyId)
   
+  // Start animation after 1 second
+  setTimeout(() => {
+    showTransition.value = true
+  }, 1000)
+  
   try {
     const storyData = {
       story_id: storyId,
@@ -139,7 +187,7 @@ const submitStory = async () => {
     
     console.log('Response from analyze:', JSON.stringify(response.data, null, 2))
     
-    // Navigate using the generated ID
+    // Animation will automatically stop when navigation occurs
     await router.push(`/agile/${storyId}`)
     
   } catch (err) {
@@ -147,6 +195,7 @@ const submitStory = async () => {
     if (err.response) {
       console.error('Error response:', err.response.data)
     }
+    showTransition.value = false
   } finally {
     analyzing.value = false
   }
@@ -213,6 +262,173 @@ const guidelines = {
     ]
   }
 }
+
+const STICKY_NOTES = [
+  "User Stories",
+  "Acceptance Criteria",
+  "Technical Tasks",
+  "Estimations",
+  "Implementation"
+];
+
+const notes = ref([])
+
+const initializeNotes = () => {
+  const margin = 160;
+  const width = window.innerWidth - margin * 2;
+  const height = window.innerHeight - margin * 2;
+  const halfWidth = width / 2;
+  const halfHeight = height / 2;
+
+  notes.value = STICKY_NOTES.map((text, index) => {
+    const quadrant = index % 4;
+    let x, y, vx, vy;
+
+    // Position notes in corners
+    switch(quadrant) {
+      case 0: // Top-left
+        x = margin;
+        y = margin;
+        vx = 1 + Math.random();
+        vy = 1 + Math.random();
+        break;
+      case 1: // Top-right
+        x = width - margin;
+        y = margin;
+        vx = -(1 + Math.random());
+        vy = 1 + Math.random();
+        break;
+      case 2: // Bottom-left
+        x = margin;
+        y = height - margin;
+        vx = 1 + Math.random();
+        vy = -(1 + Math.random());
+        break;
+      case 3: // Bottom-right
+        x = width - margin;
+        y = height - margin;
+        vx = -(1 + Math.random());
+        vy = -(1 + Math.random());
+        break;
+    }
+
+    return {
+      id: index,
+      text,
+      x,
+      y,
+      vx,
+      vy,
+      rotation: Math.random() * 360,
+      rotationSpeed: (Math.random() - 0.5) * 0.8
+    };
+  });
+}
+
+const startAnimation = () => {
+  const animate = () => {
+    updateNotes();
+    requestAnimationFrame(animate);
+  };
+  animate();
+}
+
+const updateNotes = () => {
+  const margin = 160;
+  const containerWidth = window.innerWidth - margin;
+  const containerHeight = window.innerHeight - margin;
+
+  notes.value.forEach((note, i) => {
+    // Update position with slower movement
+    note.x += note.vx * 0.7;
+    note.y += note.vy * 0.7;
+    note.rotation += note.rotationSpeed;
+
+    // Bounce off walls with gentler randomization
+    if (note.x < margin || note.x > containerWidth - margin) {
+      note.vx *= -1;
+      note.vy += (Math.random() - 0.5) * 0.5;
+      note.x = Math.max(margin, Math.min(note.x, containerWidth - margin));
+    }
+    if (note.y < margin || note.y > containerHeight - margin) {
+      note.vy *= -1;
+      note.vx += (Math.random() - 0.5) * 0.5;
+      note.y = Math.max(margin, Math.min(note.y, containerHeight - margin));
+    }
+
+    // Collision detection with other notes
+    for (let j = i + 1; j < notes.value.length; j++) {
+      const other = notes.value[j];
+      const dx = other.x - note.x;
+      const dy = other.y - note.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const minDistance = margin * 0.8; // Collision distance
+
+      if (distance < minDistance) {
+        // Calculate collision response
+        const angle = Math.atan2(dy, dx);
+        const targetX = note.x + Math.cos(angle) * minDistance;
+        const targetY = note.y + Math.sin(angle) * minDistance;
+        
+        // Move notes apart gently
+        const moveRatio = 0.1; // Gentle movement
+        other.x = other.x * (1 - moveRatio) + targetX * moveRatio;
+        other.y = other.y * (1 - moveRatio) + targetY * moveRatio;
+        
+        // Exchange velocities with dampening
+        const dampening = 0.8;
+        const tempVx = note.vx;
+        const tempVy = note.vy;
+        
+        note.vx = other.vx * dampening;
+        note.vy = other.vy * dampening;
+        other.vx = tempVx * dampening;
+        other.vy = tempVy * dampening;
+        
+        // Add slight rotation on collision
+        const rotationImpact = 0.4;
+        note.rotationSpeed += (Math.random() - 0.5) * rotationImpact;
+        other.rotationSpeed += (Math.random() - 0.5) * rotationImpact;
+      }
+    }
+
+    // Maintain minimum speed
+    const speed = Math.sqrt(note.vx * note.vx + note.vy * note.vy);
+    if (speed < 1) {
+      const angle = Math.random() * Math.PI * 2;
+      note.vx = Math.cos(angle) * 1.5;
+      note.vy = Math.sin(angle) * 1.5;
+    }
+
+    // Cap maximum rotation speed
+    note.rotationSpeed = Math.max(-1, Math.min(1, note.rotationSpeed));
+  });
+}
+
+const getNoteColor = (index) => {
+  const colors = [
+    { bg: '#fff7c0', shadow: '#e6d28a' }, // Yellow
+    { bg: '#c0f0c0', shadow: '#8ad28a' }, // Green
+    { bg: '#c0e0ff', shadow: '#8ab2d2' }, // Blue
+    { bg: '#ffc0db', shadow: '#d28aa6' }, // Pink
+    { bg: '#ffd7b0', shadow: '#d2a88a' }  // Orange
+  ];
+  const color = colors[index % colors.length];
+  return {
+    background: `linear-gradient(135deg, ${color.bg} 0%, ${color.shadow} 100%)`
+  };
+}
+
+watch(showTransition, (newVal) => {
+  if (newVal) {
+    initializeNotes();
+    startAnimation();
+  } else {
+    if (animationFrame.value) {
+      cancelAnimationFrame(animationFrame.value);
+    }
+  }
+})
 </script>
 
 <style scoped>
@@ -387,5 +603,104 @@ const guidelines = {
 .criteria-item :deep(.v-field__input) {
   min-height: 48px !important;  /* Reduced height */
   padding: 8px 12px !important;
+}
+
+.animation-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.brain {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(35vw, 350px);
+  height: min(35vw, 350px);
+}
+
+.brain-path {
+  fill: #2c3e50;
+  stroke: #34495e;
+  stroke-width: 2;
+}
+
+.gear {
+  transform-origin: center;
+}
+
+.gear-body {
+  fill: #95a5a6;
+  stroke: #7f8c8d;
+  stroke-width: 1;
+}
+
+.gear-teeth {
+  fill: #95a5a6;
+}
+
+.gear-1 {
+  animation: rotate 8s linear infinite;
+}
+
+.gear-2 {
+  animation: rotate-reverse 6s linear infinite;
+}
+
+.gear-3 {
+  animation: rotate 10s linear infinite;
+}
+
+.sticky-note {
+  position: absolute;
+  width: min(18vw, 160px);
+  height: min(18vw, 140px);
+  transition: transform 0.1s linear;
+}
+
+.note-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  box-shadow: 3px 3px 10px rgba(0,0,0,0.2),
+              -1px -1px 4px rgba(0,0,0,0.1);
+  border-radius: 4px;
+  padding: 15px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: clamp(14px, 1.8vw, 20px);
+  color: #2c3e50;
+}
+
+.note-text {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes rotate-reverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style> 
