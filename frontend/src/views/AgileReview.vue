@@ -18,74 +18,76 @@
       <!-- Left Column -->
       <div class="primary-content-wrapper">
         <div class="primary-content">
-          <h2 class="page-title">Improved Title</h2>
-          <div class="dark-panel mb-8">
-            <EditableContent
-              v-model="analysis.analysis.title"
-              title="Story Title"
-              type="single-line"
-              placeholder="Enter story title..."
-            />
-          </div>
-
-          <h2 class="page-title">Improved Story</h2>
-          <div class="dark-panel mb-8">
-            <EditableContent
-              v-model="analysis.analysis.story"
-              title="User Story"
-              type="text"
-              placeholder="Describe the user story..."
-            />
-          </div>
-
-          <h2 class="page-title">Acceptance Criteria</h2>
-          <div class="dark-panel mb-8">
-            <EditableContent
-              v-model="analysis.analysis.acceptance_criteria"
-              title="Acceptance Criteria"
-              type="list"
-              placeholder="Enter each criterion on a new line..."
-            />
-          </div>
-
-          <!-- Single button for tech review -->
-          <div class="action-buttons">
-            <v-btn
-              @click="requestTechnicalReview"
-              color="primary"
-              :loading="reviewing"
-              :disabled="!canRequestReview || !analysis.analysis"
-            >
-              Request Technical Review
-            </v-btn>
-          </div>
+          <h2 class="page-title">Agile Review Modifications</h2>
+          
+          <EditableSection
+            v-model="analysis.analysis.title"
+            title="Story Title"
+            type="single-line"
+            placeholder="Enter story title..."
+          />
+          
+          <EditableSection
+            v-model="analysis.analysis.story"
+            title="User Story"
+            type="text"
+            placeholder="Describe the user story..."
+          />
+          
+          <EditableSection
+            v-model="analysis.analysis.acceptance_criteria"
+            title="Acceptance Criteria"
+            type="list"
+            placeholder="Enter each criterion on a new line..."
+          />
         </div>
       </div>
       
       <!-- Right Column -->
       <div class="analysis-panel">
-        <h3 class="panel-title">Suggestions</h3>
-        <div class="dark-panel mb-8">
-          <ul class="suggestions-list">
-            <li v-for="(suggestion, index) in analysis.analysis.Suggestions || []"
-                :key="index"
-                class="suggestion-item">
-              {{ suggestion }}
-            </li>
-          </ul>
+        <h2 class="page-title">Suggestions</h2>
+        <div class="suggestions-list">
+          <div v-for="(suggestion, index) in analysis.analysis.Suggestions || []"
+               :key="index"
+               class="suggestion-item">
+            {{ suggestion }}
+          </div>
         </div>
 
-        <h3 class="panel-title">INVEST Analysis</h3>
+        <h2 class="page-title mt-8">INVEST Analysis</h2>
         <div class="invest-grid">
           <div v-for="(item, index) in analysis.analysis.INVESTAnalysis || []"
                :key="index"
                class="invest-item">
             <div class="invest-header">
-              <span class="invest-letter">{{ item.letter }}</span>
-              <span class="invest-title">{{ item.title }}</span>
+              <div class="invest-letter">{{ item.letter }}</div>
+              <div class="invest-title">{{ item.title }}</div>
             </div>
             <div class="invest-content">{{ item.content }}</div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Replace the current action-buttons div with this sticky footer -->
+    <div class="sticky-footer">
+      <div class="footer-content">
+        <div class="footer-buttons">
+          <v-btn 
+            color="success" 
+            class="mr-4"
+            @click="acceptAgileReview"
+          >
+            ACCEPT AGILE REVIEW
+          </v-btn>
+          <v-btn 
+            color="primary"
+            @click="requestTechnicalReview"
+            :loading="reviewing"
+            :disabled="!canRequestReview || !analysis.analysis"
+          >
+            REQUEST TECH REVIEW
+          </v-btn>
         </div>
       </div>
     </div>
@@ -94,14 +96,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { mockAnalysisResult } from '@/mocks/mockAnalysisData'
-import { useStoryStore } from '@/stores/storyStore'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
-import EditableContent from '@/components/EditableContent.vue'
+import EditableSection from '@/components/EditableSection.vue'
 
 const router = useRouter()
-const storyStore = useStoryStore()
 const analysis = ref(null)
 const route = useRoute()
 const error = ref(null)
@@ -115,99 +114,6 @@ onMounted(() => {
     mounted.value = true
   }, 100)
 })
-
-// Comment out or remove the redirect logic
-/*
-watch(analysis, (newValue) => {
-  if (!newValue) {
-    router.push('/')
-  }
-})
-*/
-
-// Story editing
-const editingStory = ref(false)
-const editedStory = ref('')
-
-const startEditingStory = () => {
-  editedStory.value = mockAnalysisResult.analysis.story
-  editingStory.value = true
-}
-
-const saveStory = () => {
-  mockAnalysisResult.analysis.story = editedStory.value
-  editingStory.value = false
-}
-
-const cancelEditStory = () => {
-  editingStory.value = false
-}
-
-// Acceptance Criteria editing
-const editingAC = ref(false)
-const editedAC = ref('')
-
-const startEditingAC = () => {
-  editedAC.value = mockAnalysisResult.analysis.acceptance_criteria.join('\n')
-  editingAC.value = true
-}
-
-const saveAC = () => {
-  mockAnalysisResult.analysis.acceptance_criteria = editedAC.value
-    .split('\n')
-    .filter(line => line.trim()) // Remove empty lines
-  editingAC.value = false
-}
-
-const cancelEditAC = () => {
-  editingAC.value = false
-}
-
-// Parse INVEST analysis into structured data
-const investAnalysis = [
-  {
-    letter: 'I',
-    title: 'Independent',
-    content: 'The user story is independent, as it does not seem to depend on any other user story for its implementation.'
-  },
-  {
-    letter: 'N',
-    title: 'Negotiable',
-    content: 'The story is not very negotiable as it is not clear on what exactly the notification bell should do, or what exactly broadcasting a message entails.'
-  },
-  {
-    letter: 'V',
-    title: 'Valuable',
-    content: 'The value to the user is not clearly stated. Why should the user care about this new notification bell?'
-  },
-  {
-    letter: 'E',
-    title: 'Estimable',
-    content: 'The story is too vague to be reliably estimated. We don\'t know what "broadcasting a message" involves.'
-  },
-  {
-    letter: 'S',
-    title: 'Small',
-    content: 'The story is not small, as it seems to involve several different features or functionalities.'
-  },
-  {
-    letter: 'T',
-    title: 'Testable',
-    content: 'The acceptance criteria are too vague to be testable. What does it mean for everyone to "get it" and "read it"?'
-  }
-]
-
-// Add this function to detect negative feedback
-const isNegative = (content: string): boolean => {
-  const negativeTerms = ['not', 'too vague', 'unclear', 'missing'];
-  return negativeTerms.some(term => content.toLowerCase().includes(term));
-}
-
-const updateCriterion = (index, value) => {
-  if (analysis.value?.analysis?.acceptance_criteria) {
-    analysis.value.analysis.acceptance_criteria[index] = value
-  }
-}
 
 const fetchAnalysis = async () => {
   loading.value = true
@@ -286,10 +192,24 @@ const requestTechnicalReview = async () => {
     reviewing.value = false
   }
 }
+
+const acceptAgileReview = async () => {
+  try {
+    // Add your accept logic here
+    console.log('Accepting agile review')
+    // Could navigate to next step or show confirmation
+  } catch (error) {
+    console.error('Error accepting agile review:', error)
+  }
+}
+
+const isNegative = (content: string): boolean => {
+  const negativeTerms = ['not', 'too vague', 'unclear', 'missing']
+  return negativeTerms.some(term => content.toLowerCase().includes(term))
+}
 </script>
 
 <style scoped>
-/* Copy all styles from OLD-AgileReview.vue */
 .test {
   display: block;
   width: 100%;
@@ -424,17 +344,12 @@ const requestTechnicalReview = async () => {
 
 .suggestion-item {
   margin-bottom: 1rem;
-  padding-left: 1.5rem;
-  position: relative;
   font-size: 1rem;
   line-height: 1.6;
-}
-
-.suggestion-item::before {
-  content: "•";
-  color: #FFA726;
-  position: absolute;
-  left: 0;
+  background: rgba(33, 150, 243, 0.1);
+  padding: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: rgba(255, 255, 255, 0.87);
 }
 
 @media (max-width: 1024px) {
@@ -483,5 +398,27 @@ const requestTechnicalReview = async () => {
   white-space: pre-wrap;
   word-break: break-all;
   font-size: 0.8rem;
+}
+
+.sticky-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(18, 18, 18, 0.9);
+  padding: 1rem;
+  z-index: 100;
+}
+
+.footer-content {
+  max-width: 1800px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+}
+
+.footer-buttons {
+  display: flex;
+  gap: 1rem;
 }
 </style> 

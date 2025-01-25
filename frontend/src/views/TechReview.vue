@@ -26,21 +26,21 @@
         <div class="primary-content">
           <h2 class="page-title">Technical Review Modifications</h2>
           
-          <EditableContent
+          <EditableSection
             v-model="storyData.content.title"
             title="Story Title"
             type="single-line"
             placeholder="Enter story title..."
           />
           
-          <EditableContent
+          <EditableSection
             v-model="storyData.content.story"
             title="User Story"
             type="text"
             placeholder="Describe the user story..."
           />
           
-          <EditableContent
+          <EditableSection
             v-model="storyData.content.acceptance_criteria"
             title="Acceptance Criteria"
             type="list"
@@ -75,7 +75,7 @@
           </div>
 
           <!-- Implementation Details Section -->
-          <h3 class="mt-6">Implementation Details</h3>
+          <h2 class="mt-6">Implementation Details</h2>
           <div class="tech-section">
             <h4>Frontend</h4>
             <div class="task-list">
@@ -190,7 +190,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import EditableContent from '@/components/EditableContent.vue'
+import EditableSection from '@/components/EditableSection.vue'
 import { mockTechReviewResult } from '@/mocks/mockTechReviewData'
 
 const isDev = computed(() => import.meta.env.DEV)
