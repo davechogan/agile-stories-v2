@@ -29,6 +29,10 @@ output "estimations_table_stream_arn" {
   value       = aws_dynamodb_table.estimations.stream_arn
 }
 
+output "estimations_role_index_name" {
+  value = "role-story-index"
+}
+
 output "locks_table_name" {
   description = "Name of the terraform locks table"
   value       = aws_dynamodb_table.terraform_locks.name

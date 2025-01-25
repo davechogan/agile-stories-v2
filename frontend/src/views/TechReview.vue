@@ -224,6 +224,7 @@ const editedCriteria = ref('')
 const estimating = ref(false)
 const showTransition = ref(false)
 const isExiting = ref(false)
+const videoPlayer = ref(null)
 
 interface ImplementationDetail {
   type: 'Frontend' | 'Backend' | 'Database'
@@ -338,18 +339,20 @@ const getTeamEstimate = async () => {
       content: {
         title: storyData.value.content.title,
         story: storyData.value.content.story,
-        acceptance_criteria: storyData.value.content.acceptance_criteria
-      },
-      analysis: {
-        ImplementationDetails: selectedDetails.value.map(detail => ({
+        acceptance_criteria: storyData.value.content.acceptance_criteria,
+        implementation_details: selectedDetails.value.map(detail => ({
           type: detail.type,
           text: detail.text
         }))
       },
-      roles: [...new Set(selectedDetails.value.map(detail => detail.type))]
+      roles: ['Frontend', 'Backend', 'Database']  // TODO: Get from settings
     }
     
     console.log('Sending estimate request:', estimatePayload)
+    
+    // Show transition immediately
+    showTransition.value = true
+    isExiting.value = false
     
     const response = await axios.post(
       `${import.meta.env.VITE_API_URL}/stories/estimate`,
@@ -358,11 +361,10 @@ const getTeamEstimate = async () => {
     
     console.log('Estimate response:', response.data)
     
-    // Show transition after successful request
-    showTransition.value = true
-    isExiting.value = false
+    // Start fading out after response
+    isExiting.value = true
     
-    // Wait for fade out animation before navigating
+    // Wait for fade out animation before hiding video and navigating
     setTimeout(async () => {
       showTransition.value = false
       await router.push(`/estimates/${storyId}`)
@@ -881,6 +883,21 @@ h4:first-of-type {
 }
 
 .fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+.test {
+  display: block;
+  width: 100%;
+  opacity: 0;
+  transition: opacity 1s ease-in-out;
+}
+
+.fade-in {
+  opacity: 1;
+}
+
+.test.fade-out {
   opacity: 0;
 }
 </style> 

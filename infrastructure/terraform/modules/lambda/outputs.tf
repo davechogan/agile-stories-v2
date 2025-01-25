@@ -106,8 +106,13 @@ output "lambda_environment_variables" {
 
 # Note: Sensitive information should be marked as sensitive
 output "lambda_role_arn" {
-  description = "ARN of the IAM role used by Lambda functions"
+  description = "ARN of the Lambda IAM role"
   value       = aws_iam_role.lambda_role.arn
+}
+
+output "lambda_role_name" {
+  description = "Name of the Lambda IAM role"
+  value       = aws_iam_role.lambda_role.name
 }
 
 output "analyze_story_worker_arn" {

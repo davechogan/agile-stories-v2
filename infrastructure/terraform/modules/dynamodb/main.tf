@@ -81,6 +81,11 @@ resource "aws_dynamodb_table" "estimations" {
     type = "S"
   }
 
+  attribute {
+    name = "role"
+    type = "S"
+  }
+
   global_secondary_index {
     name            = "story-created-index"
     hash_key        = "story_id"
@@ -91,6 +96,13 @@ resource "aws_dynamodb_table" "estimations" {
   global_secondary_index {
     name            = "tenant-index"
     hash_key        = "tenantId"
+    range_key       = "story_id"
+    projection_type = "ALL"
+  }
+
+  global_secondary_index {
+    name            = "role-story-index"
+    hash_key        = "role"
     range_key       = "story_id"
     projection_type = "ALL"
   }

@@ -29,13 +29,14 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 # Initialize AWS clients
+secrets_client = boto3.client('secretsmanager')
 dynamodb = boto3.resource('dynamodb')
 lambda_client = boto3.client('lambda')
 ssm = boto3.client('ssm')
 
 # Get DynamoDB tables
-stories_table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
-estimates_table = dynamodb.Table(os.environ['ESTIMATES_TABLE'])
+stories_table = dynamodb.Table(os.environ.get('DYNAMODB_TABLE', 'dev-agile-stories'))
+estimates_table = dynamodb.Table(os.environ.get('ESTIMATES_TABLE', 'dev-agile-stories-estimations'))
 
 def get_story(story_id: str, tenant_id: str) -> dict:
     """
@@ -193,78 +194,158 @@ def store_final_estimate(story_id: str, tenant_id: str, estimates: list):
         logger.error(f"Error storing final estimate: {str(e)}")
         raise
 
+def calculate_average(estimate_type: str, results: list) -> float:
+    """
+    Calculate the average value for a specific estimate type across all roles.
+    
+    Args:
+        estimate_type (str): Either 'story_points' or 'person_days'
+        results (list): List of worker results containing estimates
+        
+    Returns:
+        float: Average value, or 0 if no results
+    """
+    if not results:
+        logger.warning(f"No results provided for {estimate_type} average calculation")
+        return 0
+        
+    values = [r['estimates'][estimate_type]['value'] for r in results]
+    if not values:
+        logger.warning(f"No values found for {estimate_type} in results")
+        return 0
+        
+    return sum(values) / len(values)
+
+def calculate_confidence(estimate_type: str, results: list) -> str:
+    """
+    Calculate the overall confidence level for a specific estimate type.
+    Uses conservative approach: if any LOW, return LOW, if any MEDIUM, return MEDIUM, else HIGH
+    
+    Args:
+        estimate_type (str): Either 'story_points' or 'person_days'
+        results (list): List of worker results containing estimates
+        
+    Returns:
+        str: 'LOW', 'MEDIUM', or 'HIGH', defaults to 'LOW' if no results
+    """
+    if not results:
+        logger.warning(f"No results provided for {estimate_type} confidence calculation")
+        return 'LOW'
+        
+    confidences = [r['estimates'][estimate_type]['confidence'] for r in results]
+    if not confidences:
+        logger.warning(f"No confidence values found for {estimate_type} in results")
+        return 'LOW'
+        
+    if 'LOW' in confidences:
+        return 'LOW'
+    elif 'MEDIUM' in confidences:
+        return 'MEDIUM'
+    return 'HIGH'
+
 def handler(event, context):
     try:
         # Parse request
         body = json.loads(event.get('body', '{}'))
         story_id = body.get('story_id')
         tenant_id = body.get('tenant_id')
-        roles = body.get('roles', [])
+        content = body.get('content', {})
+        analysis = body.get('analysis', {})
         
-        current_time = datetime.utcnow().isoformat()
+        # Define default roles based on implementation details
+        implementation_details = analysis.get('ImplementationDetails', [])
+        roles = list(set(detail.get('type') for detail in implementation_details if detail.get('type')))
         
-        # Save original content in PENDING to stories table
+        logger.info(f"Extracted roles from implementation details: {roles}")
+        
+        if not roles:
+            logger.warning("No roles found in implementation details, using defaults")
+            roles = ['Frontend', 'Backend']  # Default roles if none found
+        
+        # Save initial PENDING state
         pending_item = {
             'story_id': story_id,
             'version': 'TEAM_ESTIMATE_PENDING',
-            'tenant_id': tenant_id,
-            'created_at': current_time,
-            'updated_at': current_time,
-            'content': {  # Original story content
-                'title': body.get('content', {}).get('title', ''),
-                'story': body.get('content', {}).get('story', ''),
-                'acceptance_criteria': body.get('content', {}).get('acceptance_criteria', [])
-            },
-            'analysis': {  # Implementation details from tech review
-                'ImplementationDetails': body.get('analysis', {}).get('ImplementationDetails', [])
-            }
+            'tenantId': tenant_id,
+            'content': content,
+            'analysis': analysis,
+            'created_at': datetime.utcnow().isoformat(),
+            'status': 'PENDING',
+            'roles': roles  # Include roles in the pending state
         }
         
-        # Save PENDING version to stories table
+        logger.info(f"Saving PENDING state with roles: {json.dumps(pending_item)}")
         stories_table.put_item(Item=pending_item)
         
-        # Invoke workers and collect results
+        # Initialize Lambda client
         lambda_client = boto3.client('lambda')
         worker_results = []
+        worker_function_name = "dev-agile-stories-estimate-worker"  # Hardcoded for now
         
+        logger.info(f"Worker Lambda name: {worker_function_name}")
+        logger.info(f"Processing roles: {roles}")
+        
+        # Invoke worker Lambda for each role
         for role in roles:
             worker_payload = {
                 'story_id': story_id,
                 'tenant_id': tenant_id,
                 'role': role,
-                'content': pending_item['content'],
-                'analysis': pending_item['analysis']
+                'content': content,
+                'analysis': analysis
             }
             
-            response = lambda_client.invoke(
-                FunctionName='dev-agile-stories-estimate-worker',
-                InvocationType='RequestResponse',  # Synchronous invocation
-                Payload=json.dumps(worker_payload)
-            )
-            
-            result = json.loads(response['Payload'].read())
-            worker_results.append(result)
+            logger.info(f"Invoking worker for role {role} with payload: {json.dumps(worker_payload)}")
+            try:
+                response = lambda_client.invoke(
+                    FunctionName=worker_function_name,
+                    InvocationType='RequestResponse',
+                    Payload=json.dumps(worker_payload)
+                )
+                logger.info(f"Worker response for {role}: {response}")
+                
+                result = json.loads(response['Payload'].read())
+                logger.info(f"Worker result for {role}: {json.dumps(result)}")
+                
+                if result.get('statusCode') == 200:
+                    worker_result = json.loads(result.get('body', '{}'))
+                    worker_results.append(worker_result)
+                    logger.info(f"Added estimate from {role}: {json.dumps(worker_result)}")
+                else:
+                    logger.error(f"Worker failed for role {role}: {json.dumps(result)}")
+            except Exception as e:
+                logger.error(f"Error invoking worker for role {role}: {str(e)}")
         
-        # Calculate averages and store final estimate
+        # Calculate and save final estimate
+        current_time = datetime.utcnow().isoformat()
         final_estimate = {
-            'estimation_id': f"{story_id}_final",
+            'estimation_id': f"{story_id}_FINAL",
             'story_id': story_id,
-            'tenant_id': tenant_id,
-            'version': 'FINAL',
-            'created_at': datetime.utcnow().isoformat(),
-            'averages': calculate_average_estimates(worker_results),
+            'tenantId': tenant_id,
+            'created_at': current_time,
+            'role': 'FINAL',
+            'averages': {
+                'story_points': {
+                    'value': calculate_average('story_points', worker_results),
+                    'confidence': calculate_confidence('story_points', worker_results)
+                },
+                'person_days': {
+                    'value': calculate_average('person_days', worker_results),
+                    'confidence': calculate_confidence('person_days', worker_results)
+                }
+            },
             'individual_estimates': worker_results
         }
         
-        # Save final estimate to estimates table
+        logger.info(f"Saving final estimate: {json.dumps(final_estimate)}")
         estimates_table.put_item(Item=final_estimate)
         
         return {
             'statusCode': 200,
             'body': json.dumps({
-                'message': 'Estimation process completed',
+                'message': 'Team estimate completed',
                 'story_id': story_id,
-                'final_estimate': final_estimate
+                'estimate': final_estimate
             })
         }
         

@@ -117,3 +117,18 @@ output "stories_table_stream_arn" {
   description = "Stream ARN of the stories DynamoDB table"
   value       = module.dynamodb.stories_table_stream_arn
 }
+
+output "estimations_table_name" {
+  description = "Name of the estimations DynamoDB table"
+  value       = module.dynamodb.estimations_table_name
+}
+
+output "estimations_table_arn" {
+  description = "ARN of the estimations DynamoDB table"
+  value       = module.dynamodb.estimations_table_arn
+}
+
+output "estimations_role_index_name" {
+  description = "Name of the role-story GSI on estimations table"
+  value       = module.dynamodb.estimations_role_index_name
+}

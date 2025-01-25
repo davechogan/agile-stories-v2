@@ -7,7 +7,7 @@ FUNCTIONS=(
   #  "analyze_story:dev-agile-stories-analyze"
   #  "technical_review:dev-agile-stories-review"
     "team_estimate:dev-agile-stories-estimate"
-  #  "team_estimate_worker:dev-agile-stories-estimate-worker"
+    "team_estimate_worker:dev-agile-stories-estimate-worker"
 )
 
 for func in "${FUNCTIONS[@]}"; do

@@ -110,17 +110,22 @@ variable "stories_table_stream_arn" {
 }
 
 variable "estimations_table_name" {
-  description = "Name of the estimations DynamoDB table"
+  description = "Name of the DynamoDB estimations table"
   type        = string
 }
 
 variable "estimations_table_arn" {
-  description = "ARN of the estimations DynamoDB table"
+  description = "ARN of the DynamoDB estimations table"
   type        = string
 }
 
 variable "estimations_table_stream_arn" {
   description = "Stream ARN of the estimations DynamoDB table"
+  type        = string
+}
+
+variable "estimations_role_index_name" {
+  description = "Name of the role-story GSI on estimations table"
   type        = string
 }
 

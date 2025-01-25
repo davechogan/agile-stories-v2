@@ -144,23 +144,31 @@ variable "dynamodb_table_name" {
 }
 
 variable "estimations_table_name" {
-  description = "Name of the estimations DynamoDB table"
+  description = "Name of the DynamoDB estimations table"
   type        = string
+  default     = "dev-agile-stories-estimations"
 }
 
 variable "estimations_table_arn" {
-  description = "ARN of the estimations DynamoDB table"
+  description = "ARN of the DynamoDB estimations table"
   type        = string
 }
 
 variable "estimations_table_stream_arn" {
-  description = "Stream ARN of the estimations DynamoDB table"
+  description = "Stream ARN of the DynamoDB estimations table"
   type        = string
 }
 
 variable "tenant_index_name" {
-  description = "Name of the tenant GSI index"
+  description = "Name of the tenant GSI"
   type        = string
+  default     = "tenant-index"
+}
+
+variable "role_index_name" {
+  description = "Name of the role-story GSI"
+  type        = string
+  default     = "role-story-index"
 }
 
 # API Configuration

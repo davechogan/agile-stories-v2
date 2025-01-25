@@ -93,12 +93,14 @@ module "lambda" {
   estimations_table_arn        = module.dynamodb.estimations_table_arn
   estimations_table_stream_arn = module.dynamodb.estimations_table_stream_arn
   tenant_index_name            = module.dynamodb.tenant_index_name
+  estimations_role_index_name  = module.dynamodb.estimations_role_index_name
 
   error_handler_package_path = var.error_handler_package_path
   workflow_signal_handler_package_path = var.workflow_signal_handler_package_path
 
   environment_variables = {
     STORIES_TABLE = module.dynamodb.stories_table_name
+    ESTIMATES_TABLE = module.dynamodb.estimations_table_name
     OPENAI_API_KEY = var.openai_api_key
     TECHNICAL_REVIEW_LAMBDA_NAME = "${var.environment}-agile-stories-review"
   }

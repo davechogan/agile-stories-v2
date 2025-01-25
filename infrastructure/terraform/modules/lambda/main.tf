@@ -5,7 +5,7 @@ locals {
   }
 }
 
-# IAM role for Lambda functions
+# Create IAM role for Lambda functions
 resource "aws_iam_role" "lambda_role" {
   name = "${var.environment}-agile-stories-lambda-role"
 
@@ -341,12 +341,13 @@ resource "aws_iam_role_policy" "dynamodb_access" {
           "dynamodb:UpdateItem",
           "dynamodb:DeleteItem",
           "dynamodb:Query",
-          "dynamodb:BatchGetItem",
-          "dynamodb:BatchWriteItem"
+          "dynamodb:Scan"
         ]
         Resource = [
-          var.dynamodb_table_arn,
-          "${var.dynamodb_table_arn}/index/*"
+          var.stories_table_arn,
+          "${var.stories_table_arn}/index/*",
+          var.estimations_table_arn,
+          "${var.estimations_table_arn}/index/*"
         ]
       }
     ]
