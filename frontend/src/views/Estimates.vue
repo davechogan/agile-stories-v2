@@ -32,7 +32,9 @@
         <div class="member-info">
           <div class="member-name">{{ member.name }}</div>
           <div class="member-title">{{ member.title }}</div>
-          <div class="member-estimate">{{ member.estimate }} days</div>
+          <div class="member-estimate">
+            {{ member.estimates[estimateType].value }} {{ estimateType === 'story_points' ? 'points' : 'days' }}
+          </div>
         </div>
       </div>
     </div>
@@ -51,12 +53,21 @@
           <div class="member-dialog-role">{{ selectedMember?.title }}</div>
           <div class="member-dialog-estimate">
             <span class="estimate-label">Estimate:</span>
-            <span class="estimate-value">{{ selectedMember?.estimate }} days</span>
+            <span class="estimate-value">
+              {{ selectedMember?.estimates[estimateType].value }} 
+              {{ estimateType === 'story_points' ? 'points' : 'days' }}
+            </span>
+            <div class="confidence-level">
+              Confidence: {{ selectedMember?.estimates[estimateType].confidence }}
+            </div>
           </div>
+          
           <div class="mt-4">
-            <div class="justification-label">Justification:</div>
-            <div class="justification-text">
-              {{ selectedMember?.justification || 'No justification provided.' }}
+            <div v-for="(section, index) in selectedMember?.justification" 
+                 :key="index" 
+                 class="justification-section">
+              <h3 class="section-title">{{ section.title }}</h3>
+              <p class="section-content">{{ section.content }}</p>
             </div>
           </div>
         </v-card-text>
@@ -83,42 +94,25 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
+import { getMockEstimates } from '@/services/mockEstimateService'
 
 const router = useRouter()
+const route = useRoute()
+const mounted = ref(false)
 
 // Avatar styles available in DiceBear
 const avatarStyles = [
-  'adventurer',
-  'adventurer-neutral',
-  'avataaars',
-  'avataaars-neutral',
-  'big-ears',
-  'big-ears-neutral',
-  'big-smile',
-  'bottts',
-  'bottts-neutral',
-  'croodles',
-  'croodles-neutral',
-  'fun-emoji',
-  'icons',
-  'identicon',
-  'initials',
-  'lorelei',
-  'lorelei-neutral',
-  'micah',
-  'miniavs',
-  'notionists',
-  'notionists-neutral',
-  'open-peeps',
-  'personas',
-  'pixel-art',
-  'pixel-art-neutral',
-  'shapes',
-  'thumbs'
+  'bottts',        // Robots
+  'bottts-neutral', // More robots
+  'shapes',        // Abstract shapes
+  'identicon',     // GitHub-style identicons
+  'icons',         // Abstract icons
+  'pixel-art',     // Pixel art creatures (non-human)
+  'thumbs',        // Abstract thumbprint patterns
 ]
 
-const currentAvatarStyle = ref('adventurer')
+const currentAvatarStyle = ref('bottts')
 const currentStyleIndex = ref(0)
 
 // Mock team data
@@ -131,72 +125,7 @@ interface TeamMember {
   justification?: string
 }
 
-const mockTeamEstimates = ref<TeamMember[]>([
-  {
-    id: 1,
-    name: 'Sarah Chen',
-    title: 'Senior Developer Lead',
-    estimate: 15,
-    avatarUrl: '',
-    justification: 'Need to account for integration testing and security review. Previous similar features took around 2 weeks.'
-  },
-  {
-    id: 2,
-    name: 'Jamie Lee',
-    title: 'Junior QA Analyst',
-    estimate: 7,
-    avatarUrl: '',
-    justification: 'Based on test coverage requirements and new test cases needed.'
-  },
-  {
-    id: 3,
-    name: 'Alex Thompson',
-    title: 'Senior Developer',
-    estimate: 9,
-    avatarUrl: '',
-    justification: 'Complex backend changes required. Need to refactor existing code.'
-  },
-  {
-    id: 4,
-    name: 'Michael Rodriguez',
-    title: 'Senior QA Analyst',
-    estimate: 5,
-    avatarUrl: '',
-    justification: 'Mostly regression testing needed, automation scripts can be reused.'
-  },
-  {
-    id: 5,
-    name: 'Emily Parker',
-    title: 'Mid-level Developer',
-    estimate: 7,
-    avatarUrl: '',
-    justification: 'Frontend changes are straightforward but need time for proper unit tests.'
-  },
-  {
-    id: 6,
-    name: 'David Kim',
-    title: 'UX Designer',
-    estimate: 6,
-    avatarUrl: '',
-    justification: 'Need to create and validate new interaction patterns with users.'
-  },
-  {
-    id: 7,
-    name: 'Lisa Wang',
-    title: 'Backend Developer',
-    estimate: 12,
-    avatarUrl: '',
-    justification: 'Database schema changes and API modifications required.'
-  },
-  {
-    id: 8,
-    name: 'Marcus Johnson',
-    title: 'DevOps Engineer',
-    estimate: 8,
-    avatarUrl: '',
-    justification: 'Need to update deployment pipeline and add new monitoring.'
-  }
-])
+const mockTeamEstimates = ref<TeamMember[]>([])
 
 // Initial random positions for animation
 const initialPositions = ref(new Map())
@@ -219,10 +148,7 @@ const initializePositions = () => {
 }
 
 // Calculate average estimate
-const averageEstimate = computed(() => {
-  const total = mockTeamEstimates.value.reduce((sum, member) => sum + member.estimate, 0)
-  return (total / mockTeamEstimates.value.length).toFixed(1)
-})
+const averageEstimate = ref(0)
 
 // Calculate circle size based on viewport
 const circleStyles = computed(() => {
@@ -267,8 +193,9 @@ const getPositionStyle = (index: number, total: number) => {
 // Generate new avatar URLs
 const regenerateAvatars = () => {
   mockTeamEstimates.value.forEach(member => {
+    const style = avatarStyles[Math.floor(Math.random() * avatarStyles.length)]
     const seed = Math.random().toString(36).substring(7)
-    member.avatarUrl = `https://api.dicebear.com/7.x/${currentAvatarStyle.value}/svg?seed=${seed}`
+    member.avatarUrl = `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`
   })
   initializePositions()
 }
@@ -277,7 +204,11 @@ const regenerateAvatars = () => {
 const cycleAvatarStyle = () => {
   currentStyleIndex.value = (currentStyleIndex.value + 1) % avatarStyles.length
   currentAvatarStyle.value = avatarStyles[currentStyleIndex.value]
-  regenerateAvatars()
+  mockTeamEstimates.value.forEach(member => {
+    const seed = Math.random().toString(36).substring(7)
+    member.avatarUrl = `https://api.dicebear.com/7.x/${currentAvatarStyle.value}/svg?seed=${seed}`
+  })
+  initializePositions()
 }
 
 // Add these refs for dialog control
@@ -290,9 +221,23 @@ const showMemberDetails = (member: TeamMember) => {
   showDialog.value = true
 }
 
+const estimateType = ref('person_days') // or get from settings
+
 // Initialize avatars on mount
-onMounted(() => {
-  regenerateAvatars()
+onMounted(async () => {
+  try {
+    // Use mock service instead of API call for now
+    const data = getMockEstimates(route.params.id as string)
+    mockTeamEstimates.value = data.individual_estimates
+    averageEstimate.value = data.average.toFixed(1)
+    
+    // Trigger animation
+    setTimeout(() => {
+      mounted.value = true
+    }, 100)
+  } catch (error) {
+    console.error('Error loading estimates:', error)
+  }
 })
 </script>
 
@@ -397,6 +342,7 @@ onMounted(() => {
 .member-estimate {
   color: #64B5F6;
   font-weight: bold;
+  margin-top: 0.3rem;
 }
 
 @keyframes fadeIn {
@@ -443,13 +389,25 @@ onMounted(() => {
   font-weight: bold;
 }
 
-.justification-label {
-  font-weight: 500;
+.justification-section {
+  margin-top: 1rem;
+  padding: 0.5rem 0;
+}
+
+.section-title {
+  color: var(--v-primary-base);
+  font-size: 1.1rem;
   margin-bottom: 0.5rem;
 }
 
-.justification-text {
-  line-height: 1.5;
+.section-content {
+  color: var(--v-medium-emphasis-opacity);
+  line-height: 1.4;
+}
+
+.confidence-level {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
   color: var(--v-medium-emphasis-opacity);
 }
 

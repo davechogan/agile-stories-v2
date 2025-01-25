@@ -31,25 +31,11 @@
           Estimates
         </v-btn>
         <v-btn 
-          to="/test-tech-review-view" 
+          to="/settings" 
           variant="text"
           color="primary"
         >
-          Test Tech Review View
-        </v-btn>
-        <v-btn 
-          to="/test-tech-review" 
-          variant="text"
-          color="primary"
-        >
-          Test Tech Review
-        </v-btn>
-        <v-btn 
-          :to="'/test-agile-results'" 
-          variant="text"
-          color="primary"
-        >
-          Test Agile Results
+          Settings
         </v-btn>
       </v-container>
     </v-app-bar>
