@@ -2,11 +2,12 @@
 team_estimate Lambda Function
 
 This Lambda is triggered by API Gateway when a user submits a story for team estimation.
-It creates estimates by:
-1. Getting selected roles from settings
-2. Spawning parallel worker Lambdas for each role
-3. Collecting and aggregating responses
-4. Storing results in the estimates table
+It:
+1. Fetches story from DynamoDB
+2. Gets selected roles from settings
+3. Spawns parallel worker Lambdas for each role
+4. Collects and aggregates responses
+5. Returns formatted results for frontend
 
 Environment Variables:
     DYNAMODB_TABLE (str): Name of the DynamoDB table for storing stories
@@ -36,21 +37,59 @@ ssm = boto3.client('ssm')
 stories_table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
 estimates_table = dynamodb.Table(os.environ['ESTIMATES_TABLE'])
 
-def invoke_worker_lambda(role: str, story_data: dict) -> dict:
+def get_story(story_id: str, tenant_id: str) -> dict:
     """
-    Invokes a worker Lambda for a specific role to get their estimate.
+    Fetches story details from DynamoDB.
+    """
+    try:
+        response = stories_table.get_item(
+            Key={
+                'story_id': story_id,
+                'tenantId': tenant_id
+            }
+        )
+        return response['Item']
+    except Exception as e:
+        logger.error(f"Error fetching story {story_id}: {str(e)}")
+        raise
+
+def prepare_story_payload(story_data: dict) -> dict:
+    """
+    Prepares a simplified story payload for the workers.
+    Extracts fields from content and analysis at root level.
     
     Args:
-        role (str): The role ID (e.g., 'senior_dev', 'qa_engineer')
-        story_data (dict): Story content and context
+        story_data (dict): Raw story data from DynamoDB
         
     Returns:
-        dict: The worker's response containing their estimate
+        dict: Cleaned story payload for workers
+    """
+    try:
+        content = story_data.get('content', {})
+        analysis = story_data.get('analysis', {})
+
+        return {
+            'story_id': story_data['story_id'],
+            'tenantId': story_data['tenantId'],
+            'title': content.get('title'),
+            'story': content.get('story'),
+            'acceptance_criteria': content.get('acceptance_criteria'),
+            'implementation_details': analysis.get('ImplementationDetails')
+        }
+    except Exception as e:
+        logger.error(f"Error preparing story payload: {str(e)}")
+        raise
+
+def invoke_worker_lambda(role: str, story_payload: dict) -> dict:
+    """
+    Invokes a worker Lambda for a specific role.
     """
     try:
         payload = {
             'role': role,
-            'story_data': story_data
+            'story_data': story_payload,
+            'story_id': story_payload['story_id'],
+            'tenant_id': story_payload['tenantId']
         }
         
         response = lambda_client.invoke(
@@ -95,106 +134,142 @@ def store_estimate(story_id: str, role: str, estimate_data: dict, tenant_id: str
         logger.error(f"Error storing estimate for role {role}: {str(e)}")
         raise
 
-def calculate_average_estimate(estimates: list) -> dict:
+def calculate_average_estimates(estimates: list) -> dict:
     """
-    Calculates the average estimate and confidence across all roles.
-    
-    Args:
-        estimates (list): List of role estimates
+    Calculates average estimates and confidence for both story points and person days.
+    """
+    def calc_type_average(estimate_type: str) -> dict:
+        values = [e['estimates'][estimate_type]['value'] for e in estimates]
+        confidences = [e['estimates'][estimate_type]['confidence'] for e in estimates]
         
-    Returns:
-        dict: Average estimate and confidence
-    """
-    total_estimate = sum(float(e['estimate']) for e in estimates)
-    total_confidence = sum(float(e['confidence']) for e in estimates)
-    count = len(estimates)
-    
+        # Map confidence levels to numbers for averaging
+        confidence_map = {'LOW': 1, 'MEDIUM': 2, 'HIGH': 3}
+        confidence_nums = [confidence_map[c] for c in confidences]
+        
+        avg_value = sum(values) / len(values)
+        avg_confidence_num = sum(confidence_nums) / len(confidence_nums)
+        
+        # Map back to confidence level
+        confidence_levels = {1: 'LOW', 2: 'MEDIUM', 3: 'HIGH'}
+        avg_confidence = confidence_levels[round(avg_confidence_num)]
+        
+        return {
+            'value': Decimal(str(avg_value)),
+            'confidence': avg_confidence
+        }
+
     return {
-        'average_estimate': Decimal(str(total_estimate / count)),
-        'average_confidence': Decimal(str(total_confidence / count))
+        'story_points': calc_type_average('story_points'),
+        'person_days': calc_type_average('person_days')
     }
 
-def handler(event, context):
+def store_final_estimate(story_id: str, tenant_id: str, estimates: list):
     """
-    Main handler for team estimation process.
-    
-    Args:
-        event (dict): API Gateway event containing:
-            story_id (str): Story UUID
-            tenant_id (str): Tenant ID
-            settings (dict): User's estimation settings
-            content (dict): Story content
-        context (obj): Lambda context
-    
-    Returns:
-        dict: API Gateway response with estimation results
+    Stores the final combined estimate data with both story points and person days.
     """
     try:
-        logger.info(f"Event received: {json.dumps(event)}")
+        timestamp = datetime.utcnow().isoformat()
+        estimation_id = f"{story_id}_final"  # Special ID for combined record
         
-        # Parse request
-        body = json.loads(event['body'])
-        story_id = body['story_id']
-        tenant_id = body['tenant_id']  # Make sure this is passed from the frontend
-        settings = body['settings']
-        content = body['content']
-        selected_roles = settings['selectedRoles']
+        # Calculate averages for both types
+        averages = calculate_average_estimates(estimates)
         
-        # Get story data
-        story_data = {
-            'content': content,
-            'settings': settings
+        item = {
+            'estimation_id': estimation_id,
+            'story_id': story_id,
+            'tenantId': tenant_id,
+            'version': 'FINAL',
+            'created_at': timestamp,
+            'averages': {
+                'story_points': averages['story_points'],
+                'person_days': averages['person_days']
+            },
+            'individual_estimates': estimates
         }
         
-        estimates = []
+        estimates_table.put_item(Item=item)
         
-        # Invoke worker Lambdas in parallel
-        with ThreadPoolExecutor(max_workers=len(selected_roles)) as executor:
-            future_to_role = {
-                executor.submit(invoke_worker_lambda, role, story_data): role 
-                for role in selected_roles
+    except Exception as e:
+        logger.error(f"Error storing final estimate: {str(e)}")
+        raise
+
+def handler(event, context):
+    try:
+        # Parse request
+        body = json.loads(event.get('body', '{}'))
+        story_id = body.get('story_id')
+        tenant_id = body.get('tenant_id')
+        roles = body.get('roles', [])
+        
+        current_time = datetime.utcnow().isoformat()
+        
+        # Save original content in PENDING to stories table
+        pending_item = {
+            'story_id': story_id,
+            'version': 'TEAM_ESTIMATE_PENDING',
+            'tenant_id': tenant_id,
+            'created_at': current_time,
+            'updated_at': current_time,
+            'content': {  # Original story content
+                'title': body.get('content', {}).get('title', ''),
+                'story': body.get('content', {}).get('story', ''),
+                'acceptance_criteria': body.get('content', {}).get('acceptance_criteria', [])
+            },
+            'analysis': {  # Implementation details from tech review
+                'ImplementationDetails': body.get('analysis', {}).get('ImplementationDetails', [])
+            }
+        }
+        
+        # Save PENDING version to stories table
+        stories_table.put_item(Item=pending_item)
+        
+        # Invoke workers and collect results
+        lambda_client = boto3.client('lambda')
+        worker_results = []
+        
+        for role in roles:
+            worker_payload = {
+                'story_id': story_id,
+                'tenant_id': tenant_id,
+                'role': role,
+                'content': pending_item['content'],
+                'analysis': pending_item['analysis']
             }
             
-            for future in as_completed(future_to_role):
-                role = future_to_role[future]
-                try:
-                    estimate_data = future.result()
-                    estimates.append(estimate_data)
-                    store_estimate(story_id, role, estimate_data, tenant_id)
-                except Exception as e:
-                    logger.error(f"Error processing estimate for role {role}: {str(e)}")
-                    raise
+            response = lambda_client.invoke(
+                FunctionName='dev-agile-stories-estimate-worker',
+                InvocationType='RequestResponse',  # Synchronous invocation
+                Payload=json.dumps(worker_payload)
+            )
+            
+            result = json.loads(response['Payload'].read())
+            worker_results.append(result)
         
-        # Calculate averages
-        averages = calculate_average_estimate(estimates)
-        
-        # Store final results
-        timestamp = datetime.utcnow().isoformat()
-        final_result = {
+        # Calculate averages and store final estimate
+        final_estimate = {
+            'estimation_id': f"{story_id}_final",
             'story_id': story_id,
-            'version': 'TEAM_ESTIMATES_COMPLETE',
-            'estimates': estimates,
-            'average_estimate': averages['average_estimate'],
-            'average_confidence': averages['average_confidence'],
-            'settings_used': settings,
-            'created_at': timestamp,
-            'updated_at': timestamp
+            'tenant_id': tenant_id,
+            'version': 'FINAL',
+            'created_at': datetime.utcnow().isoformat(),
+            'averages': calculate_average_estimates(worker_results),
+            'individual_estimates': worker_results
         }
         
-        stories_table.put_item(Item=final_result)
+        # Save final estimate to estimates table
+        estimates_table.put_item(Item=final_estimate)
         
         return {
             'statusCode': 200,
             'body': json.dumps({
+                'message': 'Estimation process completed',
                 'story_id': story_id,
-                'message': 'Team estimates completed',
-                'estimates': estimates,
-                'averages': averages
+                'final_estimate': final_estimate
             })
         }
         
     except Exception as e:
-        logger.error(f"Error in handler: {str(e)}", exc_info=True)
+        logger.error(f"Error in team estimate handler: {str(e)}")
         return {
             'statusCode': 500,
             'body': json.dumps({

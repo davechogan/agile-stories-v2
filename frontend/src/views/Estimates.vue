@@ -13,7 +13,9 @@
     <div class="estimation-circle" :style="circleStyles">
       <div class="average-estimate">
         <div class="average-number">{{ averageEstimate }}</div>
-        <div class="average-label">days average</div>
+        <div class="average-label">
+          {{ useStoryPoints ? 'story points' : 'days' }} average
+        </div>
       </div>
       
       <div 
@@ -32,8 +34,8 @@
         <div class="member-info">
           <div class="member-name">{{ member.name }}</div>
           <div class="member-title">{{ member.title }}</div>
-          <div class="member-estimate">
-            {{ member.estimates[estimateType].value }} {{ estimateType === 'story_points' ? 'points' : 'days' }}
+          <div class="member-estimate" :class="getConfidence(member).toLowerCase()">
+            {{ getCurrentEstimate(member) }}
           </div>
         </div>
       </div>
@@ -95,11 +97,39 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { getMockEstimates } from '@/services/mockEstimateService'
+import axios from 'axios'
 
-const router = useRouter()
+// Role display names and titles
+const roleDisplayData = {
+  'backend_dev': { name: 'Backend Sage', title: 'Backend Developer' },
+  'frontend_dev': { name: 'UI Wizard', title: 'Frontend Developer' },
+  'devops_engineer': { name: 'Cloud Master', title: 'DevOps Engineer' },
+  'qa_engineer': { name: 'Test Oracle', title: 'QA Engineer' },
+  'security_expert': { name: 'Security Guardian', title: 'Security Expert' },
+  'database_admin': { name: 'Data Keeper', title: 'Database Admin' }
+}
+
+interface TeamMember {
+  id: string;
+  name: string;
+  title: string;
+  avatarUrl: string;
+  estimates: {
+    story_points: { value: number; confidence: string; }
+    person_days: { value: number; confidence: string; }
+  };
+  justification: Array<{
+    title: string;
+    content: string;
+  }>;
+}
+
 const route = useRoute()
-const mounted = ref(false)
+const mockTeamEstimates = ref<TeamMember[]>([])
+const rawEstimateData = ref<any>(null)
+const isLoading = ref(true)
+const error = ref<string | null>(null)
+const useStoryPoints = ref(true)  // Default to story points
 
 // Avatar styles available in DiceBear
 const avatarStyles = [
@@ -114,18 +144,6 @@ const avatarStyles = [
 
 const currentAvatarStyle = ref('bottts')
 const currentStyleIndex = ref(0)
-
-// Mock team data
-interface TeamMember {
-  id: number
-  name: string
-  title: string
-  estimate: number
-  avatarUrl: string
-  justification?: string
-}
-
-const mockTeamEstimates = ref<TeamMember[]>([])
 
 // Initial random positions for animation
 const initialPositions = ref(new Map())
@@ -146,9 +164,6 @@ const initializePositions = () => {
     initialPositions.value = new Map()
   }, 50)
 }
-
-// Calculate average estimate
-const averageEstimate = ref(0)
 
 // Calculate circle size based on viewport
 const circleStyles = computed(() => {
@@ -223,22 +238,75 @@ const showMemberDetails = (member: TeamMember) => {
 
 const estimateType = ref('person_days') // or get from settings
 
-// Initialize avatars on mount
-onMounted(async () => {
-  try {
-    // Use mock service instead of API call for now
-    const data = getMockEstimates(route.params.id as string)
-    mockTeamEstimates.value = data.individual_estimates
-    averageEstimate.value = data.average.toFixed(1)
-    
-    // Trigger animation
-    setTimeout(() => {
-      mounted.value = true
-    }, 100)
-  } catch (error) {
-    console.error('Error loading estimates:', error)
-  }
+// Calculate average based on current estimate type
+const averageEstimate = computed(() => {
+  const estimateType = useStoryPoints.value ? 'story_points' : 'person_days'
+  return rawEstimateData.value?.averages[estimateType].value || 0
 })
+
+// Transform raw estimate data into display format
+const transformEstimateData = (rawData: any): TeamMember[] => {
+  return rawData.individual_estimates.map((estimate: any) => {
+    const roleData = roleDisplayData[estimate.role] || { 
+      name: 'Team Member', 
+      title: estimate.role 
+    }
+    
+    // Generate avatar URL using role as seed
+    const style = avatarStyles[Math.floor(Math.random() * avatarStyles.length)]
+    const seed = estimate.role + Date.now()
+    
+    return {
+      id: estimate.role,
+      name: roleData.name,
+      title: roleData.title,
+      avatarUrl: `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`,
+      estimates: estimate.estimates,
+      justification: estimate.justification
+    }
+  })
+}
+
+// Fetch estimate data
+const fetchEstimateData = async () => {
+  try {
+    isLoading.value = true
+    const storyId = route.params.id
+    const response = await axios.get(
+      `${import.meta.env.VITE_API_URL}/estimates/${storyId}?version=FINAL`
+    )
+    
+    rawEstimateData.value = response.data
+    mockTeamEstimates.value = transformEstimateData(response.data)
+  } catch (err) {
+    console.error('Error fetching estimates:', err)
+    error.value = 'Failed to load team estimates'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Initialize on mount
+onMounted(() => {
+  fetchEstimateData()
+})
+
+// Toggle estimate type display
+const toggleEstimateType = () => {
+  useStoryPoints.value = !useStoryPoints.value
+}
+
+// Get current estimate value for display
+const getCurrentEstimate = (member: TeamMember) => {
+  const estimateType = useStoryPoints.value ? 'story_points' : 'person_days'
+  return member.estimates[estimateType].value
+}
+
+// Get confidence level for current estimate type
+const getConfidence = (member: TeamMember) => {
+  const estimateType = useStoryPoints.value ? 'story_points' : 'person_days'
+  return member.estimates[estimateType].confidence
+}
 </script>
 
 <style>
@@ -416,5 +484,17 @@ onMounted(async () => {
   bottom: 2rem;
   right: 2rem;
   z-index: 10;
+}
+
+.member-estimate.high {
+  color: #4CAF50;
+}
+
+.member-estimate.medium {
+  color: #FFC107;
+}
+
+.member-estimate.low {
+  color: #F44336;
 }
 </style> 

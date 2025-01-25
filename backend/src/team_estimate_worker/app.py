@@ -1,20 +1,16 @@
 """
 team_estimate_worker Lambda Function
 
-This Lambda is triggered by Step Functions to generate team estimates for a story.
-It creates a FINAL version with estimation results in DynamoDB.
+This Lambda is invoked in parallel by the team_estimate Lambda to generate
+role-specific estimates for a story. It:
+1. Loads role-specific prompt
+2. Generates estimates using OpenAI
+3. Stores results in DynamoDB
+4. Returns formatted estimate data to the main Lambda
 
 Environment Variables:
-    DYNAMODB_TABLE (str): Name of the DynamoDB table for storing stories
-    ESTIMATES_TABLE (str): Name of the DynamoDB table for storing individual estimates
-    OPENAI_API_KEY (str): OpenAI API key for estimation analysis
-
-Returns:
-    dict: Step Functions response object containing:
-        story_id (str): UUID of the processed story
-        tenant_id (str): Tenant identifier
-        estimates (dict): Aggregated estimation results
-        content (dict): Story content
+    ESTIMATES_TABLE (str): Name of the DynamoDB table for storing estimates
+    OPENAI_API_KEY (str): OpenAI API key for generating estimates
 """
 
 import os
@@ -22,7 +18,8 @@ import json
 import boto3
 import logging
 from datetime import datetime
-from statistics import mean
+from pathlib import Path
+from .test_data import get_test_estimate
 
 # Set up logging
 logger = logging.getLogger()
@@ -30,161 +27,108 @@ logger.setLevel(logging.INFO)
 
 # Initialize AWS clients
 dynamodb = boto3.resource('dynamodb')
-
-# Get DynamoDB tables
-stories_table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
 estimates_table = dynamodb.Table(os.environ['ESTIMATES_TABLE'])
 
-def generate_team_member_estimate(content, role):
+def load_role_prompt(role: str) -> str:
     """
-    Generates an estimate for a single team member/role using AI.
+    Loads the prompt template for the specified role.
     
     Args:
-        content (dict): Story content containing:
-            title (str): Story title
-            description (str): Story description
-            story (str): User story
-            acceptance_criteria (list): List of acceptance criteria
-            technical_review (dict): Technical review results
-        role (str): Team member role (e.g., 'frontend', 'backend')
-    
+        role (str): The role ID (e.g., 'senior_dev', 'qa_engineer')
+        
     Returns:
-        dict: Individual estimate containing:
-            points (int): Story points estimate
-            days (float): Days estimate
-            justification (str): Reasoning for the estimate
-    
-    Note:
-        This is currently a placeholder. Actual implementation will use OpenAI.
+        str: The prompt template for the role
     """
-    return {
-        "points": 5,
-        "days": 3.5,
-        "justification": f"Based on {role} complexity and technical requirements"
-    }
+    try:
+        prompt_path = Path(__file__).parent / 'prompts' / f'{role}Prompt.md'
+        with open(prompt_path, 'r') as f:
+            return f.read()
+    except Exception as e:
+        logger.error(f"Error loading prompt for role {role}: {str(e)}")
+        # Fallback to basic prompt if role-specific one not found
+        return """Please estimate this story from your role's perspective.
+                 Provide story points, person days, and detailed justification."""
 
-def store_individual_estimate(story_id, tenant_id, role, estimate):
+def generate_estimate(role: str, story_data: dict) -> dict:
     """
-    Stores an individual team member's estimate in the estimates table.
+    Generates an estimate for a specific role (using test data for now).
+    """
+    # TODO: Replace with OpenAI integration later
+    return get_test_estimate(role)
+
+def store_estimate(story_id: str, role: str, estimate_data: dict, tenant_id: str):
+    """
+    Stores the estimate in DynamoDB.
     
     Args:
-        story_id (str): UUID of the story
-        tenant_id (str): Tenant identifier
-        role (str): Team member role
-        estimate (dict): Individual estimate results
+        story_id (str): The story's UUID
+        role (str): The estimating role
+        estimate_data (dict): The estimate details
+        tenant_id (str): The tenant ID
     """
-    timestamp = datetime.utcnow().isoformat()
-    
-    item = {
-        'story_id': story_id,
-        'team_member_id': f"{role}-{timestamp}",  # Using role+timestamp as unique ID
-        'tenant_id': tenant_id,
-        'role': role,
-        'estimate_points': estimate['points'],
-        'estimate_days': estimate['days'],
-        'justification': estimate['justification'],
-        'created_at': timestamp
-    }
-    
-    estimates_table.put_item(Item=item)
-
-def aggregate_estimates(estimates):
-    """
-    Aggregates individual estimates into team consensus.
-    
-    Args:
-        estimates (list): List of individual estimates
-    
-    Returns:
-        dict: Aggregated results containing:
-            average_points (float): Mean of story points
-            average_days (float): Mean of day estimates
-            point_range (tuple): Min and max points
-            day_range (tuple): Min and max days
-    """
-    points = [e['points'] for e in estimates]
-    days = [e['days'] for e in estimates]
-    
-    return {
-        'average_points': mean(points),
-        'average_days': mean(days),
-        'point_range': (min(points), max(points)),
-        'day_range': (min(days), max(days))
-    }
+    try:
+        timestamp = datetime.utcnow().isoformat()
+        estimation_id = f"{story_id}_{role}"
+        
+        item = {
+            'estimation_id': estimation_id,
+            'story_id': story_id,
+            'tenantId': tenant_id,
+            'role': role,
+            'estimates': estimate_data['estimates'],
+            'justification': estimate_data['justification'],
+            'created_at': timestamp
+        }
+        
+        estimates_table.put_item(Item=item)
+        
+    except Exception as e:
+        logger.error(f"Error storing estimate: {str(e)}")
+        raise
 
 def handler(event, context):
     """
-    Lambda handler for processing team estimation requests.
-    
-    Generates estimates from multiple team members and creates a FINAL
-    version with aggregated results.
+    Lambda handler for generating role-specific estimates.
     
     Args:
-        event (dict): Step Functions event object containing:
-            story_id (str): UUID of the story
-            tenant_id (str): Tenant identifier
-            content (dict): Story content to estimate
-            team_config (dict): Team configuration settings
-        context (obj): Lambda context object
-    
+        event (dict): Event containing:
+            role (str): Role to generate estimate for
+            story_data (dict): Story content and context
+            story_id (str): Story UUID
+            tenant_id (str): Tenant ID
+            
     Returns:
-        dict: Step Functions response object
-    
-    Raises:
-        Exception: For any processing errors
+        dict: Generated estimate data
     """
     try:
-        logger.info(f"Event received: {json.dumps(event)}")
+        logger.info(f"Processing estimate request: {json.dumps(event)}")
         
-        # Extract data from Step Functions input
-        story_id = event['story_id']
-        tenant_id = event.get('tenant_id', 'default')
-        content = event['content']
-        team_config = event.get('team_config', {
-            'roles': ['frontend', 'backend', 'qa']  # Default roles if not specified
-        })
-        timestamp = datetime.utcnow().isoformat()
+        role = event['role']
+        story_data = event['story_data']
+        story_id = story_data['story_id']
+        tenant_id = story_data['tenant_id']
         
-        # Generate individual estimates
-        individual_estimates = []
-        for role in team_config['roles']:
-            estimate = generate_team_member_estimate(content, role)
-            store_individual_estimate(story_id, tenant_id, role, estimate)
-            individual_estimates.append(estimate)
+        # Generate estimate
+        estimate_data = generate_estimate(role, story_data)
         
-        # Aggregate estimates
-        aggregated_results = aggregate_estimates(individual_estimates)
+        # Store in DynamoDB
+        store_estimate(story_id, role, estimate_data, tenant_id)
         
-        # Store final results
-        final_item = {
-            'story_id': story_id,
-            'version': 'FINAL',
-            'tenant_id': tenant_id,
-            'content': {
-                **content,
-                'team_estimates': {
-                    'individual_estimates': individual_estimates,
-                    'aggregated_results': aggregated_results
-                }
-            },
-            'created_at': timestamp,
-            'updated_at': timestamp
-        }
-        
-        logger.info(f"Storing FINAL version in DynamoDB: {json.dumps(final_item)}")
-        stories_table.put_item(Item=final_item)
-        
-        # Return results to Step Functions
+        # Return estimate data for aggregation
         return {
-            'story_id': story_id,
-            'tenant_id': tenant_id,
-            'estimates': {
-                'individual_estimates': individual_estimates,
-                'aggregated_results': aggregated_results
-            },
-            'content': content
+            'statusCode': 200,
+            'body': {
+                'role': role,
+                'estimates': estimate_data['estimates'],
+                'justification': estimate_data['justification']
+            }
         }
         
     except Exception as e:
         logger.error(f"Error in handler: {str(e)}", exc_info=True)
-        raise 
+        return {
+            'statusCode': 500,
+            'body': {
+                'error': str(e)
+            }
+        } 

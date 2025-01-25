@@ -124,9 +124,10 @@
                 </v-btn>
                 <v-btn 
                   color="primary"
-                  @click="submitForEstimation"
+                  @click="getTeamEstimate"
+                  :loading="estimating"
                 >
-                  SEND FOR ESTIMATION
+                  GET TEAM ESTIMATE
                 </v-btn>
               </div>
             </div>
@@ -183,6 +184,22 @@
         </div>
       </div>
     </div>
+
+    <transition name="fade">
+      <div v-if="showTransition" class="animation-container">
+        <video 
+          ref="videoPlayer"
+          class="background-video" 
+          autoplay 
+          loop 
+          muted 
+          playsinline
+        >
+          <source src="/videos/AdobeStock_910543395.mp4" type="video/mp4">
+          <source src="/videos/AdobeStock_910543395.webm" type="video/webm">
+        </video>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -204,6 +221,9 @@ const editingStory = ref(false)
 const editedStory = ref('')
 const editingCriteria = ref(false)
 const editedCriteria = ref('')
+const estimating = ref(false)
+const showTransition = ref(false)
+const isExiting = ref(false)
 
 interface ImplementationDetail {
   type: 'Frontend' | 'Backend' | 'Database'
@@ -305,15 +325,56 @@ const acceptTechReview = async () => {
   }
 }
 
-const submitForEstimation = async () => {
-  loading.value = true
+const getTeamEstimate = async () => {
+  estimating.value = true
+  
   try {
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    router.push('/estimate')
-  } catch (error) {
-    console.error('Error submitting for estimation:', error)
+    const storyId = route.params.id
+    
+    // Single POST to trigger estimation process
+    const estimatePayload = {
+      story_id: storyId,
+      tenant_id: "test-tenant-001",
+      content: {
+        title: storyData.value.content.title,
+        story: storyData.value.content.story,
+        acceptance_criteria: storyData.value.content.acceptance_criteria
+      },
+      analysis: {
+        ImplementationDetails: selectedDetails.value.map(detail => ({
+          type: detail.type,
+          text: detail.text
+        }))
+      },
+      roles: [...new Set(selectedDetails.value.map(detail => detail.type))]
+    }
+    
+    console.log('Sending estimate request:', estimatePayload)
+    
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_URL}/stories/estimate`,
+      estimatePayload
+    )
+    
+    console.log('Estimate response:', response.data)
+    
+    // Show transition after successful request
+    showTransition.value = true
+    isExiting.value = false
+    
+    // Wait for fade out animation before navigating
+    setTimeout(async () => {
+      showTransition.value = false
+      await router.push(`/estimates/${storyId}`)
+    }, 1000)
+    
+  } catch (err) {
+    console.error('Error in estimate process:', err)
+    showTransition.value = false
+    isExiting.value = false
+    error.value = 'Failed to process estimate request'
   } finally {
-    loading.value = false
+    estimating.value = false
   }
 }
 
@@ -792,5 +853,34 @@ h4:first-of-type {
   padding: 1.5rem;
   margin: 1rem 0;
   transition: all 0.3s ease;
+}
+
+.animation-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 1000;
+}
+
+.background-video {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 1s ease-in-out;
+}
+
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
 }
 </style> 

@@ -179,12 +179,6 @@ const canRequestReview = computed(() => {
 const requestTechnicalReview = async () => {
   reviewing.value = true
   
-  // Add a 3-second delay before showing the video
-  setTimeout(() => {
-    showTransition.value = true
-    isExiting.value = false  // Keep page visible while video plays
-  }, 3000)  // 3000ms = 3 seconds
-  
   try {
     const storyId = route.params.id
     const payload = {
@@ -196,6 +190,10 @@ const requestTechnicalReview = async () => {
     
     console.log('Sending tech review request:', payload)
     
+    // Show transition immediately
+    showTransition.value = true
+    isExiting.value = false
+    
     const response = await axios.post(
       `${import.meta.env.VITE_API_URL}/stories/tech-review`,
       payload
@@ -203,7 +201,7 @@ const requestTechnicalReview = async () => {
     
     console.log('Technical review response:', response.data)
     
-    // Only start fading out after we get the response
+    // Start fading out after response
     isExiting.value = true
     
     // Wait for fade out animation before hiding video and navigating
