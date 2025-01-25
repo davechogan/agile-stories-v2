@@ -58,7 +58,7 @@
           </div>
         </div>
 
-        <div class="fixed-button-container">
+        <div class="button-container">
           <v-btn
             color="primary"
             size="large"
@@ -468,17 +468,17 @@ watch(showTransition, (newVal) => {
   padding-bottom: 5rem;
 }
 
-.fixed-button-container {
-  position: fixed;
-  bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  width: auto;
+.button-container {
   display: flex;
-  justify-content: center;
-  background: linear-gradient(to top, rgba(18, 18, 18, 1) 50%, rgba(18, 18, 18, 0));
-  padding: 1rem;
+  justify-content: flex-end;
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(18, 18, 18, 0.8);
+  position: sticky;
+  bottom: 0;
+  right: 0;
+  z-index: 10;
+  backdrop-filter: blur(10px);
 }
 
 .criteria-item {

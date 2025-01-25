@@ -38,6 +38,12 @@ ssm = boto3.client('ssm')
 stories_table = dynamodb.Table(os.environ.get('DYNAMODB_TABLE', 'dev-agile-stories'))
 estimates_table = dynamodb.Table(os.environ.get('ESTIMATES_TABLE', 'dev-agile-stories-estimations'))
 
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return str(obj)
+        return super(DecimalEncoder, self).default(obj)
+
 def get_story(story_id: str, tenant_id: str) -> dict:
     """
     Fetches story details from DynamoDB.
@@ -194,27 +200,51 @@ def store_final_estimate(story_id: str, tenant_id: str, estimates: list):
         logger.error(f"Error storing final estimate: {str(e)}")
         raise
 
-def calculate_average(estimate_type: str, results: list) -> float:
+def get_nearest_fibonacci(num: Decimal) -> Decimal:
+    """
+    Get the nearest Fibonacci number for a given value.
+    Fibonacci sequence used: 1, 2, 3, 5, 8, 13, 21
+    """
+    fib_sequence = [Decimal('1'), Decimal('2'), Decimal('3'), Decimal('5'), 
+                   Decimal('8'), Decimal('13'), Decimal('21')]
+    
+    if num <= Decimal('0'):
+        return Decimal('1')
+    
+    # Find the closest Fibonacci number
+    closest = min(fib_sequence, key=lambda x: abs(x - num))
+    return closest
+
+def calculate_average(estimate_type: str, results: list) -> Decimal:
     """
     Calculate the average value for a specific estimate type across all roles.
+    For story_points, returns nearest Fibonacci number.
+    For person_days, returns regular average.
     
     Args:
         estimate_type (str): Either 'story_points' or 'person_days'
         results (list): List of worker results containing estimates
         
     Returns:
-        float: Average value, or 0 if no results
+        Decimal: Average value, or Decimal('0') if no results
     """
     if not results:
         logger.warning(f"No results provided for {estimate_type} average calculation")
-        return 0
+        return Decimal('0')
         
-    values = [r['estimates'][estimate_type]['value'] for r in results]
+    values = [Decimal(str(r['estimates'][estimate_type]['value'])) for r in results]
     if not values:
         logger.warning(f"No values found for {estimate_type} in results")
-        return 0
+        return Decimal('0')
         
-    return sum(values) / len(values)
+    avg = Decimal(str(sum(values) / len(values)))
+    
+    # For story points, return nearest Fibonacci number
+    if estimate_type == 'story_points':
+        return get_nearest_fibonacci(avg)
+    
+    # For person days, return regular average
+    return avg
 
 def calculate_confidence(estimate_type: str, results: list) -> str:
     """
@@ -243,6 +273,28 @@ def calculate_confidence(estimate_type: str, results: list) -> str:
         return 'MEDIUM'
     return 'HIGH'
 
+def convert_to_decimal(obj):
+    """
+    Recursively convert any float values to Decimal in a nested structure.
+    """
+    if isinstance(obj, dict):
+        return {key: convert_to_decimal(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_to_decimal(item) for item in obj]
+    elif isinstance(obj, float):
+        return Decimal(str(obj))
+    return obj
+
+def decimal_to_str(obj):
+    """Convert Decimal objects to strings in a nested structure."""
+    if isinstance(obj, dict):
+        return {key: decimal_to_str(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [decimal_to_str(item) for item in obj]
+    elif isinstance(obj, Decimal):
+        return str(obj)
+    return obj
+
 def handler(event, context):
     try:
         # Parse request
@@ -250,17 +302,9 @@ def handler(event, context):
         story_id = body.get('story_id')
         tenant_id = body.get('tenant_id')
         content = body.get('content', {})
-        analysis = body.get('analysis', {})
+        roles = body.get('roles', ['Frontend', 'Backend', 'Database'])  # Default roles if none provided
         
-        # Define default roles based on implementation details
-        implementation_details = analysis.get('ImplementationDetails', [])
-        roles = list(set(detail.get('type') for detail in implementation_details if detail.get('type')))
-        
-        logger.info(f"Extracted roles from implementation details: {roles}")
-        
-        if not roles:
-            logger.warning("No roles found in implementation details, using defaults")
-            roles = ['Frontend', 'Backend']  # Default roles if none found
+        logger.info(f"Received team estimate request for story {story_id} with roles: {roles}")
         
         # Save initial PENDING state
         pending_item = {
@@ -268,10 +312,9 @@ def handler(event, context):
             'version': 'TEAM_ESTIMATE_PENDING',
             'tenantId': tenant_id,
             'content': content,
-            'analysis': analysis,
             'created_at': datetime.utcnow().isoformat(),
             'status': 'PENDING',
-            'roles': roles  # Include roles in the pending state
+            'roles': roles
         }
         
         logger.info(f"Saving PENDING state with roles: {json.dumps(pending_item)}")
@@ -291,8 +334,7 @@ def handler(event, context):
                 'story_id': story_id,
                 'tenant_id': tenant_id,
                 'role': role,
-                'content': content,
-                'analysis': analysis
+                'content': content
             }
             
             logger.info(f"Invoking worker for role {role} with payload: {json.dumps(worker_payload)}")
@@ -309,8 +351,10 @@ def handler(event, context):
                 
                 if result.get('statusCode') == 200:
                     worker_result = json.loads(result.get('body', '{}'))
+                    # Convert any float values to Decimal
+                    worker_result = convert_to_decimal(worker_result)
                     worker_results.append(worker_result)
-                    logger.info(f"Added estimate from {role}: {json.dumps(worker_result)}")
+                    logger.info(f"Added estimate from {role}: {json.dumps(worker_result, cls=DecimalEncoder)}")
                 else:
                     logger.error(f"Worker failed for role {role}: {json.dumps(result)}")
             except Exception as e:
@@ -337,15 +381,18 @@ def handler(event, context):
             'individual_estimates': worker_results
         }
         
-        logger.info(f"Saving final estimate: {json.dumps(final_estimate)}")
-        estimates_table.put_item(Item=final_estimate)
+        # Convert Decimals to strings before saving or returning
+        final_estimate_json = decimal_to_str(final_estimate)
+        
+        logger.info(f"Saving final estimate: {json.dumps(final_estimate_json)}")
+        estimates_table.put_item(Item=final_estimate)  # DynamoDB accepts Decimal
         
         return {
             'statusCode': 200,
             'body': json.dumps({
                 'message': 'Team estimate completed',
                 'story_id': story_id,
-                'estimate': final_estimate
+                'estimate': final_estimate_json
             })
         }
         

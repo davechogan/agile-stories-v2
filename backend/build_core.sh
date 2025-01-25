@@ -26,24 +26,27 @@ for func in "${FUNCTIONS[@]}"; do
     cp "$BACKEND_DIR/src/$FUNCTION_NAME/"*.py "$BUILD_DIR/"
     cp "$BACKEND_DIR/src/$FUNCTION_NAME/"*.md "$BUILD_DIR/" 2>/dev/null || true
     
-    # Install core dependencies first
-    pip install \
-        --platform manylinux2014_x86_64 \
-        --implementation cp \
-        --python-version 3.11 \
-        --only-binary=:all: \
-        --target "$BUILD_DIR" \
-        requests==2.31.0 \
-        urllib3==1.26.18
-    
-    # Then install project dependencies
-    pip install \
-        --platform manylinux2014_x86_64 \
-        --implementation cp \
-        --python-version 3.11 \
-        --only-binary=:all: \
-        --target "$BUILD_DIR" \
-        -r "$BACKEND_DIR/src/$FUNCTION_NAME/requirements.txt"
+# Install core dependencies first
+pip install -q --no-cache-dir --progress-bar off \
+    --platform manylinux2014_x86_64 \
+    --implementation cp \
+    --python-version 3.11 \
+    --only-binary=:all: \
+    --target "$BUILD_DIR" \
+    --no-input \
+    requests==2.31.0 \
+    urllib3==1.26.18
+
+# Then install project dependencies
+pip install -q --no-cache-dir --progress-bar off \
+    --platform manylinux2014_x86_64 \
+    --implementation cp \
+    --python-version 3.11 \
+    --only-binary=:all: \
+    --target "$BUILD_DIR" \
+    --no-input \
+    -r "$BACKEND_DIR/src/$FUNCTION_NAME/requirements.txt"
+
     
     # Create zip
     cd "$BUILD_DIR"
@@ -53,8 +56,9 @@ for func in "${FUNCTIONS[@]}"; do
     
     # Deploy
     aws lambda update-function-code \
-        --function-name "$LAMBDA_NAME" \
-        --zip-file "fileb://$BACKEND_DIR/src/$FUNCTION_NAME/package.zip"
+    --no-cli-pager \
+    --function-name "$LAMBDA_NAME" \
+    --zip-file "fileb://$BACKEND_DIR/src/$FUNCTION_NAME/package.zip"
     
     # Clean up
     rm -rf "$BUILD_DIR"

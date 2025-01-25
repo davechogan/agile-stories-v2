@@ -95,9 +95,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import axios from 'axios'
+import { DynamoDB } from 'aws-sdk'
+import { useAuth } from '@/composables/useAuth'  // Assuming you have this for credentials
+
+const route = useRoute()
+const router = useRouter()
+const { getCredentials } = useAuth()
+
+console.log('Estimates component initializing')  // Add initialization log
 
 // Role display names and titles
 const roleDisplayData = {
@@ -124,7 +131,6 @@ interface TeamMember {
   }>;
 }
 
-const route = useRoute()
 const mockTeamEstimates = ref<TeamMember[]>([])
 const rawEstimateData = ref<any>(null)
 const isLoading = ref(true)
@@ -270,16 +276,38 @@ const transformEstimateData = (rawData: any): TeamMember[] => {
 // Fetch estimate data
 const fetchEstimateData = async () => {
   try {
+    console.log('Starting fetchEstimateData')
     isLoading.value = true
     const storyId = route.params.id
-    const response = await axios.get(
-      `${import.meta.env.VITE_API_URL}/estimates/${storyId}?version=FINAL`
-    )
     
-    rawEstimateData.value = response.data
-    mockTeamEstimates.value = transformEstimateData(response.data)
+    // Initialize DynamoDB client
+    const credentials = await getCredentials()
+    const dynamoDB = new DynamoDB.DocumentClient({
+      region: 'us-east-1',
+      credentials
+    })
+    
+    // Query DynamoDB directly
+    const params = {
+      TableName: 'dev-agile-stories-estimations',
+      KeyConditionExpression: 'story_id = :sid',
+      FilterExpression: 'version = :ver',
+      ExpressionAttributeValues: {
+        ':sid': storyId,
+        ':ver': 'TEAM_ESTIMATE'
+      }
+    }
+    
+    const response = await dynamoDB.query(params).promise()
+    console.log('DynamoDB response:', response)
+    
+    if (response.Items && response.Items.length > 0) {
+      rawEstimateData.value = response.Items[0]
+      mockTeamEstimates.value = transformEstimateData(response.Items[0])
+    }
+    
   } catch (err) {
-    console.error('Error fetching estimates:', err)
+    console.error('Error in fetchEstimateData:', err)
     error.value = 'Failed to load team estimates'
   } finally {
     isLoading.value = false
@@ -288,6 +316,7 @@ const fetchEstimateData = async () => {
 
 // Initialize on mount
 onMounted(() => {
+  console.log('Estimates component mounted')  // Add mount log
   fetchEstimateData()
 })
 
@@ -307,6 +336,13 @@ const getConfidence = (member: TeamMember) => {
   const estimateType = useStoryPoints.value ? 'story_points' : 'person_days'
   return member.estimates[estimateType].confidence
 }
+
+// Add error watcher
+watch(error, (newError) => {
+  if (newError) {
+    console.error('Error state updated:', newError)
+  }
+})
 </script>
 
 <style>

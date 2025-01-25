@@ -39,9 +39,10 @@ const router = createRouter({
       props: true
     },
     {
-      path: '/estimates',
+      path: '/estimates/:id',
       name: 'estimates',
-      component: Estimates
+      component: Estimates,
+      props: true
     },
     {
       path: '/test-tech-review-view',

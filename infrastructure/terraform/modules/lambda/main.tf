@@ -485,3 +485,45 @@ resource "aws_iam_role_policy_attachment" "analyze_story_worker_secrets" {
   policy_arn = aws_iam_policy.secrets_access.arn
   role       = "dev-agile-stories-lambda-role"
 }
+
+# IAM role policy for Lambda functions
+resource "aws_iam_role_policy" "lambda_permissions" {
+  name = "${var.environment}-agile-stories-lambda-permissions"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:Scan"
+        ]
+        Resource = [
+          var.stories_table_arn,
+          "${var.stories_table_arn}/index/*",
+          var.estimations_table_arn,
+          "${var.estimations_table_arn}/index/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:InvokeFunction"
+        ]
+        Resource = [
+          "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${var.environment}-agile-stories-estimate-worker"
+        ]
+      }
+    ]
+  })
+}
+
+# Get current AWS region and account ID
+data "aws_region" "current" {}
+data "aws_caller_identity" "current" {}
