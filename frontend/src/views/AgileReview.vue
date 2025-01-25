@@ -1,5 +1,5 @@
 <template>
-  <div class="test" :class="{ 'fade-in': mounted }">
+  <div class="test" :class="{ 'fade-in': mounted, 'fade-out': isExiting }">
     <div v-if="loading" class="loading">
       <v-progress-circular indeterminate />
     </div>
@@ -91,6 +91,22 @@
         </div>
       </div>
     </div>
+
+    <transition name="fade">
+      <div v-if="showTransition" class="animation-container">
+        <video 
+          ref="videoPlayer"
+          class="background-video" 
+          autoplay 
+          loop 
+          muted 
+          playsinline
+        >
+          <source src="/videos/AdobeStock_910543395.mp4" type="video/mp4">
+          <source src="/videos/AdobeStock_910543395.webm" type="video/webm">
+        </video>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -107,6 +123,9 @@ const error = ref(null)
 const loading = ref(false)
 const reviewing = ref(false)
 const mounted = ref(false)
+const showTransition = ref(false)
+const isExiting = ref(false)
+const videoPlayer = ref(null)
 
 onMounted(() => {
   fetchAnalysis()
@@ -159,10 +178,15 @@ const canRequestReview = computed(() => {
 
 const requestTechnicalReview = async () => {
   reviewing.value = true
+  
+  // Add a 3-second delay before showing the video
+  setTimeout(() => {
+    showTransition.value = true
+    isExiting.value = false  // Keep page visible while video plays
+  }, 3000)  // 3000ms = 3 seconds
+  
   try {
     const storyId = route.params.id
-    console.log('Requesting technical review for story:', storyId)
-    
     const payload = {
       story_id: storyId,
       tenant_id: "test-tenant-001",
@@ -179,14 +203,19 @@ const requestTechnicalReview = async () => {
     
     console.log('Technical review response:', response.data)
     
-    // Navigate to tech review page with correct path
-    router.push(`/tech/${storyId}`)
+    // Only start fading out after we get the response
+    isExiting.value = true
+    
+    // Wait for fade out animation before hiding video and navigating
+    setTimeout(async () => {
+      showTransition.value = false
+      await router.push(`/tech/${storyId}`)
+    }, 1000)
     
   } catch (err) {
     console.error('Error requesting technical review:', err)
-    if (err.response) {
-      console.error('Error response:', err.response.data)
-    }
+    showTransition.value = false
+    isExiting.value = false
     error.value = 'Failed to request technical review'
   } finally {
     reviewing.value = false
@@ -219,6 +248,10 @@ const isNegative = (content: string): boolean => {
 
 .fade-in {
   opacity: 1;
+}
+
+.test.fade-out {
+  opacity: 0;
 }
 
 .test > .two-column-layout {
@@ -420,5 +453,34 @@ const isNegative = (content: string): boolean => {
 .footer-buttons {
   display: flex;
   gap: 1rem;
+}
+
+.animation-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 1000;
+}
+
+.background-video {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 1s ease-in-out;
+}
+
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
 }
 </style> 
