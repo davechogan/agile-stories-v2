@@ -58,7 +58,10 @@
           </div>
         </div>
 
-        <div class="button-container">
+        <div 
+          class="button-container"
+          :class="{ 'hide-button': showTransition }"
+        >
           <v-btn
             color="primary"
             size="large"
@@ -460,25 +463,30 @@ watch(showTransition, (newVal) => {
 .primary-content-wrapper {
   display: flex;
   flex-direction: column;
-  min-height: 100%;  /* Take full height */
+  min-height: 100%;
 }
 
 .primary-content {
-  flex: 1;          /* Take remaining space */
+  flex: 1;
   padding-bottom: 5rem;
 }
 
 .button-container {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   padding: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(18, 18, 18, 0.8);
   position: sticky;
   bottom: 0;
-  right: 0;
+  left: 0;
+  width: 50vw;
   z-index: 10;
-  backdrop-filter: blur(10px);
+  background: transparent;
+  transition: opacity 0.3s ease-out;
+}
+
+.hide-button {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .criteria-item {
@@ -489,7 +497,7 @@ watch(showTransition, (newVal) => {
 }
 
 .editable-content {
-  margin-bottom: 1.5rem;  /* More space between sections */
+  margin-bottom: 1.5rem;
 }
 
 /* Target Vuetify input components */
@@ -517,7 +525,7 @@ watch(showTransition, (newVal) => {
 }
 
 .story-section > * {
-  margin-bottom: 1.5rem;  /* Reduced from 3rem */
+  margin-bottom: 1.5rem;
 }
 
 .invest-grid {
@@ -593,14 +601,14 @@ watch(showTransition, (newVal) => {
 .page-title {
   color: #64B5F6;
   font-size: 1.5rem;
-  margin-bottom: 1rem;  /* Reduced from 1.5rem */
+  margin-bottom: 1rem;
   font-weight: 500;
 }
 
 .input-label {
   color: #fff;
   font-size: 1rem;
-  margin-bottom: 0.25rem;  /* Reduced from 0.5rem */
+  margin-bottom: 0.25rem;
   font-weight: 400;
 }
 
@@ -616,7 +624,7 @@ watch(showTransition, (newVal) => {
 
 /* Adjust acceptance criteria textarea size */
 .criteria-item :deep(.v-field__input) {
-  min-height: 48px !important;  /* Reduced height */
+  min-height: 48px !important;
   padding: 8px 12px !important;
 }
 

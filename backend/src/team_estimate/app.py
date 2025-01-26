@@ -20,45 +20,118 @@ import os
 import json
 import boto3
 import logging
-from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, UTC
 from decimal import Decimal
+import asyncio
 
 # Set up logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 # Initialize AWS clients
-secrets_client = boto3.client('secretsmanager')
 dynamodb = boto3.resource('dynamodb')
 lambda_client = boto3.client('lambda')
-ssm = boto3.client('ssm')
 
-# Get DynamoDB tables
-stories_table = dynamodb.Table(os.environ.get('DYNAMODB_TABLE', 'dev-agile-stories'))
-estimates_table = dynamodb.Table(os.environ.get('ESTIMATES_TABLE', 'dev-agile-stories-estimations'))
+# Use the actual table name
+ESTIMATES_TABLE = 'dev-agile-stories-estimations'  # or whatever your table name is
 
 class DecimalEncoder(json.JSONEncoder):
+    """Custom JSON encoder for Decimal types"""
     def default(self, obj):
         if isinstance(obj, Decimal):
             return str(obj)
         return super(DecimalEncoder, self).default(obj)
 
-def get_story(story_id: str, tenant_id: str) -> dict:
-    """
-    Fetches story details from DynamoDB.
-    """
+def get_nearest_fibonacci(num: Decimal) -> Decimal:
+    """Get nearest Fibonacci number (1,2,3,5,8,13,21)"""
+    fib_sequence = [Decimal('1'), Decimal('2'), Decimal('3'), Decimal('5'), 
+                   Decimal('8'), Decimal('13'), Decimal('21')]
+    if num <= Decimal('0'):
+        return Decimal('1')
+    return min(fib_sequence, key=lambda x: abs(x - num))
+
+def calculate_confidence(estimates: list) -> str:
+    """Conservative approach: if any LOW, return LOW, if any MEDIUM, return MEDIUM, else HIGH"""
+    confidences = [est.get('confidence', 'LOW') for est in estimates]
+    if 'LOW' in confidences:
+        return 'LOW'
+    elif 'MEDIUM' in confidences:
+        return 'MEDIUM'
+    return 'HIGH'
+
+async def invoke_worker_lambda(role: str, story_data: dict, story_id: str, tenant_id: str) -> dict:
+    """Invokes a worker Lambda for a specific role."""
     try:
-        response = stories_table.get_item(
-            Key={
-                'story_id': story_id,
-                'tenantId': tenant_id
-            }
+        payload = {
+            'role': role,
+            'content': story_data,
+            'story_id': story_id,
+            'tenant_id': tenant_id
+        }
+        
+        logger.info(f"Invoking worker lambda for role {role} with payload: {json.dumps(payload)}")
+        
+        response = lambda_client.invoke(
+            FunctionName="dev-agile-stories-estimate-worker",
+            InvocationType='RequestResponse',
+            Payload=json.dumps(payload)
         )
-        return response['Item']
+        
+        return json.loads(response['Payload'].read())
     except Exception as e:
-        logger.error(f"Error fetching story {story_id}: {str(e)}")
+        logger.error(f"Error invoking worker lambda for role {role}: {str(e)}")
         raise
+
+def calculate_averages(estimates: list) -> dict:
+    """Calculate average estimates with Fibonacci numbers for story points"""
+    story_points = []
+    person_days = []
+    
+    for est in estimates:
+        if 'estimates' in est:
+            sp = est['estimates'].get('story_points', {})
+            pd = est['estimates'].get('person_days', {})
+            
+            if 'value' in sp:
+                story_points.append(Decimal(str(sp['value'])))
+            if 'value' in pd:
+                person_days.append(Decimal(str(pd['value'])))
+    
+    # Calculate averages
+    sp_avg = Decimal('0')
+    pd_avg = Decimal('0')
+    
+    if story_points:
+        sp_avg = get_nearest_fibonacci(sum(story_points) / len(story_points))
+    if person_days:
+        pd_avg = sum(person_days) / len(person_days)
+    
+    return {
+        'story_points': {
+            'value': sp_avg,
+            'confidence': calculate_confidence([e['estimates']['story_points'] for e in estimates])
+        },
+        'person_days': {
+            'value': pd_avg,
+            'confidence': calculate_confidence([e['estimates']['person_days'] for e in estimates])
+        }
+    }
+
+def convert_to_decimal(obj):
+    """Recursively convert any float or string number values to Decimal in a nested structure."""
+    if isinstance(obj, dict):
+        return {key: convert_to_decimal(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_to_decimal(item) for item in obj]
+    elif isinstance(obj, float):
+        return Decimal(str(obj))
+    elif isinstance(obj, str):
+        try:
+            # Try to convert string to Decimal if it looks like a number
+            return Decimal(obj)
+        except:
+            return obj
+    return obj
 
 def prepare_story_payload(story_data: dict) -> dict:
     """
@@ -76,8 +149,6 @@ def prepare_story_payload(story_data: dict) -> dict:
         analysis = story_data.get('analysis', {})
 
         return {
-            'story_id': story_data['story_id'],
-            'tenantId': story_data['tenantId'],
             'title': content.get('title'),
             'story': content.get('story'),
             'acceptance_criteria': content.get('acceptance_criteria'),
@@ -87,320 +158,112 @@ def prepare_story_payload(story_data: dict) -> dict:
         logger.error(f"Error preparing story payload: {str(e)}")
         raise
 
-def invoke_worker_lambda(role: str, story_payload: dict) -> dict:
-    """
-    Invokes a worker Lambda for a specific role.
-    """
-    try:
-        payload = {
-            'role': role,
-            'story_data': story_payload,
-            'story_id': story_payload['story_id'],
-            'tenant_id': story_payload['tenantId']
-        }
-        
-        response = lambda_client.invoke(
-            FunctionName=os.environ['WORKER_LAMBDA_ARN'],
-            InvocationType='RequestResponse',
-            Payload=json.dumps(payload)
-        )
-        
-        return json.loads(response['Payload'].read())
-    except Exception as e:
-        logger.error(f"Error invoking worker lambda for role {role}: {str(e)}")
-        raise
-
-def store_estimate(story_id: str, role: str, estimate_data: dict, tenant_id: str):
-    """
-    Stores an individual role's estimate in DynamoDB.
-    
-    Args:
-        story_id (str): The story's UUID
-        role (str): The estimating role
-        estimate_data (dict): The estimate details
-        tenant_id (str): The tenant ID
-    """
-    try:
-        timestamp = datetime.utcnow().isoformat()
-        estimation_id = f"{story_id}_{role}"  # Create unique estimation ID
-        
-        item = {
-            'estimation_id': estimation_id,  # hash key
-            'story_id': story_id,           # range key
-            'tenantId': tenant_id,          # for tenant-index GSI
-            'role': role,
-            'estimate': estimate_data['estimate'],
-            'confidence': estimate_data['confidence'],
-            'rationale': estimate_data['rationale'],
-            'created_at': timestamp         # for story-created-index GSI
-        }
-        
-        estimates_table.put_item(Item=item)
-        
-    except Exception as e:
-        logger.error(f"Error storing estimate for role {role}: {str(e)}")
-        raise
-
-def calculate_average_estimates(estimates: list) -> dict:
-    """
-    Calculates average estimates and confidence for both story points and person days.
-    """
-    def calc_type_average(estimate_type: str) -> dict:
-        values = [e['estimates'][estimate_type]['value'] for e in estimates]
-        confidences = [e['estimates'][estimate_type]['confidence'] for e in estimates]
-        
-        # Map confidence levels to numbers for averaging
-        confidence_map = {'LOW': 1, 'MEDIUM': 2, 'HIGH': 3}
-        confidence_nums = [confidence_map[c] for c in confidences]
-        
-        avg_value = sum(values) / len(values)
-        avg_confidence_num = sum(confidence_nums) / len(confidence_nums)
-        
-        # Map back to confidence level
-        confidence_levels = {1: 'LOW', 2: 'MEDIUM', 3: 'HIGH'}
-        avg_confidence = confidence_levels[round(avg_confidence_num)]
-        
-        return {
-            'value': Decimal(str(avg_value)),
-            'confidence': avg_confidence
-        }
-
-    return {
-        'story_points': calc_type_average('story_points'),
-        'person_days': calc_type_average('person_days')
-    }
-
-def store_final_estimate(story_id: str, tenant_id: str, estimates: list):
-    """
-    Stores the final combined estimate data with both story points and person days.
-    """
-    try:
-        timestamp = datetime.utcnow().isoformat()
-        estimation_id = f"{story_id}_final"  # Special ID for combined record
-        
-        # Calculate averages for both types
-        averages = calculate_average_estimates(estimates)
-        
-        item = {
-            'estimation_id': estimation_id,
-            'story_id': story_id,
-            'tenantId': tenant_id,
-            'version': 'FINAL',
-            'created_at': timestamp,
-            'averages': {
-                'story_points': averages['story_points'],
-                'person_days': averages['person_days']
-            },
-            'individual_estimates': estimates
-        }
-        
-        estimates_table.put_item(Item=item)
-        
-    except Exception as e:
-        logger.error(f"Error storing final estimate: {str(e)}")
-        raise
-
-def get_nearest_fibonacci(num: Decimal) -> Decimal:
-    """
-    Get the nearest Fibonacci number for a given value.
-    Fibonacci sequence used: 1, 2, 3, 5, 8, 13, 21
-    """
-    fib_sequence = [Decimal('1'), Decimal('2'), Decimal('3'), Decimal('5'), 
-                   Decimal('8'), Decimal('13'), Decimal('21')]
-    
-    if num <= Decimal('0'):
-        return Decimal('1')
-    
-    # Find the closest Fibonacci number
-    closest = min(fib_sequence, key=lambda x: abs(x - num))
-    return closest
-
-def calculate_average(estimate_type: str, results: list) -> Decimal:
-    """
-    Calculate the average value for a specific estimate type across all roles.
-    For story_points, returns nearest Fibonacci number.
-    For person_days, returns regular average.
-    
-    Args:
-        estimate_type (str): Either 'story_points' or 'person_days'
-        results (list): List of worker results containing estimates
-        
-    Returns:
-        Decimal: Average value, or Decimal('0') if no results
-    """
-    if not results:
-        logger.warning(f"No results provided for {estimate_type} average calculation")
-        return Decimal('0')
-        
-    values = [Decimal(str(r['estimates'][estimate_type]['value'])) for r in results]
-    if not values:
-        logger.warning(f"No values found for {estimate_type} in results")
-        return Decimal('0')
-        
-    avg = Decimal(str(sum(values) / len(values)))
-    
-    # For story points, return nearest Fibonacci number
-    if estimate_type == 'story_points':
-        return get_nearest_fibonacci(avg)
-    
-    # For person days, return regular average
-    return avg
-
-def calculate_confidence(estimate_type: str, results: list) -> str:
-    """
-    Calculate the overall confidence level for a specific estimate type.
-    Uses conservative approach: if any LOW, return LOW, if any MEDIUM, return MEDIUM, else HIGH
-    
-    Args:
-        estimate_type (str): Either 'story_points' or 'person_days'
-        results (list): List of worker results containing estimates
-        
-    Returns:
-        str: 'LOW', 'MEDIUM', or 'HIGH', defaults to 'LOW' if no results
-    """
-    if not results:
-        logger.warning(f"No results provided for {estimate_type} confidence calculation")
-        return 'LOW'
-        
-    confidences = [r['estimates'][estimate_type]['confidence'] for r in results]
-    if not confidences:
-        logger.warning(f"No confidence values found for {estimate_type} in results")
-        return 'LOW'
-        
-    if 'LOW' in confidences:
-        return 'LOW'
-    elif 'MEDIUM' in confidences:
-        return 'MEDIUM'
-    return 'HIGH'
-
-def convert_to_decimal(obj):
-    """
-    Recursively convert any float values to Decimal in a nested structure.
-    """
-    if isinstance(obj, dict):
-        return {key: convert_to_decimal(value) for key, value in obj.items()}
-    elif isinstance(obj, list):
-        return [convert_to_decimal(item) for item in obj]
-    elif isinstance(obj, float):
-        return Decimal(str(obj))
-    return obj
-
-def decimal_to_str(obj):
-    """Convert Decimal objects to strings in a nested structure."""
-    if isinstance(obj, dict):
-        return {key: decimal_to_str(value) for key, value in obj.items()}
-    elif isinstance(obj, list):
-        return [decimal_to_str(item) for item in obj]
-    elif isinstance(obj, Decimal):
-        return str(obj)
-    return obj
-
 def handler(event, context):
+    """Main Lambda handler that wraps async implementation."""
+    loop = asyncio.get_event_loop()
+    return loop.run_until_complete(_async_handler(event, context))
+
+async def _async_handler(event, context):
+    """Async implementation of handler logic."""
     try:
         # Parse request
         body = json.loads(event.get('body', '{}'))
+        logger.info(f"Received request body: {json.dumps(body)}")
+        
         story_id = body.get('story_id')
         tenant_id = body.get('tenant_id')
-        content = body.get('content', {})
-        roles = body.get('roles', ['Frontend', 'Backend', 'Database'])  # Default roles if none provided
         
-        logger.info(f"Received team estimate request for story {story_id} with roles: {roles}")
+        # Get roles directly from the root level
+        roles = body.get('roles', [])
+        logger.info(f"Selected roles: {json.dumps(roles)}")
         
-        # Save initial PENDING state
-        pending_item = {
-            'story_id': story_id,
-            'version': 'TEAM_ESTIMATE_PENDING',
-            'tenantId': tenant_id,
-            'content': content,
-            'created_at': datetime.utcnow().isoformat(),
-            'status': 'PENDING',
-            'roles': roles
-        }
-        
-        logger.info(f"Saving PENDING state with roles: {json.dumps(pending_item)}")
-        stories_table.put_item(Item=pending_item)
-        
-        # Initialize Lambda client
-        lambda_client = boto3.client('lambda')
-        worker_results = []
-        worker_function_name = "dev-agile-stories-estimate-worker"  # Hardcoded for now
-        
-        logger.info(f"Worker Lambda name: {worker_function_name}")
-        logger.info(f"Processing roles: {roles}")
-        
-        # Invoke worker Lambda for each role
-        for role in roles:
-            worker_payload = {
-                'story_id': story_id,
-                'tenant_id': tenant_id,
-                'role': role,
-                'content': content
+        if not roles:
+            logger.error("No roles found in request")
+            return {
+                'statusCode': 400,
+                'body': json.dumps({'error': 'No roles provided in request'})
             }
             
-            logger.info(f"Invoking worker for role {role} with payload: {json.dumps(worker_payload)}")
-            try:
-                response = lambda_client.invoke(
-                    FunctionName=worker_function_name,
-                    InvocationType='RequestResponse',
-                    Payload=json.dumps(worker_payload)
-                )
-                logger.info(f"Worker response for {role}: {response}")
-                
-                result = json.loads(response['Payload'].read())
-                logger.info(f"Worker result for {role}: {json.dumps(result)}")
-                
-                if result.get('statusCode') == 200:
-                    worker_result = json.loads(result.get('body', '{}'))
-                    # Convert any float values to Decimal
-                    worker_result = convert_to_decimal(worker_result)
-                    worker_results.append(worker_result)
-                    logger.info(f"Added estimate from {role}: {json.dumps(worker_result, cls=DecimalEncoder)}")
-                else:
-                    logger.error(f"Worker failed for role {role}: {json.dumps(result)}")
-            except Exception as e:
-                logger.error(f"Error invoking worker for role {role}: {str(e)}")
+        # Prepare story data
+        story_data = {
+            'title': body.get('content', {}).get('title'),
+            'story': body.get('content', {}).get('story'),
+            'acceptance_criteria': body.get('content', {}).get('acceptance_criteria', []),
+            'implementation_details': body.get('content', {}).get('implementation_details', [])
+        }
         
-        # Calculate and save final estimate
-        current_time = datetime.utcnow().isoformat()
+        logger.info(f"Prepared story data for workers: {json.dumps(story_data)}")
+        
+        # Process estimates for each role
+        tasks = [
+            process_role_estimate(role, story_data, story_id, tenant_id)
+            for role in roles
+        ]
+        estimates = await asyncio.gather(*tasks)
+
+        # Calculate final estimate
         final_estimate = {
             'estimation_id': f"{story_id}_FINAL",
             'story_id': story_id,
             'tenantId': tenant_id,
-            'created_at': current_time,
-            'role': 'FINAL',
-            'averages': {
-                'story_points': {
-                    'value': calculate_average('story_points', worker_results),
-                    'confidence': calculate_confidence('story_points', worker_results)
-                },
-                'person_days': {
-                    'value': calculate_average('person_days', worker_results),
-                    'confidence': calculate_confidence('person_days', worker_results)
-                }
-            },
-            'individual_estimates': worker_results
+            'created_at': datetime.now(UTC).isoformat(),
+            'r#role': 'FINAL',
+            'averages': calculate_averages(estimates),
+            'individual_estimates': estimates
         }
-        
-        # Convert Decimals to strings before saving or returning
-        final_estimate_json = decimal_to_str(final_estimate)
-        
-        logger.info(f"Saving final estimate: {json.dumps(final_estimate_json)}")
-        estimates_table.put_item(Item=final_estimate)  # DynamoDB accepts Decimal
-        
+
+        # Save final estimate
+        table = dynamodb.Table(ESTIMATES_TABLE)
+        table.put_item(Item=json.loads(json.dumps(final_estimate, cls=DecimalEncoder)))
+
         return {
             'statusCode': 200,
-            'body': json.dumps({
-                'message': 'Team estimate completed',
-                'story_id': story_id,
-                'estimate': final_estimate_json
-            })
+            'body': json.dumps(final_estimate, cls=DecimalEncoder)
         }
-        
+
     except Exception as e:
-        logger.error(f"Error in team estimate handler: {str(e)}")
+        logger.error(f"Error in handler: {str(e)}")
         return {
             'statusCode': 500,
-            'body': json.dumps({
-                'error': str(e)
-            })
-        } 
+            'body': json.dumps({'error': str(e)})
+        }
+
+async def process_role_estimate(role: str, story_data: dict, story_id: str, tenant_id: str) -> dict:
+    """Process estimate for a single role."""
+    try:
+        response = await invoke_worker_lambda(role, story_data, story_id, tenant_id)
+        estimate = json.loads(response['body'])
+        
+        # Convert any float or string number values to Decimal
+        estimate = convert_to_decimal(estimate)
+        
+        # Ensure estimates values are Decimal
+        if 'estimates' in estimate:
+            for est_type in ['story_points', 'person_days']:
+                if est_type in estimate['estimates']:
+                    value = estimate['estimates'][est_type].get('value')
+                    if value is not None:
+                        estimate['estimates'][est_type]['value'] = Decimal(str(value))
+        
+        # Create estimate record with role
+        estimate_record = {
+            'r#role': role,
+            'estimates': estimate['estimates'],
+            'justification': estimate['justification']
+        }
+        
+        # Save individual estimate
+        table = dynamodb.Table(ESTIMATES_TABLE)
+        table.put_item(Item={
+            'estimation_id': f"{story_id}_{role}",
+            'story_id': story_id,
+            'tenantId': tenant_id,
+            'created_at': datetime.now(UTC).isoformat(),
+            **estimate_record
+        })
+        
+        return estimate_record
+
+    except Exception as e:
+        logger.error(f"Error processing role {role}: {str(e)}")
+        raise 

@@ -37,7 +37,7 @@ def get_role_prompt(role: str) -> str:
     try:
         # Convert role to match file naming convention
         role_file = role.lower().replace(' ', '_')
-        prompt_path = Path(__file__).parent / "prompts" / f"{role_file}Prompt.md"
+        prompt_path = Path('/var/task') / f"{role_file}Prompt.md"
         
         with open(prompt_path, 'r') as f:
             return f.read()
@@ -50,12 +50,15 @@ def handler(event, context):
         # Get OpenAI key
         get_openai_key()
         
-        # Parse input
+        # Log the incoming event for debugging
+        logger.info(f"Received event: {json.dumps(event)}")
+        
+        # Parse input - use content instead of story_data
         role = event['role']
-        story_data = event['story_data']
+        content = event['content']  # This matches what team_estimate sends
         
         logger.info(f"Processing estimation for role: {role}")
-        logger.info(f"Story data: {json.dumps(story_data)}")
+        logger.info(f"Content: {json.dumps(content)}")
 
         # Get role-specific prompt
         prompt = get_role_prompt(role)
@@ -65,7 +68,7 @@ def handler(event, context):
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": prompt},
-                {"role": "user", "content": json.dumps(story_data)}
+                {"role": "user", "content": json.dumps(content)}
             ],
             response_format={ "type": "json_object" }
         )

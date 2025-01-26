@@ -24,6 +24,7 @@
         class="team-member"
         :style="getPositionStyle(index, mockTeamEstimates.length)"
       >
+        {{ console.log('Member data:', member) }}
         <v-avatar
           size="60"
           class="member-avatar"
@@ -32,8 +33,9 @@
           <v-img :src="member.avatarUrl"></v-img>
         </v-avatar>
         <div class="member-info">
-          <div class="member-name">{{ member.name }}</div>
-          <div class="member-title">{{ member.title }}</div>
+          {{ console.log('Role:', member.role) }}
+          <div class="member-name">{{ getRoleName(member.role) }}</div>
+          <div class="member-title">{{ formatRole(member.role) }}</div>
           <div class="member-estimate" :class="getConfidence(member).toLowerCase()">
             {{ getCurrentEstimate(member) }}
           </div>
@@ -48,36 +50,34 @@
           <v-avatar size="48" class="mr-4">
             <v-img :src="selectedMember?.avatarUrl"></v-img>
           </v-avatar>
-          {{ selectedMember?.name }}
+          {{ getRoleName(selectedMember?.role) }}
         </v-card-title>
         
         <v-card-text>
           <div class="member-dialog-role">{{ selectedMember?.title }}</div>
+          
           <div class="member-dialog-estimate">
-            <span class="estimate-label">Estimate:</span>
-            <span class="estimate-value">
-              {{ selectedMember?.estimates[estimateType].value }} 
-              {{ estimateType === 'story_points' ? 'points' : 'days' }}
-            </span>
-            <div class="confidence-level">
-              Confidence: {{ selectedMember?.estimates[estimateType].confidence }}
+            <div class="estimate-row">
+              <span class="estimate-label">Estimate:</span>
+              <span class="estimate-value">
+                {{ selectedMember?.estimates[useStoryPoints.value ? 'story_points' : 'person_days'].value }} 
+                {{ useStoryPoints.value ? 'points' : 'days' }}
+              </span>
+            </div>
+            
+            <div class="confidence-row">
+              <span class="estimate-label">Confidence:</span>
+              <span class="estimate-value">
+                {{ selectedMember?.estimates[useStoryPoints.value ? 'story_points' : 'person_days'].confidence }}
+              </span>
             </div>
           </div>
           
           <div class="mt-4">
-            <div v-for="(section, index) in selectedMember?.justification" 
-                 :key="index" 
-                 class="justification-section">
-              <h3 class="section-title">{{ section.title }}</h3>
-              <p class="section-content">{{ section.content }}</p>
-            </div>
+            <h3 class="section-title">Justification</h3>
+            <p class="justification-text">{{ selectedMember?.justification }}</p>
           </div>
         </v-card-text>
-        
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="primary" @click="showDialog = false">Close</v-btn>
-        </v-card-actions>
       </v-card>
     </v-dialog>
     
@@ -98,6 +98,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { CognitoIdentityCredentials, DynamoDB } from 'aws-sdk'
+import { useSettingsStore } from '@/stores/settingsStore'
 
 const route = useRoute()
 const router = useRouter()
@@ -105,7 +106,10 @@ const isLoading = ref(true)
 const error = ref('')
 const rawEstimateData = ref(null)
 const mockTeamEstimates = ref(null)
-const useStoryPoints = ref(true)  // Default to story points
+const settingsStore = useSettingsStore()
+
+// Initialize useStoryPoints from settings store or localStorage, defaulting to false (days)
+const useStoryPoints = ref(false) // Default to days
 
 // Role display names and titles
 const roleDisplayData = {
@@ -237,9 +241,38 @@ const showMemberDetails = (member: TeamMember) => {
   showDialog.value = true
 }
 
-const estimateType = ref('person_days') // or get from settings
+// Initialize on mount
+onMounted(async () => {
+  console.log('Component mounted')
+  await fetchEstimateData()
+  
+  // Try to get from settings store first
+  const storeSetting = settingsStore.estimateType
+  // Then try localStorage
+  const localSetting = localStorage.getItem('estimateType')
+  
+  // Use store setting, then localStorage, then default to false (days)
+  useStoryPoints.value = storeSetting === 'story_points' || 
+                        (storeSetting === null && localSetting === 'story_points')
+  
+  console.log('Estimate type initialized:', useStoryPoints.value ? 'story_points' : 'person_days')
+})
 
-// Calculate average based on current estimate type
+// Watch for changes and update both store and localStorage
+watch(useStoryPoints, (newValue) => {
+  const estimateType = newValue ? 'story_points' : 'person_days'
+  settingsStore.setEstimateType(estimateType)
+  localStorage.setItem('estimateType', estimateType)
+  console.log('Estimate type changed to:', estimateType)
+})
+
+// Make sure all estimate displays use this setting
+const getCurrentEstimate = (member: TeamMember) => {
+  const estimateType = useStoryPoints.value ? 'story_points' : 'person_days'
+  return member.estimates[estimateType].value
+}
+
+// Update average estimate computation if needed
 const averageEstimate = computed(() => {
   const estimateType = useStoryPoints.value ? 'story_points' : 'person_days'
   return rawEstimateData.value?.averages[estimateType].value || 0
@@ -249,49 +282,39 @@ const averageEstimate = computed(() => {
 const transformEstimateData = (rawData: any): TeamMember[] => {
   console.log('Raw data received:', rawData);
   
-  return rawData.individual_estimates.map((estimate: any) => {
+  return rawData.individual_estimates.map((estimate: any, index: number) => {
     console.log('Processing estimate:', estimate);
     
-    const roleData = roleDisplayData[estimate.role] || {
+    // Updated roles array to match the exact order from the image
+    const roles = [
+      'database_admin',
+      'devops_engineer',
+      'frontend_dev',
+      'qa_engineer',
+      'scrum_master',
+      'security_expert',
+      'ui_designer',
+      'senior_dev'
+    ];
+    
+    const role = roles[index];
+    const roleData = roleDisplayData[role] || {
       name: 'Team Member', 
-      title: estimate.role
+      title: role
     }
     
     // Generate avatar URL using role as seed
     const style = avatarStyles[Math.floor(Math.random() * avatarStyles.length)]
-    const seed = estimate.role + Date.now()
-    
-    // Parse justification text into sections
-    const justificationText = estimate.justification
-    console.log('Justification text:', justificationText);
-    
-    // Simply split by double newlines and format each section
-    const sections = justificationText.split('\n\n').map(section => {
-      const lines = section.split('\n')
-      return {
-        title: lines[0].replace(':', '').trim(),
-        content: lines.slice(1).join('\n').trim()
-      }
-    }).filter(section => section.content); // Only keep sections with content
-    
-    console.log('Processed sections:', sections);
+    const seed = role + Date.now()
     
     return {
-      id: estimate.role,
+      id: role,
+      role: role,
       name: roleData.name,
       title: roleData.title,
       avatarUrl: `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`,
-      estimates: {
-        story_points: {
-          value: estimate.estimates.story_points.value,
-          confidence: estimate.estimates.story_points.confidence
-        },
-        person_days: {
-          value: estimate.estimates.person_days.value,
-          confidence: estimate.estimates.person_days.confidence
-        }
-      },
-      justification: sections
+      estimates: estimate.estimates,
+      justification: estimate.justification
     }
   })
 }
@@ -312,9 +335,9 @@ const fetchEstimateData = async () => {
     console.log('Starting fetchEstimateData')
     isLoading.value = true
     const storyId = route.params.id
+    console.log('Looking for story_id:', storyId)
     
     // Get credentials directly from Cognito Identity Pool
-    console.log('Getting credentials from Identity Pool')
     const credentials = new CognitoIdentityCredentials({
       IdentityPoolId: import.meta.env.VITE_COGNITO_IDENTITY_POOL_ID
     }, {
@@ -322,7 +345,6 @@ const fetchEstimateData = async () => {
     })
     
     await credentials.getPromise()
-    console.log('Got credentials:', credentials)
     
     // Initialize DynamoDB with credentials
     const dynamoDB = new DynamoDB.DocumentClient({
@@ -330,12 +352,36 @@ const fetchEstimateData = async () => {
       credentials
     })
     
-    // Use scan instead of query since we don't have the estimation_id
-    const params = {
+    // Try query first
+    const queryParams = {
+      TableName: `${import.meta.env.VITE_ENVIRONMENT}-agile-stories-estimations`,
+      KeyConditionExpression: 'estimation_id = :eid AND story_id = :sid',
+      ExpressionAttributeValues: {
+        ':eid': `${storyId}_FINAL`,
+        ':sid': storyId
+      }
+    }
+    
+    console.log('Trying query first with params:', JSON.stringify(queryParams, null, 2))
+    try {
+      const queryResponse = await dynamoDB.query(queryParams).promise()
+      console.log('Query response:', queryResponse)
+      if (queryResponse.Items && queryResponse.Items.length > 0) {
+        rawEstimateData.value = queryResponse.Items[0]
+        mockTeamEstimates.value = transformEstimateData(queryResponse.Items[0])
+        return
+      }
+    } catch (queryError) {
+      console.error('Query failed:', queryError)
+    }
+    
+    // Fall back to scan if query fails or returns no results
+    console.log('Falling back to scan...')
+    const scanParams = {
       TableName: `${import.meta.env.VITE_ENVIRONMENT}-agile-stories-estimations`,
       FilterExpression: 'story_id = :sid AND #r = :role',
       ExpressionAttributeNames: {
-        '#r': 'role'
+        '#r': 'r#role'
       },
       ExpressionAttributeValues: {
         ':sid': storyId,
@@ -343,13 +389,13 @@ const fetchEstimateData = async () => {
       }
     }
     
-    console.log('Scanning DynamoDB with params:', params)
-    const response = await dynamoDB.scan(params).promise()
-    console.log('DynamoDB response:', response)
+    console.log('Scan params:', JSON.stringify(scanParams, null, 2))
+    const scanResponse = await dynamoDB.scan(scanParams).promise()
+    console.log('Scan response:', scanResponse)
     
-    if (response.Items && response.Items.length > 0) {
-      rawEstimateData.value = response.Items[0]
-      mockTeamEstimates.value = transformEstimateData(response.Items[0])
+    if (scanResponse.Items && scanResponse.Items.length > 0) {
+      rawEstimateData.value = scanResponse.Items[0]
+      mockTeamEstimates.value = transformEstimateData(scanResponse.Items[0])
     } else {
       error.value = 'No estimate found for this story'
     }
@@ -362,35 +408,44 @@ const fetchEstimateData = async () => {
   }
 }
 
-// Initialize on mount
-onMounted(async () => {
-  console.log('Component mounted')
-  await fetchEstimateData()
-})
-
-// Toggle estimate type display
-const toggleEstimateType = () => {
-  useStoryPoints.value = !useStoryPoints.value
-}
-
-// Get current estimate value for display
-const getCurrentEstimate = (member: TeamMember) => {
-  const estimateType = useStoryPoints.value ? 'story_points' : 'person_days'
-  return member.estimates[estimateType].value
-}
-
 // Get confidence level for current estimate type
 const getConfidence = (member: TeamMember) => {
   const estimateType = useStoryPoints.value ? 'story_points' : 'person_days'
   return member.estimates[estimateType].confidence
 }
 
-// Add error watcher
-watch(error, (newError) => {
-  if (newError) {
-    console.error('Error state updated:', newError)
+// Instead of generating random names each time, let's create a stable mapping
+const roleNames = {
+  'database_admin': 'Data Keeper',
+  'devops_engineer': 'Cloud Master',
+  'frontend_dev': 'UI Wizard',
+  'qa_engineer': 'Test Oracle',
+  'scrum_master': 'Agile Guide',
+  'security_expert': 'Security Guardian',
+  'ui_designer': 'Design Master',
+  'senior_dev': 'Tech Lead'
+}
+
+// Replace the getRandomName function with a stable one
+const getRoleName = (role: string) => {
+  return roleNames[role] || role
+}
+
+const formatRole = (role) => {
+  const formattedRoles = {
+    'backend_dev': 'Backend Developer',
+    'frontend_dev': 'Frontend Developer',
+    'devops_engineer': 'DevOps Engineer',
+    'qa_engineer': 'QA Engineer',
+    'security_expert': 'Security Expert',
+    'database_admin': 'Database Admin',
+    'ui_designer': 'UI Designer',
+    'senior_dev': 'Senior Developer',
+    'scrum_master': 'Scrum Master'
   }
-})
+
+  return formattedRoles[role] || role
+}
 </script>
 
 <style>
@@ -419,7 +474,7 @@ watch(error, (newError) => {
 
 .estimation-circle {
   position: relative;
-  margin: -2rem auto 0;
+  margin: 4rem auto 0;  /* Increased from -2rem to 4rem */
   padding-top: 2rem;
 }
 
@@ -456,7 +511,7 @@ watch(error, (newError) => {
   position: absolute;
   text-align: center;
   transition: all 1s cubic-bezier(0.34, 1.56, 0.64, 1);
-  width: 120px;
+  width: 140px; /* Increased from 120px to accommodate longer names */
 }
 
 .member-avatar {
@@ -477,11 +532,14 @@ watch(error, (newError) => {
   font-size: 0.8rem;
   white-space: nowrap;
   color: rgba(255, 255, 255, 0.87);
+  text-align: center;
+  margin-top: 0.5rem;
 }
 
 .member-name {
   font-weight: bold;
   color: rgba(255, 255, 255, 0.87);
+  font-size: 0.9rem;
 }
 
 .member-title {
@@ -526,41 +584,34 @@ watch(error, (newError) => {
 }
 
 .member-dialog-estimate {
+  margin-top: 16px;
+}
+
+.estimate-row, .confidence-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+  margin-bottom: 8px;
 }
 
 .estimate-label {
   font-weight: 500;
+  min-width: 100px;
 }
 
 .estimate-value {
-  color: var(--v-theme-primary);
-  font-weight: bold;
+  margin-left: 8px;
 }
 
-.justification-section {
-  margin-top: 1rem;
-  padding: 0.5rem 0;
+.justification-text {
+  white-space: pre-wrap;
+  line-height: 1.5;
+  margin-top: 8px;
 }
 
 .section-title {
   color: var(--v-primary-base);
   font-size: 1.1rem;
   margin-bottom: 0.5rem;
-}
-
-.section-content {
-  color: var(--v-medium-emphasis-opacity);
-  line-height: 1.4;
-}
-
-.confidence-level {
-  margin-top: 0.5rem;
-  font-size: 0.9rem;
-  color: var(--v-medium-emphasis-opacity);
 }
 
 .back-button-container {
@@ -580,5 +631,14 @@ watch(error, (newError) => {
 
 .member-estimate.low {
   color: #F44336;
+}
+
+.circle-container {
+  margin-top: 64px;  /* Matches navbar height */
+}
+
+/* If you're using v-container, you could also add a class there */
+.estimates-container {
+  padding-top: 64px;  /* Matches navbar height */
 }
 </style> 
