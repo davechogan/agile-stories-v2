@@ -2,40 +2,21 @@
   <v-app theme="dark">
     <v-app-bar>
       <v-container class="d-flex align-center">
-        <v-btn 
+        <router-link 
           to="/" 
-          variant="text"
-          color="primary"
+          class="nav-link"
         >
-          Story Input
-        </v-btn>
-        <v-btn 
-          to="/agile" 
-          variant="text"
-          color="primary"
+          Agile Advisor
+        </router-link>
+        
+        <v-spacer></v-spacer>
+
+        <v-btn
+          icon
+          class="settings-btn"
+          @click="openSettings"
         >
-          Analysis Results
-        </v-btn>
-        <v-btn 
-          to="/tech" 
-          variant="text"
-          color="primary"
-        >
-          Tech Review
-        </v-btn>
-        <v-btn 
-          to="/estimates" 
-          variant="text"
-          color="primary"
-        >
-          Estimates
-        </v-btn>
-        <v-btn 
-          to="/settings" 
-          variant="text"
-          color="primary"
-        >
-          Settings
+          <v-icon color="rgba(255, 255, 255, 0.3)">mdi-cog</v-icon>
         </v-btn>
       </v-container>
     </v-app-bar>
@@ -92,5 +73,23 @@ html, body {
 .v-container {
   max-width: 100% !important;
   width: 100%;
+}
+
+.nav-link {
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  padding: 0 1rem;
+  font-size: 1.3rem;
+  font-weight: 500;
+}
+
+.settings-btn {
+  opacity: 0.7;
+}
+
+@media (max-width: 960px) {
+  .hide-mobile {
+    display: none !important;
+  }
 }
 </style>
