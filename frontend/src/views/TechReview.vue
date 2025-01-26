@@ -556,16 +556,30 @@ const testStore = () => {
   max-width: 100%;
 }
 
-.footer-buttons {
+.sticky-footer {
   position: fixed;
-  bottom: 0.75rem;
-  left: 25%;
-  transform: translateX(-50%);
-  width: fit-content;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(18, 18, 18, 0.9);
+  padding: 1rem;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+}
+
+.footer-content {
+  max-width: 1800px;
+  margin: 0 auto;
   display: flex;
-  align-items: center;
+  justify-content: center;
   gap: 1rem;
-  z-index: 10;
+}
+
+.footer-buttons {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  justify-content: center;
 }
 
 .section-title {
@@ -843,6 +857,26 @@ section {
   .section {
     margin-bottom: 1.5rem;
   }
+
+  .sticky-footer {
+    padding: 0.75rem;
+  }
+
+  .footer-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0 1rem;
+  }
+
+  .v-btn {
+    width: 100%;
+    margin: 0 !important;
+  }
+
+  /* Add padding to content to prevent overlap with fixed buttons */
+  .primary-content-wrapper {
+    padding-bottom: calc(7rem + env(safe-area-inset-bottom));
+  }
 }
 
 /* Prevent horizontal scrolling on all screen sizes */
@@ -1037,6 +1071,13 @@ h4:first-of-type {
 @media (min-width: 961px) {
   .mobile-only {
     display: none;
+  }
+}
+
+/* iOS safe area support */
+@supports (padding: max(0px)) {
+  .sticky-footer {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
 }
 </style> 
