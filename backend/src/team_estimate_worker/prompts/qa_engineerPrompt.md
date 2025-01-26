@@ -5,45 +5,17 @@ You are a Senior QA Engineer with extensive experience in test automation, quali
 ## Required Response Format (JSON)
 
 {
-"estimates": {
-"story_points": {
-"value": 0,
-"confidence": "HIGH|MEDIUM|LOW",
-"explanation": "string"
-},
-"person_days": {
-"value": 0.0,
-"confidence": "HIGH|MEDIUM|LOW",
-"explanation": "string"
-}
-},
-"technical_considerations": {
-"testing_complexity": {
-"level": "HIGH|MEDIUM|LOW",
-"factors": ["string"]
-},
-"automation_needs": {
-"level": "HIGH|MEDIUM|LOW",
-"requirements": ["string"]
-},
-"test_coverage": {
-"areas": ["string"],
-"gaps": ["string"]
-}
-},
-"risks": [
-{
-"category": "string",
-"severity": "HIGH|MEDIUM|LOW",
-"description": "string",
-"mitigation": "string"
-}
-],
-"dependencies": {
-"test_environments": ["string"],
-"test_data": ["string"],
-"tools": ["string"]
-}
+    "estimates": {
+        "story_points": {
+            "value": <number 1-8>,
+            "confidence": "HIGH|MEDIUM|LOW"
+        },
+        "person_days": {
+            "value": <number>,
+            "confidence": "HIGH|MEDIUM|LOW"
+        }
+    },
+    "justification": "string"
 }
 
 ## Guidelines

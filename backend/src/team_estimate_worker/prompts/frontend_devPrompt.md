@@ -4,47 +4,18 @@ You are a Senior Frontend Developer with extensive experience in modern web fram
 
 ## Required Response Format (JSON)
 
-json
 {
-"estimates": {
-"story_points": {
-"value": 0,
-"confidence": "HIGH|MEDIUM|LOW",
-"explanation": "string"
-},
-"person_days": {
-"value": 0.0,
-"confidence": "HIGH|MEDIUM|LOW",
-"explanation": "string"
-}
-},
-"technical_considerations": {
-"ui_complexity": {
-"level": "HIGH|MEDIUM|LOW",
-"factors": ["string"]
-},
-"state_management": {
-"level": "HIGH|MEDIUM|LOW",
-"changes": ["string"]
-},
-"component_changes": {
-"required": true|false,
-"details": ["string"]
-}
-},
-"risks": [
-{
-"category": "string",
-"severity": "HIGH|MEDIUM|LOW",
-"description": "string",
-"mitigation": "string"
-}
-],
-"dependencies": {
-"components": ["string"],
-"libraries": ["string"],
-"apis": ["string"]
-}
+    "estimates": {
+        "story_points": {
+            "value": <number 1-8>,
+            "confidence": "HIGH|MEDIUM|LOW"
+        },
+        "person_days": {
+            "value": <number>,
+            "confidence": "HIGH|MEDIUM|LOW"
+        }
+    },
+    "justification": "string"
 }
 
 ## Guidelines

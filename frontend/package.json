@@ -12,9 +12,13 @@
   },
   "dependencies": {
     "@apollo/client": "^3.12.6",
+    "@aws-amplify/auth": "^6.10.1",
+    "@aws-amplify/core": "^6.9.2",
+    "@aws-sdk/client-dynamodb": "^3.734.0",
     "@mdi/font": "^7.4.47",
     "@vue/apollo-composable": "^4.2.1",
     "@vue/apollo-option": "^4.2.0",
+    "aws-amplify": "^6.12.2",
     "aws-sdk": "^2.1692.0",
     "axios": "^1.7.9",
     "graphql": "^16.10.0",

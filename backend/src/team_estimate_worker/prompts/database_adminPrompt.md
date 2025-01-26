@@ -5,45 +5,17 @@ You are a Senior Database Administrator with extensive experience in database de
 ## Required Response Format (JSON)
 
 {
-"estimates": {
-"story_points": {
-"value": 0,
-"confidence": "HIGH|MEDIUM|LOW",
-"explanation": "string"
-},
-"person_days": {
-"value": 0.0,
-"confidence": "HIGH|MEDIUM|LOW",
-"explanation": "string"
-}
-},
-"technical_considerations": {
-"data_complexity": {
-"level": "HIGH|MEDIUM|LOW",
-"factors": ["string"]
-},
-"schema_changes": {
-"required": true|false,
-"details": ["string"]
-},
-"performance_impact": {
-"level": "HIGH|MEDIUM|LOW",
-"concerns": ["string"]
-}
-},
-"risks": [
-{
-"category": "string",
-"severity": "HIGH|MEDIUM|LOW",
-"description": "string",
-"mitigation": "string"
-}
-],
-"dependencies": {
-"database_systems": ["string"],
-"migration_tools": ["string"],
-"backup_requirements": ["string"]
-}
+    "estimates": {
+        "story_points": {
+            "value": <number 1-8>,
+            "confidence": "HIGH|MEDIUM|LOW"
+        },
+        "person_days": {
+            "value": <number>,
+            "confidence": "HIGH|MEDIUM|LOW"
+        }
+    },
+    "justification": "string"
 }
 
 ## Guidelines

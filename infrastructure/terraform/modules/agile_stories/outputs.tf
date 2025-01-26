@@ -132,3 +132,15 @@ output "estimations_role_index_name" {
   description = "Name of the role-story GSI on estimations table"
   value       = module.dynamodb.estimations_role_index_name
 }
+
+output "cognito_user_pool_id" {
+  value = module.cognito.user_pool_id
+}
+
+output "cognito_user_pool_client_id" {
+  value = module.cognito.user_pool_client_id
+}
+
+output "cognito_identity_pool_id" {
+  value = module.cognito.identity_pool_id
+}

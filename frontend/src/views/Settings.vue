@@ -31,7 +31,7 @@
       <h2 class="section-title">Estimation Roles</h2>
       <div class="settings-content">
         <v-checkbox
-          v-for="role in availableRoles"
+          v-for="role in settingsStore.availableRoles"
           :key="role.id"
           v-model="settings.selectedRoles"
           :label="role.name"
@@ -55,33 +55,30 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useSettingsStore } from '@/stores/settingsStore'
 
+const settingsStore = useSettingsStore()
 const saving = ref(false)
 
-const availableRoles = [
-  { id: 'database_admin', name: 'Database Administrator' },
-  { id: 'devops_engineer', name: 'DevOps Engineer' },
-  { id: 'frontend_dev', name: 'Frontend Developer' },
-  { id: 'qa_engineer', name: 'QA Engineer' },
-  { id: 'scrum_master', name: 'Scrum Master' },
-  { id: 'security_expert', name: 'Security Expert' },
-  { id: 'ui_designer', name: 'UI Designer' },
-  { id: 'senior_dev', name: 'Senior Developer' }
-]
-
+// Initialize settings from store
 const settings = ref({
-  useStoryPoints: true,
-  useDevDays: true,
-  defaultConfidenceThreshold: 80,
-  selectedRoles: ['senior_dev', 'frontend_dev', 'qa_engineer']
+  useStoryPoints: settingsStore.useStoryPoints,
+  useDevDays: settingsStore.useDevDays,
+  defaultConfidenceThreshold: settingsStore.defaultConfidenceThreshold,
+  selectedRoles: [...settingsStore.selectedRoles]
 })
 
 const saveSettings = async () => {
   saving.value = true
   try {
-    // TODO: Implement API call to save settings
-    await new Promise(resolve => setTimeout(resolve, 1000)) // Simulated API call
-    console.log('Settings saved:', settings.value)
+    // Update store with current settings
+    settingsStore.$patch({
+      useStoryPoints: settings.value.useStoryPoints,
+      useDevDays: settings.value.useDevDays,
+      defaultConfidenceThreshold: settings.value.defaultConfidenceThreshold,
+      selectedRoles: [...settings.value.selectedRoles]
+    })
+    await settingsStore.saveSettings()
   } catch (error) {
     console.error('Error saving settings:', error)
   } finally {
@@ -90,8 +87,14 @@ const saveSettings = async () => {
 }
 
 onMounted(async () => {
-  // TODO: Fetch current settings from API
-  console.log('Settings loaded')
+  await settingsStore.loadSettings()
+  // Update local settings after loading from store
+  settings.value = {
+    useStoryPoints: settingsStore.useStoryPoints,
+    useDevDays: settingsStore.useDevDays,
+    defaultConfidenceThreshold: settingsStore.defaultConfidenceThreshold,
+    selectedRoles: [...settingsStore.selectedRoles]
+  }
 })
 </script>
 

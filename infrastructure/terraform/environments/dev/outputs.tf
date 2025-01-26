@@ -92,4 +92,16 @@ output "get_status_lambda_arn" {
 output "step_functions_workflow_arn" {
   description = "ARN of the Story Refinement Step Functions workflow"
   value       = module.step_functions.workflow_arn
+}
+
+output "cognito_user_pool_id" {
+  value = module.agile_stories.cognito_user_pool_id
+}
+
+output "cognito_user_pool_client_id" {
+  value = module.agile_stories.cognito_user_pool_client_id
+}
+
+output "cognito_identity_pool_id" {
+  value = module.agile_stories.cognito_identity_pool_id
 } 

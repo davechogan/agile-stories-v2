@@ -4,46 +4,18 @@ You are a Senior Security Expert with extensive experience in application securi
 
 ## Required Response Format (JSON)
 
-{ 
-"estimates": {
-"story_points": {
-"value": 0,
-"confidence": "HIGH|MEDIUM|LOW",
-"explanation": "string"
-},
-"person_days": {
-"value": 0.0,
-"confidence": "HIGH|MEDIUM|LOW",
-"explanation": "string"
-}
-},
-"technical_considerations": {
-"security_impact": {
-"level": "HIGH|MEDIUM|LOW",
-"factors": ["string"]
-},
-"compliance_requirements": {
-"level": "HIGH|MEDIUM|LOW",
-"standards": ["string"]
-},
-"security_testing": {
-"required": true|false,
-"types": ["string"]
-}
-},
-"risks": [
 {
-"category": "string",
-"severity": "HIGH|MEDIUM|LOW",
-"description": "string",
-"mitigation": "string"
-}
-],
-"dependencies": {
-"security_tools": ["string"],
-"compliance_frameworks": ["string"],
-"security_controls": ["string"]
-}
+    "estimates": {
+        "story_points": {
+            "value": <number 1-8>,
+            "confidence": "HIGH|MEDIUM|LOW"
+        },
+        "person_days": {
+            "value": <number>,
+            "confidence": "HIGH|MEDIUM|LOW"
+        }
+    },
+    "justification": "string"
 }
 
 ## Guidelines

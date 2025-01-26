@@ -97,14 +97,15 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { DynamoDB } from 'aws-sdk'
-import { useAuth } from '@/composables/useAuth'  // Assuming you have this for credentials
+import { CognitoIdentityCredentials, DynamoDB } from 'aws-sdk'
 
 const route = useRoute()
 const router = useRouter()
-const { getCredentials } = useAuth()
-
-console.log('Estimates component initializing')  // Add initialization log
+const isLoading = ref(true)
+const error = ref('')
+const rawEstimateData = ref(null)
+const mockTeamEstimates = ref(null)
+const useStoryPoints = ref(true)  // Default to story points
 
 // Role display names and titles
 const roleDisplayData = {
@@ -130,12 +131,6 @@ interface TeamMember {
     content: string;
   }>;
 }
-
-const mockTeamEstimates = ref<TeamMember[]>([])
-const rawEstimateData = ref<any>(null)
-const isLoading = ref(true)
-const error = ref<string | null>(null)
-const useStoryPoints = ref(true)  // Default to story points
 
 // Avatar styles available in DiceBear
 const avatarStyles = [
@@ -252,72 +247,125 @@ const averageEstimate = computed(() => {
 
 // Transform raw estimate data into display format
 const transformEstimateData = (rawData: any): TeamMember[] => {
+  console.log('Raw data received:', rawData);
+  
   return rawData.individual_estimates.map((estimate: any) => {
-    const roleData = roleDisplayData[estimate.role] || { 
+    console.log('Processing estimate:', estimate);
+    
+    const roleData = roleDisplayData[estimate.role] || {
       name: 'Team Member', 
-      title: estimate.role 
+      title: estimate.role
     }
     
     // Generate avatar URL using role as seed
     const style = avatarStyles[Math.floor(Math.random() * avatarStyles.length)]
     const seed = estimate.role + Date.now()
     
+    // Parse justification text into sections
+    const justificationText = estimate.justification
+    console.log('Justification text:', justificationText);
+    
+    // Simply split by double newlines and format each section
+    const sections = justificationText.split('\n\n').map(section => {
+      const lines = section.split('\n')
+      return {
+        title: lines[0].replace(':', '').trim(),
+        content: lines.slice(1).join('\n').trim()
+      }
+    }).filter(section => section.content); // Only keep sections with content
+    
+    console.log('Processed sections:', sections);
+    
     return {
       id: estimate.role,
       name: roleData.name,
       title: roleData.title,
       avatarUrl: `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`,
-      estimates: estimate.estimates,
-      justification: estimate.justification
+      estimates: {
+        story_points: {
+          value: estimate.estimates.story_points.value,
+          confidence: estimate.estimates.story_points.confidence
+        },
+        person_days: {
+          value: estimate.estimates.person_days.value,
+          confidence: estimate.estimates.person_days.confidence
+        }
+      },
+      justification: sections
     }
   })
 }
 
-// Fetch estimate data
+// Log environment variables
+console.log('Environment Check:', {
+  API_URL: import.meta.env.VITE_API_URL,
+  ENVIRONMENT: import.meta.env.VITE_ENVIRONMENT,
+  COGNITO_USER_POOL_ID: import.meta.env.VITE_COGNITO_USER_POOL_ID,
+  COGNITO_CLIENT_ID: import.meta.env.VITE_COGNITO_CLIENT_ID,
+  COGNITO_IDENTITY_POOL_ID: import.meta.env.VITE_COGNITO_IDENTITY_POOL_ID,
+  MODE: import.meta.env.MODE,
+  BASE_URL: import.meta.env.BASE_URL,
+})
+
 const fetchEstimateData = async () => {
   try {
     console.log('Starting fetchEstimateData')
     isLoading.value = true
     const storyId = route.params.id
     
-    // Initialize DynamoDB client
-    const credentials = await getCredentials()
+    // Get credentials directly from Cognito Identity Pool
+    console.log('Getting credentials from Identity Pool')
+    const credentials = new CognitoIdentityCredentials({
+      IdentityPoolId: import.meta.env.VITE_COGNITO_IDENTITY_POOL_ID
+    }, {
+      region: 'us-east-1'
+    })
+    
+    await credentials.getPromise()
+    console.log('Got credentials:', credentials)
+    
+    // Initialize DynamoDB with credentials
     const dynamoDB = new DynamoDB.DocumentClient({
       region: 'us-east-1',
       credentials
     })
     
-    // Query DynamoDB directly
+    // Use scan instead of query since we don't have the estimation_id
     const params = {
-      TableName: 'dev-agile-stories-estimations',
-      KeyConditionExpression: 'story_id = :sid',
-      FilterExpression: 'version = :ver',
+      TableName: `${import.meta.env.VITE_ENVIRONMENT}-agile-stories-estimations`,
+      FilterExpression: 'story_id = :sid AND #r = :role',
+      ExpressionAttributeNames: {
+        '#r': 'role'
+      },
       ExpressionAttributeValues: {
         ':sid': storyId,
-        ':ver': 'TEAM_ESTIMATE'
+        ':role': 'FINAL'
       }
     }
     
-    const response = await dynamoDB.query(params).promise()
+    console.log('Scanning DynamoDB with params:', params)
+    const response = await dynamoDB.scan(params).promise()
     console.log('DynamoDB response:', response)
     
     if (response.Items && response.Items.length > 0) {
       rawEstimateData.value = response.Items[0]
       mockTeamEstimates.value = transformEstimateData(response.Items[0])
+    } else {
+      error.value = 'No estimate found for this story'
     }
     
   } catch (err) {
     console.error('Error in fetchEstimateData:', err)
-    error.value = 'Failed to load team estimates'
+    error.value = 'Failed to load team estimates: ' + err.message
   } finally {
     isLoading.value = false
   }
 }
 
 // Initialize on mount
-onMounted(() => {
-  console.log('Estimates component mounted')  // Add mount log
-  fetchEstimateData()
+onMounted(async () => {
+  console.log('Component mounted')
+  await fetchEstimateData()
 })
 
 // Toggle estimate type display

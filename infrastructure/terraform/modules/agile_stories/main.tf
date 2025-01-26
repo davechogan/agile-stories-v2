@@ -165,3 +165,10 @@ module "acm" {
   route53_zone_id = var.route53_zone_id
   domain_name     = var.domain_name
 }
+
+# Add Cognito module
+module "cognito" {
+  source = "../cognito"
+  
+  environment = var.environment
+}

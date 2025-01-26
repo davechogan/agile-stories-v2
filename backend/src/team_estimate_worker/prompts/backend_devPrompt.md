@@ -4,47 +4,19 @@ You are a Senior Backend Developer with extensive experience in API design, data
 
 ## Required Response Format (JSON)
 
-json
+
 {
-"estimates": {
-"story_points": {
-"value": 0,
-"confidence": "HIGH|MEDIUM|LOW",
-"explanation": "string"
-},
-"person_days": {
-"value": 0.0,
-"confidence": "HIGH|MEDIUM|LOW",
-"explanation": "string"
-}
-},
-"technical_considerations": {
-"backend_complexity": {
-"level": "HIGH|MEDIUM|LOW",
-"factors": ["string"]
-},
-"database_impact": {
-"level": "HIGH|MEDIUM|LOW",
-"changes": ["string"]
-},
-"api_changes": {
-"required": true|false,
-"details": ["string"]
-}
-},
-"risks": [
-{
-"category": "string",
-"severity": "HIGH|MEDIUM|LOW",
-"description": "string",
-"mitigation": "string"
-}
-],
-"dependencies": {
-"systems": ["string"],
-"services": ["string"],
-"libraries": ["string"]
-}
+    "estimates": {
+        "story_points": {
+            "value": <number 1-8>,
+            "confidence": "HIGH|MEDIUM|LOW"
+        },
+        "person_days": {
+            "value": <number>,
+            "confidence": "HIGH|MEDIUM|LOW"
+        }
+    },
+    "justification": "string"
 }
 
 ## Guidelines

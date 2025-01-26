@@ -209,6 +209,7 @@ import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import EditableSection from '@/components/EditableSection.vue'
 import { mockTechReviewResult } from '@/mocks/mockTechReviewData'
+import { useSettingsStore } from '@/stores/settingsStore'
 
 const isDev = computed(() => import.meta.env.DEV)
 const route = useRoute()
@@ -225,6 +226,7 @@ const estimating = ref(false)
 const showTransition = ref(false)
 const isExiting = ref(false)
 const videoPlayer = ref(null)
+const settingsStore = useSettingsStore()
 
 interface ImplementationDetail {
   type: 'Frontend' | 'Backend' | 'Database'
@@ -345,7 +347,7 @@ const getTeamEstimate = async () => {
           text: detail.text
         }))
       },
-      roles: ['Frontend', 'Backend', 'Database']  // TODO: Get from settings
+      roles: settingsStore.selectedRoles
     }
     
     console.log('Sending estimate request:', estimatePayload)

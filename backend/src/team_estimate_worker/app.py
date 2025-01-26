@@ -1,162 +1,89 @@
 """
-team_estimate_worker Lambda Function
+Team Estimate Worker Lambda Function
 
-This Lambda is invoked in parallel by the team_estimate Lambda to generate
-role-specific estimates for a story. It:
-1. Loads role-specific prompt
-2. Generates estimates using OpenAI
-3. Stores results in DynamoDB
-4. Returns formatted estimate data to the main Lambda
-
-Environment Variables:
-    ESTIMATES_TABLE (str): Name of the DynamoDB table for storing estimates
-    OPENAI_API_KEY (str): OpenAI API key for generating estimates
+This Lambda:
+1. Receives a role and story payload
+2. Gets OpenAI analysis for estimation
+3. Returns formatted estimate
 """
 
 import json
-import os
+import openai
 import boto3
 import logging
-from datetime import datetime
-from typing import Dict, Any
+from pathlib import Path
 
-# Configure logging
+# Set up logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 # Initialize AWS clients
-dynamodb = boto3.resource('dynamodb')
-estimates_table = dynamodb.Table(os.environ.get('ESTIMATES_TABLE', 'dev-agile-stories-estimations'))
+secrets_client = boto3.client('secretsmanager')
 
-def load_role_prompt(role: str) -> str:
-    """
-    Loads the prompt template for the specified role.
-    
-    Args:
-        role (str): The role ID (e.g., 'senior_dev', 'qa_engineer')
-        
-    Returns:
-        str: The prompt template for the role
-    """
+def get_openai_key():
+    """Retrieve OpenAI API key from AWS Secrets Manager."""
     try:
-        prompt_path = Path(__file__).parent / 'prompts' / f'{role}Prompt.md'
+        response = secrets_client.get_secret_value(
+            SecretId="openai_key"
+        )
+        secrets = json.loads(response['SecretString'])
+        openai.api_key = secrets['OPENAI_API_KEY']
+    except Exception as e:
+        logger.error(f"Failed to get OpenAI key: {str(e)}")
+        raise
+
+def get_role_prompt(role: str) -> str:
+    """Load role-specific estimation prompt."""
+    try:
+        # Convert role to match file naming convention
+        role_file = role.lower().replace(' ', '_')
+        prompt_path = Path(__file__).parent / "prompts" / f"{role_file}Prompt.md"
+        
         with open(prompt_path, 'r') as f:
             return f.read()
     except Exception as e:
-        logger.error(f"Error loading prompt for role {role}: {str(e)}")
-        # Fallback to basic prompt if role-specific one not found
-        return """Please estimate this story from your role's perspective.
-                 Provide story points, person days, and detailed justification."""
-
-def generate_role_estimate(role: str, content: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Generate estimates based on role and story content.
-    
-    Args:
-        role (str): The role (Frontend, Backend, Database)
-        content (dict): Story content including implementation details
-        
-    Returns:
-        dict: Estimate object with story points and person days
-    """
-    # Get implementation details for this role
-    implementation_details = content.get('implementation_details', [])
-    role_details = [d for d in implementation_details if d.get('type') == role]
-    
-    # Base estimates
-    story_points = 3  # Default medium complexity
-    person_days = 2   # Default 2 days
-    confidence = 'MEDIUM'
-    
-    # Adjust based on number of tasks
-    num_tasks = len(role_details)
-    if num_tasks > 5:
-        story_points += 2
-        person_days += 2
-        confidence = 'LOW'
-    elif num_tasks > 3:
-        story_points += 1
-        person_days += 1
-    elif num_tasks < 2:
-        confidence = 'HIGH'
-    
-    # Generate justification
-    task_list = "\n".join([f"- {d.get('text')}" for d in role_details])
-    justification = f"""
-Role: {role}
-Number of tasks: {num_tasks}
-
-Tasks:
-{task_list}
-
-Estimate based on:
-- Task complexity and quantity
-- Implementation details specific to {role}
-- Standard velocity metrics
-"""
-    
-    return {
-        'estimates': {
-            'story_points': {
-                'value': story_points,
-                'confidence': confidence
-            },
-            'person_days': {
-                'value': person_days,
-                'confidence': confidence
-            }
-        },
-        'justification': justification.strip()
-    }
+        logger.error(f"Failed to read prompt for role {role}: {str(e)}")
+        raise
 
 def handler(event, context):
-    """
-    Process estimation request for a specific role.
-    
-    Expected event structure:
-    {
-        'story_id': 'story123',
-        'tenant_id': 'tenant123',
-        'role': 'Frontend',
-        'content': { story content with implementation_details }
-    }
-    """
     try:
-        logger.info(f"Processing estimate request: {json.dumps(event)}")
+        # Get OpenAI key
+        get_openai_key()
         
-        # Extract data from event
-        story_id = event['story_id']
-        tenant_id = event['tenant_id']
+        # Parse input
         role = event['role']
-        content = event['content']
+        story_data = event['story_data']
         
-        # Generate role-specific estimate
-        estimate_result = generate_role_estimate(role, content)
+        logger.info(f"Processing estimation for role: {role}")
+        logger.info(f"Story data: {json.dumps(story_data)}")
+
+        # Get role-specific prompt
+        prompt = get_role_prompt(role)
+
+        # Get OpenAI estimation
+        response = openai.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": json.dumps(story_data)}
+            ],
+            response_format={ "type": "json_object" }
+        )
         
-        # Create complete estimate record
-        estimate_record = {
-            'estimation_id': f"{story_id}_{role}",
-            'story_id': story_id,
-            'tenantId': tenant_id,
-            'created_at': datetime.utcnow().isoformat(),
-            'role': role,
-            **estimate_result  # Includes estimates and justification
-        }
-        
-        # Save to DynamoDB
-        logger.info(f"Saving estimate for {role}: {json.dumps(estimate_record)}")
-        estimates_table.put_item(Item=estimate_record)
+        # Parse and return response
+        estimate = json.loads(response.choices[0].message.content)
+        logger.info(f"Estimation result: {json.dumps(estimate)}")
         
         return {
             'statusCode': 200,
-            'body': json.dumps(estimate_record)
+            'body': json.dumps(estimate)
         }
         
     except Exception as e:
-        logger.error(f"Error processing {event.get('role')} estimate: {str(e)}")
+        logger.error(f"Error in handler: {str(e)}")
         return {
             'statusCode': 500,
             'body': json.dumps({
                 'error': str(e)
             })
-        } 
+        }

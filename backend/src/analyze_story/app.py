@@ -179,7 +179,7 @@ def handler(event, context):
         
         # Get AGILE_COACH analysis
         response = client.chat.completions.create(
-            model=os.environ.get('GPT_MODEL', 'gpt-4-1106-preview'),
+            model=os.environ.get('GPT_MODEL', 'gpt-3.5-turbo'),
             messages=[
                 {"role": "system", "content": get_prompt()},
                 {"role": "user", "content": json.dumps(pending_item['content'])}
