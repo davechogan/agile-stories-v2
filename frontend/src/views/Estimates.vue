@@ -9,35 +9,38 @@
       <div class="current-style text-secondary">Current Style: {{ currentAvatarStyle }}</div>
     </div>
     
-    <!-- Circle layout with centered average -->
-    <div class="estimation-circle" :style="circleStyles">
-      <div class="average-estimate">
-        <div class="average-number">{{ averageEstimate }}</div>
-        <div class="average-label">
-          {{ useStoryPoints ? 'story points' : 'days' }} average
+    <!-- Center the circle in viewport -->
+    <div class="estimation-circle-container">
+      <div class="estimation-circle">
+        <!-- Fix the average display in center -->
+        <div class="center-circle">
+          <div class="average-value">
+            {{ averageEstimate }}
+            <div class="average-label">days average</div>
+          </div>
         </div>
-      </div>
-      
-      <div 
-        v-for="(member, index) in mockTeamEstimates" 
-        :key="member.id"
-        class="team-member"
-        :style="getPositionStyle(index, mockTeamEstimates.length)"
-      >
-        {{ console.log('Member data:', member) }}
-        <v-avatar
-          size="60"
-          class="member-avatar"
-          @click="showMemberDetails(member)"
+        
+        <div 
+          v-for="(member, index) in mockTeamEstimates" 
+          :key="member.id"
+          class="team-member"
+          :style="getPositionStyle(index, mockTeamEstimates.length)"
         >
-          <v-img :src="member.avatarUrl"></v-img>
-        </v-avatar>
-        <div class="member-info">
-          {{ console.log('Role:', member.role) }}
-          <div class="member-name">{{ getRoleName(member.role) }}</div>
-          <div class="member-title">{{ formatRole(member.role) }}</div>
-          <div class="member-estimate" :class="getConfidence(member).toLowerCase()">
-            {{ getCurrentEstimate(member) }}
+          {{ console.log('Member data:', member) }}
+          <v-avatar
+            size="60"
+            class="member-avatar"
+            @click="showMemberDetails(member)"
+          >
+            <v-img :src="member.avatarUrl"></v-img>
+          </v-avatar>
+          <div class="member-info">
+            {{ console.log('Role:', member.role) }}
+            <div class="member-name">{{ getRoleName(member.role) }}</div>
+            <div class="member-title">{{ formatRole(member.role) }}</div>
+            <div class="member-estimate" :class="getConfidence(member).toLowerCase()">
+              {{ getCurrentEstimate(member) }}
+            </div>
           </div>
         </div>
       </div>
@@ -241,21 +244,35 @@ const showMemberDetails = (member: TeamMember) => {
   showDialog.value = true
 }
 
-// Initialize on mount
+// Add robust error handling for settings
+const initializeSettings = () => {
+  try {
+    // Try to get from settings store first
+    const storeSetting = settingsStore.estimateType
+    
+    // Then try localStorage
+    let localSetting = null
+    try {
+      localSetting = localStorage.getItem('estimateType')
+    } catch (e) {
+      console.warn('LocalStorage not available:', e)
+    }
+    
+    // Use store setting, then localStorage, then default to false (days)
+    useStoryPoints.value = storeSetting === 'story_points' || 
+                          (storeSetting === null && localSetting === 'story_points')
+    
+    console.log('Estimate type initialized:', useStoryPoints.value ? 'story_points' : 'person_days')
+  } catch (error) {
+    console.error('Error initializing settings:', error)
+    useStoryPoints.value = false // Default to days if anything fails
+  }
+}
+
+// Call on component mount
 onMounted(async () => {
-  console.log('Component mounted')
+  initializeSettings()
   await fetchEstimateData()
-  
-  // Try to get from settings store first
-  const storeSetting = settingsStore.estimateType
-  // Then try localStorage
-  const localSetting = localStorage.getItem('estimateType')
-  
-  // Use store setting, then localStorage, then default to false (days)
-  useStoryPoints.value = storeSetting === 'story_points' || 
-                        (storeSetting === null && localSetting === 'story_points')
-  
-  console.log('Estimate type initialized:', useStoryPoints.value ? 'story_points' : 'person_days')
 })
 
 // Watch for changes and update both store and localStorage
@@ -275,7 +292,10 @@ const getCurrentEstimate = (member: TeamMember) => {
 // Update average estimate computation if needed
 const averageEstimate = computed(() => {
   const estimateType = useStoryPoints.value ? 'story_points' : 'person_days'
-  return rawEstimateData.value?.averages[estimateType].value || 0
+  const rawAverage = rawEstimateData.value?.averages[estimateType].value || 0
+  
+  // Round to nearest 0.5
+  return Math.round(rawAverage * 2) / 2
 })
 
 // Transform raw estimate data into display format
@@ -450,12 +470,13 @@ const formatRole = (role) => {
 
 <style>
 .test-estimate {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 0 20px;
-  position: relative;
+  padding: 20px;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
+  align-items: center;
 }
 
 .avatar-controls {
@@ -472,39 +493,47 @@ const formatRole = (role) => {
   opacity: 0.7;
 }
 
-.estimation-circle {
-  position: relative;
-  margin: 4rem auto 0;  /* Increased from -2rem to 4rem */
-  padding-top: 2rem;
+.estimation-circle-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 2rem;
+  min-height: calc(100vh - 120px); /* Account for navbar and padding */
 }
 
-.average-estimate {
+.estimation-circle {
+  position: relative;
+  width: 600px; /* Reduced from 800px */
+  height: 600px; /* Reduced from 800px */
+  margin: 0 auto;
+}
+
+.center-circle {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  text-align: center;
-  background: rgba(33, 150, 243, 0.1);
-  padding: 1rem;
+  background: rgba(0, 0, 0, 0.7);
   border-radius: 50%;
-  width: 120px;
-  height: 120px;
+  width: 150px; /* Reduced from 200px */
+  height: 150px; /* Reduced from 200px */
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
+  z-index: 2;
 }
 
-.average-number {
-  font-size: 2rem;
-  font-weight: bold;
+.average-value {
   color: #64B5F6;
+  font-size: 2.5rem;
+  text-align: center;
 }
 
 .average-label {
-  font-size: 0.8rem;
-  opacity: 0.87;
-  color: rgba(255, 255, 255, 0.87);
+  font-size: 1rem;
+  color: #ffffff;
+  opacity: 0.8;
 }
 
 .team-member {
@@ -560,14 +589,100 @@ const formatRole = (role) => {
   to { opacity: 1; }
 }
 
-@media (max-width: 768px) {
-  .avatar-controls {
-    bottom: 1rem;
-    left: 1rem;
+@media (max-width: 960px) {
+  .estimation-circle {
+    width: 90vw;
+    height: 90vw;
+    max-width: 350px;
+    max-height: 350px;
+    margin: 2rem auto 4rem; /* Added bottom margin for buttons */
   }
-  
-  .current-style {
+
+  .team-member {
+    width: 100px; /* Reduced width for better mobile fit */
+  }
+
+  .member-avatar {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .member-info {
     font-size: 0.7rem;
+    margin-top: 0.3rem;
+  }
+
+  .member-name {
+    font-size: 0.8rem;
+    white-space: normal; /* Allow names to wrap */
+    line-height: 1.2;
+  }
+
+  .member-title {
+    font-size: 0.6rem;
+  }
+
+  /* Fix button layout at bottom */
+  .avatar-controls {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: row; /* Changed to row */
+    justify-content: space-between;
+    padding: 0.5rem;
+    background: rgba(18, 18, 18, 0.9);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 1000;
+  }
+
+  .v-btn-group {
+    flex-direction: row !important;
+    gap: 0.5rem;
+  }
+
+  .back-button-container {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    padding: 0.5rem;
+    background: rgba(18, 18, 18, 0.9);
+  }
+
+  /* Ensure content doesn't get hidden behind fixed buttons */
+  .test-estimate {
+    padding-bottom: 70px;
+  }
+
+  /* Adjust center circle for mobile */
+  .center-circle {
+    width: 90px;
+    height: 90px;
+  }
+
+  .average-value {
+    font-size: 1.5rem;
+  }
+
+  .average-label {
+    font-size: 0.7rem;
+  }
+}
+
+/* Additional mobile optimization for very small screens */
+@media (max-width: 360px) {
+  .estimation-circle {
+    width: 95vw;
+    height: 95vw;
+    max-width: 300px;
+    max-height: 300px;
+  }
+
+  .member-avatar {
+    width: 32px !important;
+    height: 32px !important;
   }
 }
 

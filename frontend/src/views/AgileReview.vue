@@ -237,6 +237,74 @@ const isNegative = (content: string): boolean => {
 </script>
 
 <style scoped>
+/* Base layout */
+.two-column-layout {
+  display: grid !important; /* Force grid display */
+  grid-template-columns: 1fr 1fr !important; /* Force two columns by default */
+  gap: 2rem;
+  padding: 2rem;
+  max-width: 1800px;
+  margin: 0 auto;
+  min-height: calc(100vh - 64px);
+}
+
+/* Content panels */
+.primary-content-wrapper,
+.analysis-panel {
+  background: rgb(18, 18, 18);
+  position: relative;
+  z-index: 1;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 960px) {
+  .two-column-layout {
+    grid-template-columns: 1fr !important; /* Force single column */
+    gap: 1rem;
+    padding: 1rem;
+    padding-bottom: 80px;
+  }
+
+  .primary-content-wrapper,
+  .analysis-panel {
+    width: 100% !important; /* Force full width */
+    margin-bottom: 1rem;
+  }
+
+  .primary-content {
+    padding-bottom: 80px;
+  }
+
+  .analysis-panel {
+    margin-bottom: 80px;
+  }
+
+  .button-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(18, 18, 18, 0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1rem;
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+  }
+}
+
+/* Additional small screen optimizations */
+@media (max-width: 360px) {
+  .two-column-layout {
+    padding: 0.8rem;
+  }
+
+  .button-container {
+    padding: 0.8rem;
+  }
+}
+
 .test {
   display: block;
   width: 100%;
@@ -250,16 +318,6 @@ const isNegative = (content: string): boolean => {
 
 .test.fade-out {
   opacity: 0;
-}
-
-.test > .two-column-layout {
-  display: grid !important;
-  grid-template-columns: 1fr 1fr !important;
-  gap: 2rem;
-  padding: 2rem;
-  max-width: 1800px;
-  margin: 0 auto;
-  min-height: calc(100vh - 64px);
 }
 
 .primary-content-wrapper {
@@ -381,12 +439,6 @@ const isNegative = (content: string): boolean => {
   padding: 1.5rem;
   margin-bottom: 0.75rem;
   color: rgba(255, 255, 255, 0.87);
-}
-
-@media (max-width: 1024px) {
-  .two-column-layout {
-    grid-template-columns: 1fr;
-  }
 }
 
 .edit-field {

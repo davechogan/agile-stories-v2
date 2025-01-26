@@ -450,14 +450,19 @@ watch(showTransition, (newVal) => {
 </script>
 
 <style scoped>
+.test {
+  display: block;
+  width: 100%;
+}
+
 .two-column-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
   gap: 2rem;
   padding: 2rem;
   max-width: 1800px;
   margin: 0 auto;
-  min-height: 100vh;
+  min-height: calc(100vh - 64px);  /* Account for navbar */
 }
 
 .primary-content-wrapper {
@@ -478,7 +483,7 @@ watch(showTransition, (newVal) => {
   position: sticky;
   bottom: 0;
   left: 0;
-  width: 50vw;
+  width: 50vw;  /* Match the column width */
   z-index: 10;
   background: transparent;
   transition: opacity 0.3s ease-out;
@@ -567,11 +572,10 @@ watch(showTransition, (newVal) => {
 }
 
 .analysis-panel {
-  width: 100%;
-  min-width: 0;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   padding: 1rem;
+  height: 100%;
 }
 
 .writing-tips-wrapper {
@@ -663,5 +667,40 @@ watch(showTransition, (newVal) => {
 
 .story-input.fade-out {
   opacity: 0;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 1024px) {
+  .two-column-layout {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .button-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;  /* Full width on mobile */
+    background: rgba(18, 18, 18, 0.9);  /* Semi-transparent black background */
+    backdrop-filter: blur(10px);  /* Optional: adds a blur effect */
+    padding: 1rem;
+    z-index: 100;
+    display: flex;
+    justify-content: center;  /* Center the button */
+    align-items: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);  /* Subtle top border */
+  }
+
+  .primary-content {
+    padding-bottom: 80px; /* Space for fixed button */
+  }
+
+  .hide-button {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease-out;
+  }
 }
 </style> 
