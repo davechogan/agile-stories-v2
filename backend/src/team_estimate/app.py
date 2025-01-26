@@ -51,13 +51,44 @@ def get_nearest_fibonacci(num: Decimal) -> Decimal:
     return min(fib_sequence, key=lambda x: abs(x - num))
 
 def calculate_confidence(estimates: list) -> str:
-    """Conservative approach: if any LOW, return LOW, if any MEDIUM, return MEDIUM, else HIGH"""
-    confidences = [est.get('confidence', 'LOW') for est in estimates]
-    if 'LOW' in confidences:
+    """
+    Calculate confidence level based on numerical average of confidence values.
+    
+    Confidence values:
+    LOW = 1
+    MEDIUM = 2
+    HIGH = 3
+    
+    Ranges:
+    1.0 - 1.66 = LOW
+    1.67 - 2.33 = MEDIUM
+    2.34 - 3.0 = HIGH
+    """
+    confidence_values = {
+        'LOW': 1,
+        'MEDIUM': 2,
+        'HIGH': 3
+    }
+    
+    # Convert string confidences to numbers
+    numeric_confidences = [
+        confidence_values.get(est.get('confidence', 'LOW'), 1) 
+        for est in estimates
+    ]
+    
+    if not numeric_confidences:
         return 'LOW'
-    elif 'MEDIUM' in confidences:
+    
+    # Calculate average
+    average = sum(numeric_confidences) / len(numeric_confidences)
+    
+    # Convert back to confidence level
+    if average <= 1.66:
+        return 'LOW'
+    elif average <= 2.33:
         return 'MEDIUM'
-    return 'HIGH'
+    else:
+        return 'HIGH'
 
 async def invoke_worker_lambda(role: str, story_data: dict, story_id: str, tenant_id: str) -> dict:
     """Invokes a worker Lambda for a specific role."""

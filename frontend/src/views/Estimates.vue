@@ -17,6 +17,9 @@
           <div class="average-value">
             {{ averageEstimate }}
             <div class="average-label">days average</div>
+            <div class="confidence-label" :class="averageConfidence">
+              {{ averageConfidence }} confidence
+            </div>
           </div>
         </div>
         
@@ -88,7 +91,7 @@
     <div class="back-button-container">
       <v-btn 
         color="primary"
-        @click="router.push('/tech')"
+        @click="router.push(`/tech/${route.params.id}`)"
         class="text-uppercase"
       >
         Back to Tech Review
@@ -102,6 +105,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { CognitoIdentityCredentials, DynamoDB } from 'aws-sdk'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { useEstimateStore } from '@/stores/estimateStore'
 
 const route = useRoute()
 const router = useRouter()
@@ -110,6 +114,7 @@ const error = ref('')
 const rawEstimateData = ref(null)
 const mockTeamEstimates = ref(null)
 const settingsStore = useSettingsStore()
+const estimateStore = useEstimateStore()
 
 // Initialize useStoryPoints from settings store or localStorage, defaulting to false (days)
 const useStoryPoints = ref(false) // Default to days
@@ -184,21 +189,8 @@ const circleStyles = computed(() => {
 
 // Calculate position for each team member
 const getPositionStyle = (index: number, total: number) => {
-  const angle = (index * 360) / total - 90 // Start from top
-  const radius = 250 // Increased from 200 to 250 for better spacing
-  
-  // Get initial random position if it exists
-  const initialPos = initialPositions.value.get(mockTeamEstimates.value[index].id)
-  
-  if (initialPos) {
-    return {
-      position: 'absolute',
-      left: `${initialPos.x}px`,
-      top: `${initialPos.y}px`,
-      transform: 'translate(-50%, -50%)',
-      transition: 'none'
-    }
-  }
+  const angle = (index * 360) / total - 90
+  const radius = Math.min(window.innerWidth * 0.35, 250) // Responsive radius
   
   const angleInRad = (angle * Math.PI) / 180
   const x = Math.cos(angleInRad) * radius
@@ -273,6 +265,20 @@ const initializeSettings = () => {
 onMounted(async () => {
   initializeSettings()
   await fetchEstimateData()
+  
+  // Store the values right after fetching
+  if (averageEstimate.value && averageConfidence.value) {
+    estimateStore.setEstimates(averageEstimate.value, averageConfidence.value)
+    console.log('Stored in Pinia:', {
+      average: estimateStore.averageEstimate,
+      confidence: estimateStore.averageConfidence
+    })
+  }
+  
+  console.log('Initial values:', {
+    average: averageEstimate.value,
+    confidence: averageConfidence.value
+  })
 })
 
 // Watch for changes and update both store and localStorage
@@ -466,6 +472,27 @@ const formatRole = (role) => {
 
   return formattedRoles[role] || role
 }
+
+// Update average confidence computation if needed
+const averageConfidence = computed(() => {
+  const estimateType = useStoryPoints.value ? 'story_points' : 'person_days'
+  const rawConfidence = rawEstimateData.value?.averages[estimateType].confidence
+  
+  // Return the confidence string in lowercase for consistency
+  return rawConfidence ? rawConfidence.toLowerCase() : 'medium'
+})
+
+// When estimates are calculated
+watch([averageEstimate, averageConfidence], ([newEstimate, newConfidence]) => {
+  console.log('New estimates:', { newEstimate, newConfidence })
+  if (newEstimate && newConfidence) {
+    estimateStore.setEstimates(newEstimate, newConfidence)
+    console.log('Store after setting:', {
+      average: estimateStore.averageEstimate,
+      confidence: estimateStore.averageConfidence
+    })
+  }
+})
 </script>
 
 <style>
@@ -498,14 +525,15 @@ const formatRole = (role) => {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 2rem;
-  min-height: calc(100vh - 120px); /* Account for navbar and padding */
+  margin: 0 auto;
+  min-height: calc(100vh - 120px);
+  padding-top: 64px; /* Add padding for navbar */
 }
 
 .estimation-circle {
   position: relative;
-  width: 600px; /* Reduced from 800px */
-  height: 600px; /* Reduced from 800px */
+  width: min(90vw, 600px); /* Main circle responsive width */
+  height: min(90vw, 600px); /* Main circle responsive height */
   margin: 0 auto;
 }
 
@@ -516,8 +544,8 @@ const formatRole = (role) => {
   transform: translate(-50%, -50%);
   background: rgba(0, 0, 0, 0.7);
   border-radius: 50%;
-  width: 150px; /* Reduced from 200px */
-  height: 150px; /* Reduced from 200px */
+  width: min(25%, 150px);
+  height: min(25%, 150px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -591,11 +619,8 @@ const formatRole = (role) => {
 
 @media (max-width: 960px) {
   .estimation-circle {
-    width: 90vw;
-    height: 90vw;
-    max-width: 350px;
-    max-height: 350px;
-    margin: 2rem auto 4rem; /* Added bottom margin for buttons */
+    width: min(85vw, 350px);
+    height: min(85vw, 350px);
   }
 
   .team-member {
@@ -624,36 +649,27 @@ const formatRole = (role) => {
 
   /* Fix button layout at bottom */
   .avatar-controls {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    display: flex;
-    flex-direction: row; /* Changed to row */
-    justify-content: space-between;
-    padding: 0.5rem;
-    background: rgba(18, 18, 18, 0.9);
-    backdrop-filter: blur(10px);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    z-index: 1000;
-  }
-
-  .v-btn-group {
-    flex-direction: row !important;
-    gap: 0.5rem;
+    display: none; /* Hide regenerate/cycle buttons on mobile */
   }
 
   .back-button-container {
     position: fixed;
     bottom: 0;
+    left: 0;
     right: 0;
-    padding: 0.5rem;
-    background: rgba(18, 18, 18, 0.9);
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+    background: rgba(18, 18, 18, 0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 100;
   }
 
-  /* Ensure content doesn't get hidden behind fixed buttons */
-  .test-estimate {
-    padding-bottom: 70px;
+  .estimation-circle-container {
+    padding-bottom: 80px; /* Add space for fixed button */
   }
 
   /* Adjust center circle for mobile */
@@ -674,10 +690,8 @@ const formatRole = (role) => {
 /* Additional mobile optimization for very small screens */
 @media (max-width: 360px) {
   .estimation-circle {
-    width: 95vw;
-    height: 95vw;
-    max-width: 300px;
-    max-height: 300px;
+    width: 80vw;
+    height: 80vw;
   }
 
   .member-avatar {
@@ -755,5 +769,22 @@ const formatRole = (role) => {
 /* If you're using v-container, you could also add a class there */
 .estimates-container {
   padding-top: 64px;  /* Matches navbar height */
+}
+
+.confidence-label {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.confidence-label.high {
+  color: #4CAF50;
+}
+
+.confidence-label.medium {
+  color: #FFC107;
+}
+
+.confidence-label.low {
+  color: #F44336;
 }
 </style> 

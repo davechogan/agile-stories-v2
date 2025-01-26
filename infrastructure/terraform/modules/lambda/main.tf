@@ -74,7 +74,7 @@ resource "aws_lambda_function" "analyze_story" {
   role          = aws_iam_role.lambda_role.arn
   handler       = "app.handler"
   runtime       = "python3.11"
-  timeout       = 30
+  timeout       = 60
   memory_size   = 256
 
   environment {
@@ -175,7 +175,7 @@ resource "aws_lambda_function" "team_estimate" {
   role          = aws_iam_role.lambda_role.arn
   handler       = "app.handler"
   runtime       = "python3.11"
-  timeout       = var.lambda_timeout
+  timeout       = 60
   memory_size   = var.lambda_memory_size
 
   environment {
@@ -198,7 +198,7 @@ resource "aws_lambda_function" "team_estimate_worker" {
   role          = aws_iam_role.lambda_role.arn
   handler       = "app.handler"
   runtime       = "python3.11"
-  timeout       = var.lambda_timeout
+  timeout       = 60
   memory_size   = var.lambda_memory_size
 
   environment {

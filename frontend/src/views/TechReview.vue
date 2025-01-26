@@ -23,113 +23,122 @@
     <div v-else-if="storyData" class="two-column-layout">
       <!-- Left Column -->
       <div class="primary-content-wrapper">
-        <div class="primary-content">
-          <h2 class="page-title">Technical Review Modifications</h2>
-          
-          <EditableSection
-            v-model="storyData.content.title"
-            title="Story Title"
-            type="single-line"
-            placeholder="Enter story title..."
-          />
-          
-          <EditableSection
-            v-model="storyData.content.story"
-            title="User Story"
-            type="text"
-            placeholder="Describe the user story..."
-          />
-          
-          <EditableSection
-            v-model="storyData.content.acceptance_criteria"
-            title="Acceptance Criteria"
-            type="list"
-            placeholder="Enter each criterion on a new line..."
-          />
-
-          <!-- Selected Implementation Details -->
-          <h4 class="mt-4">Selected Implementation Details</h4>
-          <div class="editable-content">
-            <div v-if="selectedDetails.length === 0" class="no-details">
-              No implementation details added yet. Select from the sections below.
+        <!-- Team Estimate Panel - Shows on mobile -->
+        <div v-if="hasEstimates" class="team-estimate-panel mobile-only">
+          <h3>Team Estimate</h3>
+          <div class="estimate-details">
+            <div class="estimate-value">{{ averageEstimate }} days</div>
+            <div class="estimate-confidence" :class="averageConfidence">
+              {{ averageConfidence }} confidence
             </div>
-            <div v-else class="selected-details">
-              <div v-for="(detail, index) in selectedDetails" 
-                   :key="index"
-                   class="selected-detail">
-                <div class="detail-content">
-                  <v-icon size="small" :color="getDetailColor(detail.type)" class="mr-2">
-                    {{ getDetailIcon(detail.type) }}
-                  </v-icon>
-                  {{ detail.text }}
-                </div>
-                <v-btn 
-                  size="x-small" 
-                  color="error" 
-                  variant="text"
-                  icon="mdi-close"
-                  @click="removeDetail(index)"
-                ></v-btn>
+          </div>
+        </div>
+
+        <h2 class="page-title">Technical Review Modifications</h2>
+        
+        <EditableSection
+          v-model="storyData.content.title"
+          title="Story Title"
+          type="single-line"
+          placeholder="Enter story title..."
+        />
+        
+        <EditableSection
+          v-model="storyData.content.story"
+          title="User Story"
+          type="text"
+          placeholder="Describe the user story..."
+        />
+        
+        <EditableSection
+          v-model="storyData.content.acceptance_criteria"
+          title="Acceptance Criteria"
+          type="list"
+          placeholder="Enter each criterion on a new line..."
+        />
+
+        <!-- Selected Implementation Details -->
+        <h4 class="mt-4">Selected Implementation Details</h4>
+        <div class="editable-content">
+          <div v-if="selectedDetails.length === 0" class="no-details">
+            No implementation details added yet. Select from the sections below.
+          </div>
+          <div v-else class="selected-details">
+            <div v-for="(detail, index) in selectedDetails" 
+                 :key="index"
+                 class="selected-detail">
+              <div class="detail-content">
+                <v-icon size="small" :color="getDetailColor(detail.type)" class="mr-2">
+                  {{ getDetailIcon(detail.type) }}
+                </v-icon>
+                {{ detail.text }}
               </div>
+              <v-btn 
+                size="x-small" 
+                color="error" 
+                variant="text"
+                icon="mdi-close"
+                @click="removeDetail(index)"
+              ></v-btn>
+            </div>
+          </div>
+        </div>
+
+        <!-- Implementation Details Section -->
+        <h2 class="mt-6">Implementation Details</h2>
+        <div class="tech-section">
+          <h4>Frontend</h4>
+          <div class="task-list">
+            <div v-for="(task, index) in availableDetails.Frontend" 
+                 :key="'fe-'+index"
+                 class="task-item"
+                 @click="toggleDetail('Frontend', task)">
+              <v-icon size="small" color="primary" class="mr-2">mdi-code-tags</v-icon>
+              {{ task }}
             </div>
           </div>
 
-          <!-- Implementation Details Section -->
-          <h2 class="mt-6">Implementation Details</h2>
-          <div class="tech-section">
-            <h4>Frontend</h4>
-            <div class="task-list">
-              <div v-for="(task, index) in availableDetails.Frontend" 
-                   :key="'fe-'+index"
-                   class="task-item"
-                   @click="toggleDetail('Frontend', task)">
-                <v-icon size="small" color="primary" class="mr-2">mdi-code-tags</v-icon>
-                {{ task }}
-              </div>
-            </div>
-
-            <h4>Backend</h4>
-            <div class="task-list">
-              <div v-for="(task, index) in availableDetails.Backend" 
-                   :key="'be-'+index"
-                   class="task-item"
-                   @click="toggleDetail('Backend', task)">
-                <v-icon size="small" color="success" class="mr-2">mdi-server</v-icon>
-                {{ task }}
-              </div>
-            </div>
-
-            <h4>Database</h4>
-            <div class="task-list">
-              <div v-for="(task, index) in availableDetails.Database" 
-                   :key="'db-'+index"
-                   class="task-item"
-                   @click="toggleDetail('Database', task)">
-                <v-icon size="small" color="warning" class="mr-2">mdi-database</v-icon>
-                {{ task }}
-              </div>
+          <h4>Backend</h4>
+          <div class="task-list">
+            <div v-for="(task, index) in availableDetails.Backend" 
+                 :key="'be-'+index"
+                 class="task-item"
+                 @click="toggleDetail('Backend', task)">
+              <v-icon size="small" color="success" class="mr-2">mdi-server</v-icon>
+              {{ task }}
             </div>
           </div>
 
-          <!-- Sticky footer -->
-          <div class="sticky-footer">
-            <div class="footer-content">
-              <div class="footer-buttons">
-                <v-btn 
-                  color="success" 
-                  class="mr-4"
-                  @click="acceptTechReview"
-                >
-                  ACCEPT TECH REVIEW
-                </v-btn>
-                <v-btn 
-                  color="primary"
-                  @click="getTeamEstimate"
-                  :loading="estimating"
-                >
-                  GET TEAM ESTIMATE
-                </v-btn>
-              </div>
+          <h4>Database</h4>
+          <div class="task-list">
+            <div v-for="(task, index) in availableDetails.Database" 
+                 :key="'db-'+index"
+                 class="task-item"
+                 @click="toggleDetail('Database', task)">
+              <v-icon size="small" color="warning" class="mr-2">mdi-database</v-icon>
+              {{ task }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Sticky footer -->
+        <div class="sticky-footer">
+          <div class="footer-content">
+            <div class="footer-buttons">
+              <v-btn 
+                color="success" 
+                class="mr-4"
+                @click="acceptTechReview"
+              >
+                ACCEPT TECH REVIEW
+              </v-btn>
+              <v-btn 
+                color="primary"
+                @click="getTeamEstimate"
+                :loading="estimating"
+              >
+                GET TEAM ESTIMATE
+              </v-btn>
             </div>
           </div>
         </div>
@@ -137,6 +146,17 @@
 
       <!-- Right Column -->
       <div class="analysis-panel">
+        <!-- Team Estimate Panel - Shows on desktop -->
+        <div v-if="hasEstimates" class="team-estimate-panel desktop-only">
+          <h3>Team Estimate</h3>
+          <div class="estimate-details">
+            <div class="estimate-value">{{ averageEstimate }} days</div>
+            <div class="estimate-confidence" :class="averageConfidence">
+              {{ averageConfidence }} confidence
+            </div>
+          </div>
+        </div>
+
         <h2 class="page-title">Technical Analysis</h2>
         <div class="tech-analysis-grid">
           <div v-for="(analysis, key) in storyData?.analysis?.TechnicalAnalysis || {}"
@@ -200,6 +220,14 @@
         </video>
       </div>
     </transition>
+
+    <!-- Add test button somewhere visible -->
+    <v-btn @click="testStore" color="warning" class="ma-2">
+      Test Store
+    </v-btn>
+    <div v-if="testResult" class="ma-2">
+      Test Result: {{ testResult }}
+    </div>
   </div>
 </template>
 
@@ -210,6 +238,7 @@ import axios from 'axios'
 import EditableSection from '@/components/EditableSection.vue'
 import { mockTechReviewResult } from '@/mocks/mockTechReviewData'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { useEstimateStore } from '@/stores/estimateStore'
 
 const isDev = computed(() => import.meta.env.DEV)
 const route = useRoute()
@@ -227,6 +256,8 @@ const showTransition = ref(false)
 const isExiting = ref(false)
 const videoPlayer = ref(null)
 const settingsStore = useSettingsStore()
+const estimateStore = useEstimateStore()
+const testResult = ref('')
 
 interface ImplementationDetail {
   type: 'Frontend' | 'Backend' | 'Database'
@@ -447,7 +478,34 @@ onMounted(() => {
   if (route.params.id) {
     fetchTechReview()
   }
+  console.log('Tech Review mounted, store values:', {
+    average: estimateStore.averageEstimate,
+    confidence: estimateStore.averageConfidence,
+    hasEstimates: estimateStore.averageEstimate !== null && 
+                  estimateStore.averageConfidence !== null
+  })
 })
+
+const hasEstimates = computed(() => 
+  estimateStore.averageEstimate !== null && 
+  estimateStore.averageConfidence !== null
+)
+
+const averageEstimate = computed(() => estimateStore.averageEstimate ?? '-')
+const averageConfidence = computed(() => estimateStore.averageConfidence ?? '-')
+
+const testStore = () => {
+  // Set some test values
+  estimateStore.setEstimates(99, "test confidence")
+  
+  // Immediately try to read them back
+  testResult.value = `Read back: ${estimateStore.averageEstimate} days, ${estimateStore.averageConfidence}`
+  
+  console.log('Direct store access:', {
+    average: estimateStore.averageEstimate,
+    confidence: estimateStore.averageConfidence
+  })
+}
 </script>
 
 <style scoped>
@@ -465,12 +523,24 @@ onMounted(() => {
 .two-column-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  padding: 1rem;
-  max-width: 2000px;
+  gap: 2rem;
+  padding: 2rem;
+  max-width: 1800px;
   margin: 0 auto;
-  height: 100vh;
-  overflow: hidden;
+  min-height: calc(100vh - 64px);
+}
+
+.team-estimate-panel,
+.analysis-panel,
+.tech-analysis-item,
+.risk-item,
+.recommendation-item {
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .primary-content-wrapper {
@@ -480,13 +550,10 @@ onMounted(() => {
   overflow-x: hidden;
   padding-bottom: 7rem;
   isolation: isolate; /* Create stacking context */
-}
-
-.analysis-panel {
-  height: calc(100vh - 2rem);
-  overflow-y: auto;
-  overflow-x: hidden;
-  isolation: isolate; /* Create stacking context */
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 1rem;
+  max-width: 100%;
 }
 
 .footer-buttons {
@@ -550,8 +617,8 @@ section {
 .recommendation-item {
   background: rgba(30, 41, 59, 0.8);
   border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 0;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 .analysis-header {
@@ -731,26 +798,56 @@ section {
   margin-bottom: 1rem;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 960px) {
   .two-column-layout {
     grid-template-columns: 1fr;
     gap: 1rem;
-    height: auto;
-    overflow: visible;
+    padding: 1rem;
   }
 
+  .team-estimate-panel,
+  .analysis-panel,
+  .tech-analysis-item,
+  .risk-item,
+  .recommendation-item {
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    hyphens: auto;
+  }
+
+  /* Ensure content doesn't overflow */
   .primary-content-wrapper,
   .analysis-panel {
-    height: auto;
-    min-height: calc(100vh - 2rem);
+    width: 100%;
+    padding: 1rem;
+    overflow-x: hidden;
   }
 
-  .footer-buttons {
-    left: 50%;
-    padding: 0 1rem;
-    width: 100%;
-    justify-content: center;
+  /* Adjust text sizes for mobile */
+  h2, h3 {
+    font-size: 1.25rem;
   }
+
+  .estimate-value {
+    font-size: 1.1rem;
+  }
+
+  .estimate-confidence {
+    font-size: 0.85rem;
+  }
+
+  /* Add some breathing room between sections */
+  .section {
+    margin-bottom: 1.5rem;
+  }
+}
+
+/* Prevent horizontal scrolling on all screen sizes */
+body {
+  overflow-x: hidden;
 }
 
 /* Section headers (Frontend, Backend, Database) */
@@ -901,5 +998,45 @@ h4:first-of-type {
 
 .test.fade-out {
   opacity: 0;
+}
+
+.team-estimate-panel {
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.estimate-details {
+  margin-top: 0.5rem;
+}
+
+.estimate-value {
+  font-size: 1.2rem;
+  color: #64B5F6;
+  font-weight: 500;
+}
+
+.estimate-confidence {
+  font-size: 0.9rem;
+  margin-top: 0.2rem;
+}
+
+.estimate-confidence.high {
+  color: #4CAF50;
+}
+
+.estimate-confidence.medium {
+  color: #FFC107;
+}
+
+.estimate-confidence.low {
+  color: #F44336;
+}
+
+@media (min-width: 961px) {
+  .mobile-only {
+    display: none;
+  }
 }
 </style> 

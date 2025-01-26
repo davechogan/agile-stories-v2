@@ -109,12 +109,13 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, watch } from 'vue'
+<script setup lang="ts">
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { v4 as uuidv4 } from 'uuid'
 import AnimationTransition from '@/components/animation_transistion.vue'
+import { useEstimateStore } from '@/stores/estimateStore'
 
 const router = useRouter()
 const loading = ref(false)
@@ -124,6 +125,14 @@ const showTransition = ref(false)
 const animationFrame = ref(null)
 const videoPlayer = ref(null)
 const isExiting = ref(false)
+
+const estimateStore = useEstimateStore()
+
+onMounted(() => {
+  // Clear any previous estimates when starting a new story
+  estimateStore.clearEstimates()
+  console.log('Cleared previous estimates')
+})
 
 // Story data structure
 const story = ref({
