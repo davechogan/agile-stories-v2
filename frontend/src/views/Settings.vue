@@ -1,20 +1,34 @@
 <template>
   <div class="settings-container">
+    <!-- Add debug info -->
+    <div class="debug-info" style="position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 4px;">
+      <div>Current Store Settings:</div>
+      <div>estimateType: {{ settingsStore.estimateType }}</div>
+      <div>useDevDays: {{ settingsStore.useDevDays }}</div>
+      <div>useStoryPoints: {{ settingsStore.useStoryPoints }}</div>
+      <div>Radio Value: {{ estimationType }}</div>
+    </div>
+
     <h1 class="page-title">Settings</h1>
     
     <div class="settings-section">
       <h2 class="section-title">Estimation Settings</h2>
       <div class="settings-content">
-        <v-switch
-          v-model="settings.useStoryPoints"
-          label="Use Story Points"
-          color="primary"
-        />
-        <v-switch
-          v-model="settings.useDevDays"
-          label="Use Dev Days"
-          color="primary"
-        />
+        <v-card class="mb-4 pa-4">
+          <h3>Estimation Units</h3>
+          <v-radio-group v-model="estimationType">
+            <v-radio
+              label="Story Points"
+              value="points"
+              @change="updateEstimationType('points')"
+            ></v-radio>
+            <v-radio
+              label="Dev Days"
+              value="days"
+              @change="updateEstimationType('days')"
+            ></v-radio>
+          </v-radio-group>
+        </v-card>
         
         <v-text-field
           v-model="settings.defaultConfidenceThreshold"
@@ -56,9 +70,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { useRouter } from 'vue-router'
 
 const settingsStore = useSettingsStore()
 const saving = ref(false)
+const router = useRouter()
 
 // Initialize settings from store
 const settings = ref({
@@ -68,22 +84,49 @@ const settings = ref({
   selectedRoles: [...settingsStore.selectedRoles]
 })
 
+const estimationType = ref(settingsStore.useDevDays ? 'days' : 'points')
+
+const updateEstimationType = (type: string) => {
+  settingsStore.useDevDays = type === 'days'
+  settingsStore.useStoryPoints = type === 'points'
+}
+
 const saveSettings = async () => {
   saving.value = true
   try {
+    // Log the values before saving
+    console.log('Before save - useStoryPoints:', settings.value.useStoryPoints)
+    console.log('Before save - useDevDays:', settings.value.useDevDays)
+    console.log('Before save - estimationType:', estimationType.value)
+    
     // Update store with current settings
     settingsStore.$patch({
-      useStoryPoints: settings.value.useStoryPoints,
-      useDevDays: settings.value.useDevDays,
-      defaultConfidenceThreshold: settings.value.defaultConfidenceThreshold,
-      selectedRoles: [...settings.value.selectedRoles]
+      useStoryPoints: estimationType.value === 'points',
+      useDevDays: estimationType.value === 'days',
+      estimateType: estimationType.value === 'points' ? 'story_points' : 'person_days'
     })
+
+    // Log the store values after patching
+    console.log('After patch - Store values:', {
+      useStoryPoints: settingsStore.useStoryPoints,
+      useDevDays: settingsStore.useDevDays,
+      estimateType: settingsStore.estimateType
+    })
+
     await settingsStore.saveSettings()
   } catch (error) {
     console.error('Error saving settings:', error)
   } finally {
     saving.value = false
   }
+}
+
+const goBack = () => {
+  router.back()
+}
+
+const closePage = () => {
+  router.push('/') // Or wherever you want the close button to take you
 }
 
 onMounted(async () => {

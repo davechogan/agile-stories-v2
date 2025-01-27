@@ -1,13 +1,5 @@
 <template>
   <div class="test-estimate">
-    <!-- Add debug info at the top -->
-    <div class="debug-info" style="position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 4px;">
-      <div>Store Setting: {{ settingsStore.estimateType }}</div>
-      <div>useStoryPoints computed: {{ useStoryPoints }}</div>
-      <div>Story Points Average: {{ rawEstimateData?.averages?.story_points?.value || 'N/A' }}</div>
-      <div>Dev Days Average: {{ rawEstimateData?.averages?.person_days?.value || 'N/A' }}</div>
-    </div>
-
     <!-- Avatar style controls -->
     <div class="avatar-controls">
       <v-btn-group vertical density="compact">
@@ -24,7 +16,7 @@
         <div class="center-circle">
           <div class="average-value">
             {{ averageEstimate }}
-            <div class="average-label">{{ useStoryPoints ? 'points average' : 'days average' }}</div>
+            <div class="average-label">days average</div>
             <div class="confidence-label" :class="averageConfidence">
               {{ averageConfidence }} confidence
             </div>
@@ -74,7 +66,8 @@
             <div class="estimate-row">
               <span class="estimate-label">Estimate:</span>
               <span class="estimate-value">
-                {{ getCurrentEstimate(selectedMember) }}
+                {{ selectedMember?.estimates[useStoryPoints.value ? 'story_points' : 'person_days'].value }} 
+                {{ useStoryPoints.value ? 'points' : 'days' }}
               </span>
             </div>
             
@@ -123,8 +116,8 @@ const mockTeamEstimates = ref(null)
 const settingsStore = useSettingsStore()
 const estimateStore = useEstimateStore()
 
-// Update useStoryPoints to directly reference the store
-const useStoryPoints = computed(() => settingsStore.estimateType === 'story_points')
+// Initialize useStoryPoints from settings store or localStorage, defaulting to false (days)
+const useStoryPoints = ref(false) // Default to days
 
 // Role display names and titles
 const roleDisplayData = {
@@ -243,14 +236,34 @@ const showMemberDetails = (member: TeamMember) => {
   showDialog.value = true
 }
 
-// Update the member display in modal
-const getCurrentEstimate = (member: TeamMember) => {
-  const estimateType = useStoryPoints.value ? 'story_points' : 'person_days'
-  return `${member.estimates[estimateType].value} ${useStoryPoints.value ? 'points' : 'days'}`
+// Add robust error handling for settings
+const initializeSettings = () => {
+  try {
+    // Try to get from settings store first
+    const storeSetting = settingsStore.estimateType
+    
+    // Then try localStorage
+    let localSetting = null
+    try {
+      localSetting = localStorage.getItem('estimateType')
+    } catch (e) {
+      console.warn('LocalStorage not available:', e)
+    }
+    
+    // Use store setting, then localStorage, then default to false (days)
+    useStoryPoints.value = storeSetting === 'story_points' || 
+                          (storeSetting === null && localSetting === 'story_points')
+    
+    console.log('Estimate type initialized:', useStoryPoints.value ? 'story_points' : 'person_days')
+  } catch (error) {
+    console.error('Error initializing settings:', error)
+    useStoryPoints.value = false // Default to days if anything fails
+  }
 }
 
 // Call on component mount
 onMounted(async () => {
+  initializeSettings()
   await fetchEstimateData()
   
   // Store the values right after fetching
@@ -276,12 +289,16 @@ watch(useStoryPoints, (newValue) => {
   console.log('Estimate type changed to:', estimateType)
 })
 
-// Update average estimate computation to use the correct type
-const averageEstimate = computed(() => {
-  if (!rawEstimateData.value?.averages) return 0
-  
+// Make sure all estimate displays use this setting
+const getCurrentEstimate = (member: TeamMember) => {
   const estimateType = useStoryPoints.value ? 'story_points' : 'person_days'
-  const rawAverage = rawEstimateData.value.averages[estimateType].value || 0
+  return member.estimates[estimateType].value
+}
+
+// Update average estimate computation if needed
+const averageEstimate = computed(() => {
+  const estimateType = useStoryPoints.value ? 'story_points' : 'person_days'
+  const rawAverage = rawEstimateData.value?.averages[estimateType].value || 0
   
   // Round to nearest 0.5
   return Math.round(rawAverage * 2) / 2
@@ -602,8 +619,11 @@ watch([averageEstimate, averageConfidence], ([newEstimate, newConfidence]) => {
 
 @media (max-width: 960px) {
   .estimation-circle {
-    width: min(85vw, 350px);
-    height: min(85vw, 350px);
+    width: 90vw;
+    height: 90vw;
+    max-width: 350px;
+    max-height: 350px;
+    margin: 2rem auto 4rem; /* Added bottom margin for buttons */
   }
 
   .team-member {
@@ -632,27 +652,36 @@ watch([averageEstimate, averageConfidence], ([newEstimate, newConfidence]) => {
 
   /* Fix button layout at bottom */
   .avatar-controls {
-    display: none; /* Hide regenerate/cycle buttons on mobile */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: row; /* Changed to row */
+    justify-content: space-between;
+    padding: 0.5rem;
+    background: rgba(18, 18, 18, 0.9);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 1000;
+  }
+
+  .v-btn-group {
+    flex-direction: row !important;
+    gap: 0.5rem;
   }
 
   .back-button-container {
     position: fixed;
     bottom: 0;
-    left: 0;
     right: 0;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 1rem;
-    background: rgba(18, 18, 18, 0.95);
-    backdrop-filter: blur(10px);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    z-index: 100;
+    padding: 0.5rem;
+    background: rgba(18, 18, 18, 0.9);
   }
 
-  .estimation-circle-container {
-    padding-bottom: 80px; /* Add space for fixed button */
+  /* Ensure content doesn't get hidden behind fixed buttons */
+  .test-estimate {
+    padding-bottom: 70px;
   }
 
   /* Adjust center circle for mobile */
@@ -673,8 +702,10 @@ watch([averageEstimate, averageConfidence], ([newEstimate, newConfidence]) => {
 /* Additional mobile optimization for very small screens */
 @media (max-width: 360px) {
   .estimation-circle {
-    width: 80vw;
-    height: 80vw;
+    width: 95vw;
+    height: 95vw;
+    max-width: 300px;
+    max-height: 300px;
   }
 
   .member-avatar {

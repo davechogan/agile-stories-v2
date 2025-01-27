@@ -12,11 +12,12 @@
         <v-spacer></v-spacer>
 
         <v-btn
-          icon
-          class="settings-btn"
-          @click="openSettings"
+          icon="mdi-cog"
+          variant="text"
+          class="settings-button"
+          to="/settings"
         >
-          <v-icon color="rgba(255, 255, 255, 0.3)">mdi-cog</v-icon>
+          <v-icon>mdi-cog</v-icon>
         </v-btn>
       </v-container>
     </v-app-bar>

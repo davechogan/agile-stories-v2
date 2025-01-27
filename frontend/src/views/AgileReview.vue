@@ -257,6 +257,30 @@ const isNegative = (content: string): boolean => {
 }
 
 /* Mobile responsive adjustments */
+@media (max-width: 1024px) {
+  .sticky-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(18, 18, 18, 0.9);
+    backdrop-filter: blur(10px);
+    padding: 1rem;
+    z-index: 100;
+  }
+
+  .footer-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .footer-buttons .v-btn {
+    width: 100%;
+  }
+}
+
 @media (max-width: 960px) {
   .two-column-layout {
     grid-template-columns: 1fr !important; /* Force single column */

@@ -711,5 +711,29 @@ watch(showTransition, (newVal) => {
     pointer-events: none;
     transition: opacity 0.3s ease-out;
   }
+
+  /* Increase text field sizes */
+  :deep(.v-textarea textarea) {
+    min-height: 120px !important;  /* Larger default height */
+  }
+
+  /* Make the user story input even larger */
+  .story-form .v-textarea:has(textarea[label*="user type"]) :deep(textarea) {
+    min-height: 180px !important;  /* Extra large for user story */
+  }
+
+  /* Ensure criteria inputs are reasonably sized */
+  .criteria-item :deep(.v-textarea textarea) {
+    min-height: 80px !important;
+  }
+
+  /* Add more padding around inputs */
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .story-form {
+    padding: 1.5rem;
+  }
 }
 </style> 

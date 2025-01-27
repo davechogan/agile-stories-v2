@@ -27,7 +27,7 @@
         <div v-if="hasEstimates" class="team-estimate-panel mobile-only">
           <h3>Team Estimate</h3>
           <div class="estimate-details">
-            <div class="estimate-value">{{ averageEstimate }} days</div>
+            <div class="estimate-value">{{ averageEstimate }} {{ useStoryPoints ? 'points' : 'days' }}</div>
             <div class="estimate-confidence" :class="averageConfidence">
               {{ averageConfidence }} confidence
             </div>
@@ -150,7 +150,7 @@
         <div v-if="hasEstimates" class="team-estimate-panel desktop-only">
           <h3>Team Estimate</h3>
           <div class="estimate-details">
-            <div class="estimate-value">{{ averageEstimate }} days</div>
+            <div class="estimate-value">{{ averageEstimate }} {{ useStoryPoints ? 'points' : 'days' }}</div>
             <div class="estimate-confidence" :class="averageConfidence">
               {{ averageConfidence }} confidence
             </div>
@@ -220,14 +220,6 @@
         </video>
       </div>
     </transition>
-
-    <!-- Add test button somewhere visible -->
-    <v-btn @click="testStore" color="warning" class="ma-2">
-      Test Store
-    </v-btn>
-    <div v-if="testResult" class="ma-2">
-      Test Result: {{ testResult }}
-    </div>
   </div>
 </template>
 
@@ -257,7 +249,6 @@ const isExiting = ref(false)
 const videoPlayer = ref(null)
 const settingsStore = useSettingsStore()
 const estimateStore = useEstimateStore()
-const testResult = ref('')
 
 interface ImplementationDetail {
   type: 'Frontend' | 'Backend' | 'Database'
@@ -494,21 +485,36 @@ const hasEstimates = computed(() =>
 const averageEstimate = computed(() => estimateStore.averageEstimate ?? '-')
 const averageConfidence = computed(() => estimateStore.averageConfidence ?? '-')
 
-const testStore = () => {
-  // Set some test values
-  estimateStore.setEstimates(99, "test confidence")
-  
-  // Immediately try to read them back
-  testResult.value = `Read back: ${estimateStore.averageEstimate} days, ${estimateStore.averageConfidence}`
-  
-  console.log('Direct store access:', {
-    average: estimateStore.averageEstimate,
-    confidence: estimateStore.averageConfidence
-  })
-}
+const useStoryPoints = computed(() => settingsStore.estimateType === 'story_points')
+
+// Add debug info to verify store value
+console.log('Tech Review - Store estimate type:', settingsStore.estimateType)
 </script>
 
 <style scoped>
+/* Container (outermost) - stays black */
+.tech-review {
+  background: rgb(18, 18, 18);
+}
+
+/* Panel/Column (middle) - dark gray to match left side */
+.analysis-panel {
+  background: rgb(18, 18, 18);
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+/* Cards (innermost) - return to original blue */
+.tech-analysis-item,
+.risk-item,
+.recommendation-item,
+.team-estimate-panel {
+  background: rgba(33, 150, 243, 0.1);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
 .tech-review {
   padding: 1rem;
 }
@@ -535,7 +541,7 @@ const testStore = () => {
 .tech-analysis-item,
 .risk-item,
 .recommendation-item {
-  background: rgba(30, 41, 59, 0.8);
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1rem;
@@ -601,7 +607,7 @@ pre {
 }
 
 .dark-panel {
-  background: rgba(30, 41, 59, 0.8);
+  background: rgba(33, 150, 243, 0.1) !important;
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 0.75rem;
@@ -632,7 +638,7 @@ section {
   background: rgba(30, 41, 59, 0.8);
   border-radius: 8px;
   padding: 1rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .analysis-header {
@@ -1035,10 +1041,12 @@ h4:first-of-type {
 }
 
 .team-estimate-panel {
-  background: rgba(30, 41, 59, 0.8);
+  background: rgba(33, 150, 243, 0.1);
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1rem;
+  border: 1px solid rgba(33, 150, 243, 0.3);  /* Subtle blue border */
+  box-shadow: 0 0 15px rgba(33, 150, 243, 0.1);  /* Soft blue glow */
 }
 
 .estimate-details {
@@ -1079,5 +1087,15 @@ h4:first-of-type {
   .sticky-footer {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
+}
+
+.right-column {
+  flex: 1;
+  padding: 1rem;
+}
+
+/* If needed, override any Vuetify default backgrounds */
+:deep(.dark-panel) {
+  background: rgba(33, 150, 243, 0.1) !important;
 }
 </style> 

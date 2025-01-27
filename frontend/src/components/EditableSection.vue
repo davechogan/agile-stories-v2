@@ -1,5 +1,5 @@
 <template>
-  <div class="editable-content">
+  <div class="editable-content" :class="{ 'theme-dark': true }">
     <template v-if="!isEditing">
       <div class="content-display">
         <h3 class="section-heading">{{ title }}</h3>
@@ -11,7 +11,7 @@
       </div>
       <v-btn 
         size="small" 
-        color="primary" 
+        :color="'on-surface'"
         class="edit-btn"
         icon="mdi-pencil"
         @click="startEditing"
@@ -97,23 +97,22 @@ const cancelEdit = () => {
 <style scoped>
 .editable-content {
   position: relative;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgb(18, 18, 18);  /* Same as container/page background */
   border-radius: 8px;
   padding: 1.5rem;
-  margin: 1rem 0;
+  margin: 1.5rem 0;
   transition: all 0.3s ease;
 }
 
 .edit-btn {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  opacity: 0;
-  transition: opacity 0.2s ease;
+  top: 1rem;
+  right: 1rem;
+  opacity: 0.5;
 }
 
 .editable-content:hover .edit-btn {
-  opacity: 1;
+  opacity: 0.5;
 }
 
 .edit-actions {
@@ -129,27 +128,24 @@ const cancelEdit = () => {
 }
 
 .section-heading {
+  color: rgb(var(--v-theme-on-surface));
   font-size: 1.25rem;
-  font-weight: normal;
   margin-bottom: 1rem;
-  color: rgba(255, 255, 255, 0.87);
 }
 
 .content-text {
-  white-space: pre-wrap;
+  color: rgb(var(--v-theme-text-secondary));
   line-height: 1.6;
+  font-size: 1rem;
 }
 
 .content-list {
-  list-style-type: none;
-  padding: 0;
-  margin: 0;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
 }
 
 .content-list li {
-  display: flex;
-  align-items: baseline;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .content-list li::before {
